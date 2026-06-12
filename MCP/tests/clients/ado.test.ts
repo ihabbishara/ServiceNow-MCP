@@ -116,6 +116,20 @@ describe("AzureDevOpsClient", () => {
     ).rejects.toThrow(/disabled/);
   });
 
+  it("percent-encodes the project path segment", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ workItems: [] }));
+    await new AzureDevOpsClient({ ...cfg, project: "My Project" }).searchWorkItems({ text: "x" });
+    expect(fetchMock.mock.calls[0][0] as string).toContain("/My%20Project/_apis/");
+  });
+
+  it("throws when enabled but orgUrl/project missing", async () => {
+    const broken = { ...cfg, orgUrl: undefined, project: undefined };
+    await expect(new AzureDevOpsClient(broken).searchWorkItems({ text: "x" })).rejects.toThrow(/not configured/);
+    await expect(new AzureDevOpsClient(broken).createBug({ title: "t", description: "d", incidentNumber: "I" }))
+      .rejects.toThrow(/not configured/);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("throws with status and body snippet on non-2xx", async () => {
     fetchMock.mockResolvedValueOnce({
       ok: false, status: 403, json: async () => ({}), text: async () => "TF401027 denied"

@@ -36,7 +36,7 @@ export interface CreateBugPayload {
   iterationPath?: string;
   tags?: string[];
   assignedTeam?: string;
-  incidentNumber: string;
+  incidentNumber: string; // included in the title by the caller; not written as a separate ADO field
 }
 
 export class AzureDevOpsClient {
@@ -47,7 +47,13 @@ export class AzureDevOpsClient {
   }
 
   private apiUrl(path: string): string {
-    return `${this.cfg.orgUrl}/${this.cfg.project}/_apis/${path}`;
+    return `${this.cfg.orgUrl}/${encodeURIComponent(this.cfg.project ?? "")}/_apis/${path}`;
+  }
+
+  private assertConfigured(): void {
+    if (!this.cfg.orgUrl || !this.cfg.project) {
+      throw new Error("ADO client is enabled but orgUrl/project are not configured");
+    }
   }
 
   private async requestJson<T>(url: string, init: RequestInit): Promise<T> {
@@ -61,6 +67,7 @@ export class AzureDevOpsClient {
 
   async searchWorkItems(f: WorkItemSearchFilters): Promise<WorkItem[]> {
     if (!this.cfg.enabled) return [];
+    this.assertConfigured();
 
     const conditions = [`[System.Title] CONTAINS '${escapeWiql(f.text)}'`];
     if (f.workItemType) conditions.push(`[System.WorkItemType] = '${escapeWiql(f.workItemType)}'`);
@@ -89,6 +96,7 @@ export class AzureDevOpsClient {
 
   async createBug(p: CreateBugPayload): Promise<{ id: number; title: string }> {
     if (!this.cfg.enabled) throw new Error("ADO integration is disabled");
+    this.assertConfigured();
 
     const ops: Array<{ op: "add"; path: string; value: string }> = [
       { op: "add", path: "/fields/System.Title", value: p.title },
