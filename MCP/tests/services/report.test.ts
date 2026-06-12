@@ -52,4 +52,23 @@ describe("ReportService", () => {
     expect(report.executiveSummary).toContain("3 open incidents");
     expect(report.executiveSummary).toContain("1 P1");
   });
+
+  it("produces a valid empty report when there is no data", async () => {
+    const sn = {
+      listIncidents: vi.fn().mockResolvedValue([]),
+      listChangesWithFilters: vi.fn().mockResolvedValue([chg("CHG-NOPLAN", {})])
+    } as unknown as ServiceNowClient;
+    const incidents = {
+      listSlaRisks: vi.fn().mockResolvedValue([]),
+      listStaleIncidents: vi.fn().mockResolvedValue([])
+    } as unknown as IncidentService;
+
+    const report = await new ReportService(incidents, sn).generateDailyOpsReport(now);
+
+    expect(report.openIncidentsByPriority).toEqual({});
+    expect(report.majorIncidents).toEqual([]);
+    expect(report.upcomingChanges).toEqual([]); // change without plannedStartDate excluded via NaN guard
+    expect(report.recommendedActions).toEqual([]);
+    expect(report.executiveSummary).toContain("0 open incidents");
+  });
 });

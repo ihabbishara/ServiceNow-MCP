@@ -11,11 +11,13 @@ export class ReportService {
   ) {}
 
   async generateDailyOpsReport(now: Date = new Date()): Promise<DailyOpsReport> {
-    const open = await this.serviceNow.listIncidents({ onlyOpen: true });
-    const slaRisks = await this.incidents.listSlaRisks({ onlyOpen: true });
-    const staleIncidents = await this.incidents.listStaleIncidents({ onlyOpen: true });
     const dayAgo = new Date(now.getTime() - 24 * HOUR_MS).toISOString();
-    const recentChanges = await this.serviceNow.listChangesWithFilters({ startedAfter: dayAgo, limit: 200 });
+    const [open, slaRisks, staleIncidents, recentChanges] = await Promise.all([
+      this.serviceNow.listIncidents({ onlyOpen: true }),
+      this.incidents.listSlaRisks({ onlyOpen: true }),
+      this.incidents.listStaleIncidents({ onlyOpen: true }),
+      this.serviceNow.listChangesWithFilters({ startedAfter: dayAgo, limit: 200 })
+    ]);
 
     const openIncidentsByPriority: Record<string, number> = {};
     for (const i of open) {
@@ -24,6 +26,7 @@ export class ReportService {
 
     const majorIncidents = open.filter((i) => i.priority === "1");
     const failedOrHighRiskChanges = recentChanges.filter(
+      // both "cancelled" and "canceled" spellings appear across instances — keep both
       (c) => c.risk?.toLowerCase() === "high" || ["failed", "cancelled", "canceled"].includes(c.state.toLowerCase())
     );
     const upcomingChanges = recentChanges.filter((c) => {
@@ -32,6 +35,7 @@ export class ReportService {
     });
 
     const recommendedActions = [
+      // already sorted most-urgent-first by SlaRiskService
       ...slaRisks.slice(0, 5).map((r) => `${r.incidentNumber}: ${r.suggestedAction}`),
       ...staleIncidents
         .filter((t) => t.priority === "1" || t.priority === "2")
