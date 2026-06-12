@@ -2,6 +2,10 @@ import { ChangeRecord, Incident, RelatedChange } from "../types.js";
 
 const HOUR_MS = 3_600_000;
 
+// ServiceNow display values can vary in case between records; compare case-insensitively
+const sameValue = (a?: string, b?: string): boolean =>
+  !!a && !!b && a.toLowerCase() === b.toLowerCase();
+
 export class ChangeCorrelationService {
   constructor(private readonly window: { beforeHours: number; afterHours: number }) {}
 
@@ -20,15 +24,15 @@ export class ChangeCorrelationService {
 
       let score = 0;
       const reasons: string[] = [];
-      if (incident.cmdbCi && change.cmdbCi === incident.cmdbCi) {
+      if (sameValue(incident.cmdbCi, change.cmdbCi)) {
         score += 0.5;
         reasons.push("same configuration item");
       }
-      if (incident.businessService && change.businessService === incident.businessService) {
+      if (sameValue(incident.businessService, change.businessService)) {
         score += 0.25;
         reasons.push("same business service");
       }
-      if (incident.assignmentGroup && change.assignmentGroup === incident.assignmentGroup) {
+      if (sameValue(incident.assignmentGroup, change.assignmentGroup)) {
         score += 0.15;
         reasons.push("same assignment group");
       }

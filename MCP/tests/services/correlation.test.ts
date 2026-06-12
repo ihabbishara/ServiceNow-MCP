@@ -71,6 +71,12 @@ describe("ChangeCorrelationService", () => {
     ).toHaveLength(0);
   });
 
+  it("matches CI case-insensitively", () => {
+    const result = svc.correlate(incident, [change({ cmdbCi: "DB-PROD-01" })]);
+    expect(result).toHaveLength(1);
+    expect(result[0].correlationReason).toContain("same configuration item");
+  });
+
   it("falls back to plannedStartDate when no actual start", () => {
     const result = svc.correlate(incident, [
       change({
