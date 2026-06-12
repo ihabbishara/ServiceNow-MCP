@@ -8,7 +8,7 @@ import { ChangeCorrelationService } from "./correlation.js";
 const HOUR_MS = 3_600_000;
 
 export interface IncidentQueryFilters {
-  onlyOpen?: boolean;
+  onlyOpen?: boolean; // defaults to true when omitted
   assignmentGroup?: string;
   priorities?: string[];
 }
@@ -57,7 +57,9 @@ export class IncidentService {
   }
 
   private async correlateFor(incident: Incident): Promise<RelatedChange[]> {
-    const startedAfter = new Date(Date.parse(incident.openedAt) - this.window.beforeHours * HOUR_MS).toISOString();
+    const openedMs = Date.parse(incident.openedAt);
+    if (!Number.isFinite(openedMs)) return []; // blank/invalid openedAt → no change correlation, don't crash
+    const startedAfter = new Date(openedMs - this.window.beforeHours * HOUR_MS).toISOString();
     const changes = await this.serviceNow.listChangesWithFilters({ startedAfter, limit: 200 });
     return this.correlation.correlate(incident, changes);
   }

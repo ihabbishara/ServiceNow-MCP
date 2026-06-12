@@ -65,6 +65,21 @@ describe("IncidentService", () => {
     expect(result.relatedChanges).toHaveLength(1);
   });
 
+  it("summarizeIncident returns empty relatedChanges when openedAt is blank instead of crashing", async () => {
+    const blank = { ...incident, openedAt: "" };
+    const { svc, sn } = makeService({ sn: { getIncidentByNumber: vi.fn().mockResolvedValue(blank) } });
+    const result = await svc.summarizeIncident("INC0001");
+    expect(result.relatedChanges).toEqual([]);
+    expect(sn.listChangesWithFilters).not.toHaveBeenCalled();
+  });
+
+  it("findRelatedChanges returns correlated changes", async () => {
+    const { svc } = makeService();
+    const result = await svc.findRelatedChanges("INC0001");
+    expect(result).toHaveLength(1);
+    expect(result[0].changeNumber).toBe("CHG0001");
+  });
+
   it("listSlaRisks filters by priorities client-side", async () => {
     const p2 = { ...incident, number: "INC-P2", priority: "2", slaDue: "2026-06-11T10:30:00Z" };
     const { svc } = makeService({ sn: { listIncidents: vi.fn().mockResolvedValue([incident, p2]) } });
