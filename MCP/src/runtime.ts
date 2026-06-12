@@ -1,22 +1,16 @@
-import { loadConfig, AppConfig } from "../../dist/config/configLoader.js";
-import { IServiceNowClient } from "../../dist/integrations/servicenow/IServiceNowClient.js";
-import { ServiceNowClient } from "../../dist/integrations/servicenow/ServiceNowClient.js";
-import { MockServiceNowClient } from "../../dist/integrations/servicenow/MockServiceNowClient.js";
-import { IAzureDevOpsClient } from "../../dist/integrations/ado/IAzureDevOpsClient.js";
-import { AzureDevOpsClient } from "../../dist/integrations/ado/AzureDevOpsClient.js";
-import { MockAzureDevOpsClient } from "../../dist/integrations/ado/MockAzureDevOpsClient.js";
-import { NoopAzureDevOpsClient } from "../../dist/integrations/ado/NoopAzureDevOpsClient.js";
-import { SlaRiskService } from "../../dist/services/slaRiskService.js";
-import { StaleTicketService } from "../../dist/services/staleTicketService.js";
-import { ChangeCorrelationService } from "../../dist/services/changeCorrelationService.js";
-import { IncidentService } from "../../dist/services/incidentService.js";
-import { ReportService } from "../../dist/services/reportService.js";
-import { FallbackSummarizationService } from "../../dist/services/llmSummarizationService.js";
+import { loadConfig, AppConfig } from "./config.js";
+import { ServiceNowClient } from "./clients/servicenow.js";
+import { AzureDevOpsClient } from "./clients/ado.js";
+import { SlaRiskService } from "./services/slaRisk.js";
+import { StaleTicketService } from "./services/staleTickets.js";
+import { ChangeCorrelationService } from "./services/correlation.js";
+import { IncidentService } from "./services/incidents.js";
+import { ReportService } from "./services/report.js";
 
 export interface McpRuntime {
   config: AppConfig;
-  serviceNowClient: IServiceNowClient;
-  azureDevOpsClient: IAzureDevOpsClient;
+  serviceNowClient: ServiceNowClient;
+  azureDevOpsClient: AzureDevOpsClient;
   incidentService: IncidentService;
   reportService: ReportService;
   slaRiskService: SlaRiskService;
@@ -27,28 +21,12 @@ export interface McpRuntime {
 export const createMcpRuntime = (): McpRuntime => {
   const config = loadConfig();
 
-  // ServiceNow client
-  const serviceNowClient: IServiceNowClient = config.serviceNow.enabled
-    ? new ServiceNowClient(config.serviceNow)
-    : new MockServiceNowClient();
+  const serviceNowClient = new ServiceNowClient(config.serviceNow);
+  const azureDevOpsClient = new AzureDevOpsClient(config.azureDevOps);
 
-  // Azure DevOps client
-  const azureDevOpsClient: IAzureDevOpsClient = config.azureDevOps.enabled
-    ? new AzureDevOpsClient(config.azureDevOps)
-    : config.azureDevOps.disabledMode === "mock"
-      ? new MockAzureDevOpsClient()
-      : new NoopAzureDevOpsClient();
-
-  // Domain services
-  const slaRiskService = new SlaRiskService(config.thresholds.sla);
+  const slaRiskService = new SlaRiskService();
   const staleTicketService = new StaleTicketService(config.thresholds.staleByPriorityMinutes);
-  const correlationService = new ChangeCorrelationService({
-    windowBeforeHours: config.thresholds.relatedChangeWindow.beforeHours,
-    windowAfterHours: config.thresholds.relatedChangeWindow.afterHours
-  });
-
-  // For MCP, we use the fallback summarization (LLM is handled by Copilot)
-  const summarizationService = new FallbackSummarizationService();
+  const correlationService = new ChangeCorrelationService(config.thresholds.relatedChangeWindow);
 
   const incidentService = new IncidentService(
     serviceNowClient,
@@ -56,11 +34,9 @@ export const createMcpRuntime = (): McpRuntime => {
     slaRiskService,
     staleTicketService,
     correlationService,
-    summarizationService,
-    config
+    config.thresholds.relatedChangeWindow
   );
-
-  const reportService = new ReportService(incidentService, serviceNowClient, azureDevOpsClient);
+  const reportService = new ReportService(incidentService, serviceNowClient);
 
   return {
     config,

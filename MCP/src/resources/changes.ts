@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { McpRuntime } from "../runtime.js";
-import { ChangeRecord } from "../../dist/models/types.js";
+import { ChangeRecord } from "../types.js";
 
 const formatChangeAsMarkdown = (change: ChangeRecord): string => {
   const schedule = [

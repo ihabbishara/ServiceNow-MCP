@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { McpRuntime } from "../runtime.js";
-import { Incident } from "../../dist/models/types.js";
+import { Incident } from "../types.js";
 
 const formatIncidentAsMarkdown = (incident: Incident): string => {
   const timeline = [
