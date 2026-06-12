@@ -46,6 +46,20 @@ describe("loadConfig", () => {
     expect(cfg.azureDevOps.defaultIterationPath).toBe("Platform");
   });
 
+  it("treats empty ADO path overrides as unset, falling back to project", () => {
+    const cfg = loadConfig({
+      ...validEnv,
+      ADO_ENABLED: "true",
+      ADO_ORG_URL: "https://dev.azure.com/acme",
+      ADO_PROJECT: "Platform",
+      ADO_PAT: "pat123",
+      ADO_AREA_PATH: "",
+      ADO_ITERATION_PATH: ""
+    });
+    expect(cfg.azureDevOps.defaultAreaPath).toBe("Platform");
+    expect(cfg.azureDevOps.defaultIterationPath).toBe("Platform");
+  });
+
   it("applies threshold overrides from env", () => {
     const cfg = loadConfig({ ...validEnv, STALE_P1_MIN: "15", CORRELATION_HOURS_BEFORE: "48" });
     expect(cfg.thresholds.staleByPriorityMinutes["1"]).toBe(15);
