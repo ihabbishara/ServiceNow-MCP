@@ -4,7 +4,7 @@ MCP (Model Context Protocol) server that exposes SRE operations tools for use wi
 
 ## Features
 
-### Tools (9)
+### Tools (11)
 | Tool | Description |
 |------|-------------|
 | `search_incidents` | Search ServiceNow incidents with filters |
@@ -41,7 +41,7 @@ MCP (Model Context Protocol) server that exposes SRE operations tools for use wi
 ### 1. Install Dependencies
 
 ```bash
-cd mcp
+cd MCP
 npm install
 ```
 
@@ -51,22 +51,9 @@ npm install
 npm run build
 ```
 
-### 3. Configure Environment
+### 3. Configure MCP Client
 
-The MCP server uses the same `.env` file as the main SREOps project. Ensure these are set:
-
-```bash
-# ServiceNow
-ENABLE_SERVICENOW_INTEGRATION=true
-SERVICENOW_BASE_URL=https://your-instance.service-now.com
-SERVICENOW_BASIC_AUTH_HEADER=Basic ...
-
-# Azure DevOps (optional)
-ENABLE_ADO_INTEGRATION=true
-ADO_ORG_URL=https://dev.azure.com/your-org
-ADO_PROJECT=YourProject
-ADO_PAT=your-pat-token
-```
+See the [Configuration](#configuration) section for required environment variables, then wire them into your MCP client config (examples below).
 
 ### 4. Configure Copilot CLI
 
@@ -77,10 +64,11 @@ Add to `~/.config/github-copilot/mcp.json`:
   "mcpServers": {
     "sre-ops": {
       "command": "node",
-      "args": ["C:/path/to/SREOps/mcp/dist/index.js"],
+      "args": ["/absolute/path/to/MCP/dist/index.js"],
       "env": {
-        "SERVICENOW_BASE_URL": "https://your-instance.service-now.com",
-        "SERVICENOW_BASIC_AUTH_HEADER": "Basic ..."
+        "SERVICENOW_BASE_URL": "https://yourcompany.service-now.com",
+        "SERVICENOW_USERNAME": "your-username",
+        "SERVICENOW_PASSWORD": "your-password"
       }
     }
   }
@@ -96,11 +84,36 @@ Add to `.vscode/settings.json` or workspace settings:
   "github.copilot.chat.mcp.servers": {
     "sre-ops": {
       "command": "node",
-      "args": ["${workspaceFolder}/mcp/dist/index.js"]
+      "args": ["/absolute/path/to/MCP/dist/index.js"],
+      "env": {
+        "SERVICENOW_BASE_URL": "https://yourcompany.service-now.com",
+        "SERVICENOW_USERNAME": "your-username",
+        "SERVICENOW_PASSWORD": "your-password"
+      }
     }
   }
 }
 ```
+
+## Configuration
+
+All configuration is via environment variables (set them in the `env` block of your MCP client config).
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `SERVICENOW_BASE_URL` | yes | — | e.g. `https://yourcompany.service-now.com` |
+| `SERVICENOW_USERNAME` | yes | — | Basic auth user |
+| `SERVICENOW_PASSWORD` | yes | — | Basic auth password |
+| `ADO_ENABLED` | no | `false` | Enable Azure DevOps integration |
+| `ADO_ORG_URL` | if ADO enabled | — | e.g. `https://dev.azure.com/yourorg` |
+| `ADO_PROJECT` | if ADO enabled | — | ADO project name |
+| `ADO_PAT` | if ADO enabled | — | Personal Access Token (Work Items read/write) |
+| `ADO_AREA_PATH` | no | project name | Default area path for created bugs |
+| `ADO_ITERATION_PATH` | no | project name | Default iteration path for created bugs |
+| `ADO_ASSIGNED_TEAM` | no | — | Default team for created bugs |
+| `ADO_CREATE_BUG_ENABLED` | no | `true` | Feature flag for `create_bug_from_incident` |
+| `STALE_P1_MIN` / `STALE_P2_MIN` / `STALE_P3_MIN` / `STALE_P4_MIN` | no | 30 / 120 / 1440 / 4320 | Stale thresholds (minutes) |
+| `CORRELATION_HOURS_BEFORE` / `CORRELATION_HOURS_AFTER` | no | 24 / 4 | Change correlation window around incident open time |
 
 ## Usage Examples
 
@@ -162,7 +175,7 @@ npm test
 ### Project Structure
 
 ```
-mcp/
+MCP/
 ├── src/
 │   ├── index.ts          # Entry point
 │   ├── server.ts         # MCP server setup
@@ -176,8 +189,6 @@ mcp/
 
 ## Architecture
 
-The MCP server reuses the existing SREOps service layer:
-
 ```
 MCP Server
     │
@@ -188,7 +199,7 @@ MCP Server
 └─────────────┬───────────────┘
               │
 ┌─────────────▼───────────────┐
-│     Existing Services        │
+│       Built-in Services      │
 │  IncidentService, SlaRisk,   │
 │  StaleTicket, Correlation    │
 └─────────────┬───────────────┘
@@ -205,13 +216,23 @@ MCP Server
 
 1. Check that dependencies are installed: `npm install`
 2. Verify build succeeded: `npm run build`
-3. Check environment variables are set
+3. Check that all required environment variables are set (`SERVICENOW_BASE_URL`, `SERVICENOW_USERNAME`, `SERVICENOW_PASSWORD`)
 
 ### ServiceNow connection fails
 
-1. Verify `SERVICENOW_BASE_URL` is correct
-2. Check authentication credentials
-3. Test with `ENABLE_SERVICENOW_INTEGRATION=false` to use mock data
+1. Verify `SERVICENOW_BASE_URL` is correct (no trailing slash)
+2. Check credentials — test them directly:
+   ```bash
+   curl -u "$SERVICENOW_USERNAME:$SERVICENOW_PASSWORD" \
+     "$SERVICENOW_BASE_URL/api/now/table/incident?sysparm_limit=1"
+   ```
+3. Confirm the account has the `itil` or `sn_incident_read` role in ServiceNow
+
+### ADO tools not working
+
+1. Ensure `ADO_ENABLED=true` is set
+2. Verify `ADO_ORG_URL`, `ADO_PROJECT`, and `ADO_PAT` are all set
+3. Confirm the PAT has **Work Items (Read & Write)** scope
 
 ### Tools not appearing in Copilot
 
