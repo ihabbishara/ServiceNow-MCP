@@ -28,9 +28,12 @@ const STATE_CODES: Record<string, string> = {
 };
 const stateCode = (state: string): string => STATE_CODES[state.toLowerCase()] ?? state;
 
+// ^ is the encoded-query separator; strip it from free-text values so a value can't inject conditions
+const snSafe = (v: string): string => v.replace(/\^/g, "");
+
 const display = (row: SnRow, key: string): string | undefined => row[key]?.display_value || undefined;
 
-// SN "value" timestamps are UTC "YYYY-MM-DD HH:MM:SS"
+// SN "value" timestamps are UTC "YYYY-MM-DD HH:MM:SS" (exactly one space; String.replace replaces first occurrence only)
 const isoDate = (row: SnRow, key: string): string | undefined => {
   const v = row[key]?.value;
   return v ? `${v.replace(" ", "T")}Z` : undefined;
@@ -97,7 +100,7 @@ export interface IncidentListFilters {
 }
 
 export interface ChangeListFilters {
-  stateNot?: string;
+  stateNot?: string; // raw change_request state code (no name→code map for changes; pass numeric code)
   assignmentGroup?: string;
   configurationItem?: string;
   startedAfter?: string; // ISO 8601
@@ -133,10 +136,10 @@ export class ServiceNowClient {
     const parts: string[] = [];
     if (f.stateNot) parts.push(`state!=${stateCode(f.stateNot)}`);
     if (f.priority) parts.push(`priority=${f.priority}`);
-    if (f.assignmentGroup) parts.push(`assignment_group.name=${f.assignmentGroup}`);
+    if (f.assignmentGroup) parts.push(`assignment_group.name=${snSafe(f.assignmentGroup)}`);
     if (f.assignedTo === "") parts.push("assigned_toISEMPTY");
-    else if (f.assignedTo) parts.push(`assigned_to.name=${f.assignedTo}`);
-    if (f.shortDescriptionContains) parts.push(`short_descriptionLIKE${f.shortDescriptionContains}`);
+    else if (f.assignedTo) parts.push(`assigned_to.name=${snSafe(f.assignedTo)}`);
+    if (f.shortDescriptionContains) parts.push(`short_descriptionLIKE${snSafe(f.shortDescriptionContains)}`);
     parts.push("ORDERBYDESCsys_updated_on");
     const rows = await this.request("incident", parts.join("^"), Math.min(f.limit ?? 50, 200), INCIDENT_FIELDS);
     return rows.map(mapIncident);
@@ -145,7 +148,7 @@ export class ServiceNowClient {
   async listIncidents(f: { onlyOpen?: boolean; assignmentGroup?: string }): Promise<Incident[]> {
     const parts: string[] = [];
     if (f.onlyOpen) parts.push(OPEN_INCIDENT_QUERY);
-    if (f.assignmentGroup) parts.push(`assignment_group.name=${f.assignmentGroup}`);
+    if (f.assignmentGroup) parts.push(`assignment_group.name=${snSafe(f.assignmentGroup)}`);
     parts.push("ORDERBYDESCsys_updated_on");
     const rows = await this.request("incident", parts.join("^"), 200, INCIDENT_FIELDS);
     return rows.map(mapIncident);
@@ -159,8 +162,8 @@ export class ServiceNowClient {
   async listChangesWithFilters(f: ChangeListFilters): Promise<ChangeRecord[]> {
     const parts: string[] = [];
     if (f.stateNot) parts.push(`state!=${f.stateNot}`);
-    if (f.assignmentGroup) parts.push(`assignment_group.name=${f.assignmentGroup}`);
-    if (f.configurationItem) parts.push(`cmdb_ci.name=${f.configurationItem}`);
+    if (f.assignmentGroup) parts.push(`assignment_group.name=${snSafe(f.assignmentGroup)}`);
+    if (f.configurationItem) parts.push(`cmdb_ci.name=${snSafe(f.configurationItem)}`);
     if (f.startedAfter) parts.push(`start_date>=${toSnDateTime(f.startedAfter)}`);
     parts.push("ORDERBYDESCstart_date");
     const rows = await this.request("change_request", parts.join("^"), Math.min(f.limit ?? 50, 200), CHANGE_FIELDS);

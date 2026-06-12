@@ -104,6 +104,15 @@ describe("ServiceNowClient", () => {
     expect(url.searchParams.get("sysparm_query")).toContain("assigned_toISEMPTY");
   });
 
+  it("strips ^ from free-text filter values to prevent query injection", async () => {
+    fetchMock.mockResolvedValue(okResponse([]));
+    await new ServiceNowClient(cfg).listIncidentsWithFilters({ assignmentGroup: "SRE^assigned_toISEMPTY" });
+    const url = new URL(fetchMock.mock.calls[0][0] as string);
+    expect(url.searchParams.get("sysparm_query")).toBe(
+      "assignment_group.name=SREassigned_toISEMPTY^ORDERBYDESCsys_updated_on"
+    );
+  });
+
   it("listIncidents onlyOpen excludes resolved/closed/canceled states", async () => {
     fetchMock.mockResolvedValue(okResponse([]));
     await new ServiceNowClient(cfg).listIncidents({ onlyOpen: true, assignmentGroup: "Platform SRE" });
