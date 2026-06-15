@@ -10,13 +10,17 @@ export class ReportService {
     private readonly serviceNow: ServiceNowClient
   ) {}
 
-  async generateDailyOpsReport(now: Date = new Date()): Promise<DailyOpsReport> {
+  async generateDailyOpsReport(
+    opts: { now?: Date; assignmentGroup?: string } = {}
+  ): Promise<DailyOpsReport> {
+    const now = opts.now ?? new Date();
+    const assignmentGroup = opts.assignmentGroup;
     const dayAgo = new Date(now.getTime() - 24 * HOUR_MS).toISOString();
     const [open, slaRisks, staleIncidents, recentChanges] = await Promise.all([
-      this.serviceNow.listIncidents({ onlyOpen: true }),
-      this.incidents.listSlaRisks({ onlyOpen: true }),
-      this.incidents.listStaleIncidents({ onlyOpen: true }),
-      this.serviceNow.listChangesWithFilters({ startedAfter: dayAgo, limit: 200 })
+      this.serviceNow.listIncidents({ onlyOpen: true, assignmentGroup }),
+      this.incidents.listSlaRisks({ onlyOpen: true, assignmentGroup }),
+      this.incidents.listStaleIncidents({ onlyOpen: true, assignmentGroup }),
+      this.serviceNow.listChangesWithFilters({ startedAfter: dayAgo, assignmentGroup, limit: 200 })
     ]);
 
     const openIncidentsByPriority: Record<string, number> = {};

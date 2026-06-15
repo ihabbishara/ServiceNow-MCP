@@ -40,7 +40,7 @@ describe("ReportService", () => {
       listStaleIncidents: vi.fn().mockResolvedValue([staleTicket])
     } as unknown as IncidentService;
 
-    const report = await new ReportService(incidents, sn).generateDailyOpsReport(now);
+    const report = await new ReportService(incidents, sn).generateDailyOpsReport({ now });
 
     expect(report.generatedForDate).toBe("2026-06-11");
     expect(report.openIncidentsByPriority).toEqual({ "1": 1, "2": 2 });
@@ -63,12 +63,28 @@ describe("ReportService", () => {
       listStaleIncidents: vi.fn().mockResolvedValue([])
     } as unknown as IncidentService;
 
-    const report = await new ReportService(incidents, sn).generateDailyOpsReport(now);
+    const report = await new ReportService(incidents, sn).generateDailyOpsReport({ now });
 
     expect(report.openIncidentsByPriority).toEqual({});
     expect(report.majorIncidents).toEqual([]);
     expect(report.upcomingChanges).toEqual([]); // change without plannedStartDate excluded via NaN guard
     expect(report.recommendedActions).toEqual([]);
     expect(report.executiveSummary).toContain("0 open incidents");
+  });
+
+  it("threads assignmentGroup into every underlying query", async () => {
+    const listIncidents = vi.fn().mockResolvedValue([]);
+    const listChangesWithFilters = vi.fn().mockResolvedValue([]);
+    const sn = { listIncidents, listChangesWithFilters } as unknown as ServiceNowClient;
+    const listSlaRisks = vi.fn().mockResolvedValue([]);
+    const listStaleIncidents = vi.fn().mockResolvedValue([]);
+    const incidents = { listSlaRisks, listStaleIncidents } as unknown as IncidentService;
+
+    await new ReportService(incidents, sn).generateDailyOpsReport({ now, assignmentGroup: "Platform SRE" });
+
+    expect(listIncidents).toHaveBeenCalledWith(expect.objectContaining({ assignmentGroup: "Platform SRE" }));
+    expect(listSlaRisks).toHaveBeenCalledWith(expect.objectContaining({ assignmentGroup: "Platform SRE" }));
+    expect(listStaleIncidents).toHaveBeenCalledWith(expect.objectContaining({ assignmentGroup: "Platform SRE" }));
+    expect(listChangesWithFilters).toHaveBeenCalledWith(expect.objectContaining({ assignmentGroup: "Platform SRE" }));
   });
 });

@@ -103,7 +103,21 @@ export const registerAnalysisTools = (server: McpServer, runtime: McpRuntime): v
     },
     async (args) => {
       try {
-        const report = await runtime.reportService.generateDailyOpsReport();
+        let now: Date | undefined;
+        if (args.date) {
+          const parsed = new Date(args.date);
+          if (Number.isNaN(parsed.getTime())) {
+            return {
+              content: [{ type: "text", text: `Invalid date: ${args.date}. Use ISO 8601, e.g. 2026-06-11.` }],
+              isError: true
+            };
+          }
+          now = parsed;
+        }
+        const report = await runtime.reportService.generateDailyOpsReport({
+          now,
+          assignmentGroup: args.assignment_group
+        });
 
         const result = {
           generatedAt: report.generatedAt,

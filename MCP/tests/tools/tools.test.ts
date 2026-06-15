@@ -93,3 +93,23 @@ describe("correlate_changes tool", () => {
     expect(fns.findRelatedChanges).toHaveBeenCalledWith("INC0001", undefined);
   });
 });
+
+describe("generate_ops_summary tool", () => {
+  it("passes parsed date and assignment_group to the report service", async () => {
+    const { runtime, fns } = makeRuntime();
+    const client = await connect(runtime);
+    await callJson(client, "generate_ops_summary", { date: "2026-06-11", assignment_group: "Platform SRE" });
+    const arg = (fns.generateDailyOpsReport as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(arg.assignmentGroup).toBe("Platform SRE");
+    expect(arg.now.toISOString().slice(0, 10)).toBe("2026-06-11");
+  });
+
+  it("rejects an unparseable date without calling the report service", async () => {
+    const { runtime, fns } = makeRuntime();
+    const client = await connect(runtime);
+    const { isError, text } = await callJson(client, "generate_ops_summary", { date: "not-a-date" });
+    expect(isError).toBe(true);
+    expect(text).toMatch(/Invalid date/);
+    expect(fns.generateDailyOpsReport).not.toHaveBeenCalled();
+  });
+});
