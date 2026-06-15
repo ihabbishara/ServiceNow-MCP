@@ -13,7 +13,6 @@ describe("loadConfig", () => {
     expect(cfg.serviceNow.enabled).toBe(true);
     expect(cfg.serviceNow.baseUrl).toBe("https://example.service-now.com");
     expect(cfg.azureDevOps.enabled).toBe(false);
-    expect(cfg.azureDevOps.disabledMode).toBe("noop");
     expect(cfg.features.createAdoBug).toBe(true);
     expect(cfg.thresholds.staleByPriorityMinutes).toEqual({ "1": 30, "2": 120, "3": 1440, "4": 4320 });
     expect(cfg.thresholds.relatedChangeWindow).toEqual({ beforeHours: 24, afterHours: 4 });

@@ -3,7 +3,6 @@ import { AzureDevOpsClient } from "../../src/clients/ado.js";
 
 const cfg = {
   enabled: true,
-  disabledMode: "noop" as const,
   orgUrl: "https://dev.azure.com/acme",
   project: "Platform",
   pat: "pat123",

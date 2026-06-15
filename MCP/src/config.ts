@@ -32,7 +32,6 @@ export interface ServiceNowConfig {
 
 export interface AdoConfig {
   enabled: boolean;
-  disabledMode: "noop"; // kept because tools/ado.ts checks it
   orgUrl?: string;
   project?: string;
   pat?: string;
@@ -70,7 +69,6 @@ export const loadConfig = (env: Record<string, string | undefined> = process.env
     },
     azureDevOps: {
       enabled: e.ADO_ENABLED,
-      disabledMode: "noop",
       orgUrl: e.ADO_ORG_URL?.replace(/\/+$/, ""),
       project: e.ADO_PROJECT,
       pat: e.ADO_PAT,

@@ -65,7 +65,7 @@ export const registerAdoTools = (server: McpServer, runtime: McpRuntime): void =
     async (args) => {
       try {
         // Check if ADO integration is enabled
-        if (!runtime.config.azureDevOps.enabled && runtime.config.azureDevOps.disabledMode === "noop") {
+        if (!runtime.config.azureDevOps.enabled) {
           return {
             content: [{ type: "text", text: "ADO integration is disabled. Enable it to create bugs." }],
             isError: true

@@ -22,7 +22,7 @@ const makeRuntime = (over: Record<string, unknown> = {}) => {
   };
   const runtime = {
     config: {
-      azureDevOps: { enabled: true, disabledMode: "noop" },
+      azureDevOps: { enabled: true },
       features: { createAdoBug: true },
       thresholds: { relatedChangeWindow: { beforeHours: 24, afterHours: 4 } }
     },
