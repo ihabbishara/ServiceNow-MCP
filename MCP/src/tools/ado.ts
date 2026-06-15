@@ -14,6 +14,13 @@ export const registerAdoTools = (server: McpServer, runtime: McpRuntime): void =
     },
     async (args) => {
       try {
+        if (!runtime.config.azureDevOps.enabled) {
+          return {
+            content: [{ type: "text", text: "Azure DevOps integration is disabled. Set ADO_ENABLED=true to search work items." }],
+            isError: true
+          };
+        }
+
         const workItems = await runtime.azureDevOpsClient.searchWorkItems({
           text: args.query_text,
           workItemType: args.work_item_type,

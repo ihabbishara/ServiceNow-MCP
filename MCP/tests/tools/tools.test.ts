@@ -94,6 +94,28 @@ describe("correlate_changes tool", () => {
   });
 });
 
+describe("search_work_items tool", () => {
+  it("returns an error (not empty results) when ADO is disabled", async () => {
+    const { runtime, fns } = makeRuntime();
+    (runtime.config.azureDevOps as { enabled: boolean }).enabled = false;
+    const client = await connect(runtime);
+    const { isError, text } = await callJson(client, "search_work_items", { query_text: "INC0001" });
+    expect(isError).toBe(true);
+    expect(text).toMatch(/disabled/i);
+    expect(fns.searchWorkItems).not.toHaveBeenCalled();
+  });
+
+  it("returns results when ADO is enabled", async () => {
+    const { runtime } = makeRuntime({
+      searchWorkItems: vi.fn().mockResolvedValue([{ id: 7, title: "t", state: "Active" }])
+    });
+    const client = await connect(runtime);
+    const { isError, text } = await callJson(client, "search_work_items", { query_text: "INC0001" });
+    expect(isError).toBe(false);
+    expect(JSON.parse(text).count).toBe(1);
+  });
+});
+
 describe("generate_ops_summary tool", () => {
   it("passes parsed date and assignment_group to the report service", async () => {
     const { runtime, fns } = makeRuntime();
