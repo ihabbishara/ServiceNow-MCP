@@ -104,6 +104,7 @@ export interface ChangeListFilters {
   assignmentGroup?: string;
   configurationItem?: string;
   startedAfter?: string; // ISO 8601
+  startedBefore?: string; // ISO 8601
   limit?: number;
 }
 
@@ -165,6 +166,7 @@ export class ServiceNowClient {
     if (f.assignmentGroup) parts.push(`assignment_group.name=${snSafe(f.assignmentGroup)}`);
     if (f.configurationItem) parts.push(`cmdb_ci.name=${snSafe(f.configurationItem)}`);
     if (f.startedAfter) parts.push(`start_date>=${toSnDateTime(f.startedAfter)}`);
+    if (f.startedBefore) parts.push(`start_date<=${toSnDateTime(f.startedBefore)}`);
     parts.push("ORDERBYDESCstart_date");
     const rows = await this.request("change_request", parts.join("^"), Math.min(f.limit ?? 50, 200), CHANGE_FIELDS);
     return rows.map(mapChange);

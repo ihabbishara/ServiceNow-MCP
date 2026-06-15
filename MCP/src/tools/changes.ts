@@ -23,20 +23,15 @@ export const registerChangeTools = (server: McpServer, runtime: McpRuntime): voi
           assignmentGroup: args.assignment_group,
           configurationItem: args.configuration_item,
           startedAfter: args.started_after,
+          startedBefore: args.started_before,
           limit: args.limit ?? 50
         });
 
-        // Client-side filter for risk if provided
+        // Risk is a display value not exposed to the encoded query, so filter it client-side.
+        // started_before is now applied server-side (above) so the row limit sees the filtered set.
         let filteredChanges = changes;
         if (args.risk) {
           filteredChanges = changes.filter((c) => c.risk?.toLowerCase() === args.risk?.toLowerCase());
-        }
-        if (args.started_before) {
-          const max = new Date(args.started_before).getTime();
-          filteredChanges = filteredChanges.filter((c) => {
-            const start = new Date(c.actualStartDate ?? c.plannedStartDate ?? 0).getTime();
-            return Number.isFinite(start) && start <= max;
-          });
         }
 
         const result = {

@@ -145,6 +145,16 @@ describe("ServiceNowClient", () => {
     expect(result[0].actualEndDate).toBeUndefined();
   });
 
+  it("pushes startedBefore into the encoded query as start_date<=", async () => {
+    fetchMock.mockResolvedValue(okResponse([]));
+    await new ServiceNowClient(cfg).listChangesWithFilters({
+      startedAfter: "2026-06-09T00:00:00Z",
+      startedBefore: "2026-06-10T00:00:00Z"
+    });
+    const url = new URL(fetchMock.mock.calls[0][0] as string);
+    expect(url.searchParams.get("sysparm_query")).toContain("start_date<=2026-06-10 00:00:00");
+  });
+
   it("throws with status and body snippet on non-2xx", async () => {
     fetchMock.mockResolvedValue({
       ok: false, status: 401, json: async () => ({}), text: async () => "User Not Authenticated"

@@ -1,0 +1,64 @@
+import { describe, it, expect, vi } from "vitest";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+import { registerChangeTools } from "../../src/tools/changes.js";
+import { registerAdoTools } from "../../src/tools/ado.js";
+import { registerAnalysisTools } from "../../src/tools/analysis.js";
+import { McpRuntime } from "../../src/runtime.js";
+
+// Builds a runtime whose methods are vi mocks; pass overrides to shape responses.
+const makeRuntime = (over: Record<string, unknown> = {}) => {
+  const fns = {
+    listChangesWithFilters: vi.fn().mockResolvedValue([]),
+    findRelatedChanges: vi.fn().mockResolvedValue([]),
+    searchWorkItems: vi.fn().mockResolvedValue([]),
+    generateDailyOpsReport: vi.fn().mockResolvedValue({
+      generatedAt: "2026-06-11T12:00:00Z", generatedForDate: "2026-06-11", executiveSummary: "x",
+      openIncidentsByPriority: {}, slaRisks: [], staleIncidents: [], majorIncidents: [],
+      failedOrHighRiskChanges: [], upcomingChanges: [], recommendedActions: []
+    }),
+    ...over
+  };
+  const runtime = {
+    config: { azureDevOps: { enabled: true, disabledMode: "noop" }, features: { createAdoBug: true } },
+    serviceNowClient: { listChangesWithFilters: fns.listChangesWithFilters },
+    azureDevOpsClient: { searchWorkItems: fns.searchWorkItems },
+    incidentService: { findRelatedChanges: fns.findRelatedChanges },
+    reportService: { generateDailyOpsReport: fns.generateDailyOpsReport }
+  } as unknown as McpRuntime;
+  return { runtime, fns };
+};
+
+const connect = async (runtime: McpRuntime) => {
+  const server = new McpServer({ name: "test", version: "0.0.0" });
+  registerChangeTools(server, runtime);
+  registerAdoTools(server, runtime);
+  registerAnalysisTools(server, runtime);
+  const [ct, st] = InMemoryTransport.createLinkedPair();
+  const client = new Client({ name: "c", version: "0.0.0" });
+  await Promise.all([server.connect(st), client.connect(ct)]);
+  return client;
+};
+
+const callJson = async (client: Client, name: string, args: Record<string, unknown>) => {
+  const res = (await client.callTool({ name, arguments: args })) as {
+    isError?: boolean;
+    content: Array<{ type: string; text: string }>;
+  };
+  return { isError: res.isError ?? false, text: res.content[0].text };
+};
+
+describe("search_changes tool", () => {
+  it("pushes started_before to the server and does not drop no-start changes client-side", async () => {
+    const noStart = { number: "CHG-NOSTART", state: "New", shortDescription: "t", risk: "Low" };
+    const { runtime, fns } = makeRuntime({ listChangesWithFilters: vi.fn().mockResolvedValue([noStart]) });
+    const client = await connect(runtime);
+    const { text } = await callJson(client, "search_changes", { started_before: "2026-06-10T00:00:00Z" });
+    expect(fns.listChangesWithFilters).toHaveBeenCalledWith(
+      expect.objectContaining({ startedBefore: "2026-06-10T00:00:00Z" })
+    );
+    // No client-side date filter remains, so whatever the server returned is reported verbatim.
+    expect(JSON.parse(text).count).toBe(1);
+  });
+});
