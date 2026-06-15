@@ -13,14 +13,16 @@ const formatIncidentAsMarkdown = (incident: Incident): string => {
     .filter(Boolean)
     .join("\n");
 
+  // ServiceNow returns the journal (work_notes/comments) as a single concatenated
+  // history blob, not discrete entries — render as a block rather than a numbered list.
   const workNotes =
     incident.workNotes && incident.workNotes.length > 0
-      ? incident.workNotes.map((note, i) => `${i + 1}. ${note}`).join("\n")
+      ? incident.workNotes.join("\n\n")
       : "_No work notes available_";
 
   const comments =
     incident.comments && incident.comments.length > 0
-      ? incident.comments.map((c, i) => `${i + 1}. ${c}`).join("\n")
+      ? incident.comments.join("\n\n")
       : "_No comments available_";
 
   return `# Incident ${incident.number}
