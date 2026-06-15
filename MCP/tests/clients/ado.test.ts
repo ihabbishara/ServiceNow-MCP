@@ -110,6 +110,18 @@ describe("AzureDevOpsClient", () => {
     expect(created).toEqual({ id: 99, title: "[INC0001] DB down" });
   });
 
+  it("maps a 1-4 priority to Microsoft.VSTS.Common.Priority and omits out-of-range", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ id: 1, fields: { "System.Title": "t" } }));
+    await new AzureDevOpsClient(cfg).createBug({ title: "t", description: "d", priority: "1", incidentNumber: "INC1" });
+    let ops = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
+    expect(ops).toContainEqual({ op: "add", path: "/fields/Microsoft.VSTS.Common.Priority", value: 1 });
+
+    fetchMock.mockResolvedValueOnce(jsonResponse({ id: 2, fields: { "System.Title": "t" } }));
+    await new AzureDevOpsClient(cfg).createBug({ title: "t", description: "d", priority: "9", incidentNumber: "INC2" });
+    ops = JSON.parse((fetchMock.mock.calls[1][1] as RequestInit).body as string);
+    expect(ops.some((o: { path: string }) => o.path === "/fields/Microsoft.VSTS.Common.Priority")).toBe(false);
+  });
+
   it("createBug throws when integration is disabled", async () => {
     await expect(
       new AzureDevOpsClient({ ...cfg, enabled: false }).createBug({ title: "t", description: "d", incidentNumber: "INC1" })

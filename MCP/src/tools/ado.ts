@@ -109,6 +109,7 @@ export const registerAdoTools = (server: McpServer, runtime: McpRuntime): void =
           iterationPath: args.iteration_path ?? runtime.config.azureDevOps.defaultIterationPath,
           tags,
           assignedTeam: runtime.config.azureDevOps.defaultAssignedTeam,
+          priority: summary.incident.priority,
           incidentNumber: args.incident_number
         });
 

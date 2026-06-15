@@ -36,6 +36,7 @@ export interface CreateBugPayload {
   iterationPath?: string;
   tags?: string[];
   assignedTeam?: string;
+  priority?: string; // ServiceNow priority "1".."4"; mapped to Microsoft.VSTS.Common.Priority when in range
   incidentNumber: string; // included in the title by the caller; not written as a separate ADO field
 }
 
@@ -98,7 +99,7 @@ export class AzureDevOpsClient {
     if (!this.cfg.enabled) throw new Error("ADO integration is disabled");
     this.assertConfigured();
 
-    const ops: Array<{ op: "add"; path: string; value: string }> = [
+    const ops: Array<{ op: "add"; path: string; value: string | number }> = [
       { op: "add", path: "/fields/System.Title", value: p.title },
       { op: "add", path: "/fields/Microsoft.VSTS.TCM.ReproSteps", value: p.description.replace(/\n/g, "<br>") }
     ];
@@ -107,6 +108,11 @@ export class AzureDevOpsClient {
     if (areaPath) ops.push({ op: "add", path: "/fields/System.AreaPath", value: areaPath });
     if (iterationPath) ops.push({ op: "add", path: "/fields/System.IterationPath", value: iterationPath });
     if (p.tags?.length) ops.push({ op: "add", path: "/fields/System.Tags", value: p.tags.join("; ") });
+    // ServiceNow priority "1".."4" maps directly to ADO's 1 (highest) .. 4 (lowest).
+    const priority = p.priority ? Number(p.priority) : NaN;
+    if (Number.isInteger(priority) && priority >= 1 && priority <= 4) {
+      ops.push({ op: "add", path: "/fields/Microsoft.VSTS.Common.Priority", value: priority });
+    }
 
     const created = await this.requestJson<{ id: number; fields: { "System.Title": string } }>(
       this.apiUrl("wit/workitems/$Bug?api-version=7.1"),
