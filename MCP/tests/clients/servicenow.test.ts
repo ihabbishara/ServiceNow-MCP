@@ -145,6 +145,20 @@ describe("ServiceNowClient", () => {
     expect(result[0].actualEndDate).toBeUndefined();
   });
 
+  it("strips ^ from change stateNot to prevent query injection", async () => {
+    fetchMock.mockResolvedValue(okResponse([]));
+    await new ServiceNowClient(cfg).listChangesWithFilters({ stateNot: "3^assigned_toISEMPTY" });
+    const url = new URL(fetchMock.mock.calls[0][0] as string);
+    expect(url.searchParams.get("sysparm_query")).toContain("state!=3assigned_toISEMPTY^ORDERBYDESCstart_date");
+  });
+
+  it("strips ^ from incident stateNot (unmapped value) to prevent query injection", async () => {
+    fetchMock.mockResolvedValue(okResponse([]));
+    await new ServiceNowClient(cfg).listIncidentsWithFilters({ stateNot: "9^priority=1" });
+    const url = new URL(fetchMock.mock.calls[0][0] as string);
+    expect(url.searchParams.get("sysparm_query")).toContain("state!=9priority=1^");
+  });
+
   it("pushes startedBefore into the encoded query as start_date<=", async () => {
     fetchMock.mockResolvedValue(okResponse([]));
     await new ServiceNowClient(cfg).listChangesWithFilters({

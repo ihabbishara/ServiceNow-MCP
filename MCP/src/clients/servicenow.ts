@@ -135,7 +135,7 @@ export class ServiceNowClient {
 
   async listIncidentsWithFilters(f: IncidentListFilters): Promise<Incident[]> {
     const parts: string[] = [];
-    if (f.stateNot) parts.push(`state!=${stateCode(f.stateNot)}`);
+    if (f.stateNot) parts.push(`state!=${snSafe(stateCode(f.stateNot))}`);
     if (f.priority) parts.push(`priority=${f.priority}`);
     if (f.assignmentGroup) parts.push(`assignment_group.name=${snSafe(f.assignmentGroup)}`);
     if (f.assignedTo === "") parts.push("assigned_toISEMPTY");
@@ -162,7 +162,7 @@ export class ServiceNowClient {
 
   async listChangesWithFilters(f: ChangeListFilters): Promise<ChangeRecord[]> {
     const parts: string[] = [];
-    if (f.stateNot) parts.push(`state!=${f.stateNot}`);
+    if (f.stateNot) parts.push(`state!=${snSafe(f.stateNot)}`);
     if (f.assignmentGroup) parts.push(`assignment_group.name=${snSafe(f.assignmentGroup)}`);
     if (f.configurationItem) parts.push(`cmdb_ci.name=${snSafe(f.configurationItem)}`);
     if (f.startedAfter) parts.push(`start_date>=${toSnDateTime(f.startedAfter)}`);

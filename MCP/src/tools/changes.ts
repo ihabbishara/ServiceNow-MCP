@@ -8,7 +8,7 @@ export const registerChangeTools = (server: McpServer, runtime: McpRuntime): voi
     "search_changes",
     "Search ServiceNow change records with filters",
     {
-      state_not: z.string().optional().describe("Exclude changes with this state"),
+      state_not: z.string().optional().describe("Exclude changes with this state. Numeric change_request state code (e.g. '3'=Implement, '4'=Review), not a state name"),
       assignment_group: z.string().optional().describe("Filter by assignment group"),
       configuration_item: z.string().optional().describe("Filter by configuration item"),
       started_after: z.string().optional().describe("Changes started after this date (ISO 8601)"),
