@@ -101,6 +101,14 @@ export const registerDashboardResources = (server: McpServer, runtime: McpRuntim
         byPriority[p].push(t);
       }
 
+      // Reflect the configured thresholds (STALE_P*_MIN), not hardcoded defaults.
+      const thresholds = runtime.config.thresholds.staleByPriorityMinutes;
+      const fmtThreshold = (m: number): string => {
+        if (m % 1440 === 0) return `${m / 1440}d`;
+        if (m % 60 === 0) return `${m / 60}h`;
+        return `${m}m`;
+      };
+
       let markdown = `# Stale Tickets Dashboard
 
 **Generated:** ${new Date().toISOString()}
@@ -110,10 +118,10 @@ export const registerDashboardResources = (server: McpServer, runtime: McpRuntim
 
 | Priority | Count | Threshold |
 |----------|-------|-----------|
-| P1 | ${(byPriority["1"] || []).length} | 30 min |
-| P2 | ${(byPriority["2"] || []).length} | 2 hours |
-| P3 | ${(byPriority["3"] || []).length} | 24 hours |
-| P4 | ${(byPriority["4"] || []).length} | 72 hours |
+| P1 | ${(byPriority["1"] || []).length} | ${fmtThreshold(thresholds["1"])} |
+| P2 | ${(byPriority["2"] || []).length} | ${fmtThreshold(thresholds["2"])} |
+| P3 | ${(byPriority["3"] || []).length} | ${fmtThreshold(thresholds["3"])} |
+| P4 | ${(byPriority["4"] || []).length} | ${fmtThreshold(thresholds["4"])} |
 
 `;
 
