@@ -27,7 +27,9 @@ const makeRuntime = () => {
     incidentService: {
       listSlaRisks: vi.fn().mockResolvedValue([]),
       listStaleIncidents: vi.fn().mockResolvedValue([])
-    }
+    },
+    slaRiskService: { assess: vi.fn().mockReturnValue([]) },
+    staleTicketService: { findStale: vi.fn().mockReturnValue([]) }
   } as unknown as McpRuntime;
   return { runtime, listIncidents };
 };
@@ -72,8 +74,9 @@ describe("MCP resource surface", () => {
     expect(res.contents[0].text).toContain("Change CHG0005432");
   });
 
-  it("passes the decoded team name (with spaces) to the query", async () => {
+  it("passes the decoded team name (with spaces) to the query and fetches incidents once", async () => {
     const res = await client.readResource({ uri: "team://Platform%20SRE/incidents" });
+    expect(listIncidents).toHaveBeenCalledTimes(1);
     expect(listIncidents).toHaveBeenCalledWith(expect.objectContaining({ assignmentGroup: "Platform SRE" }));
     expect(res.contents[0].text).toContain("Platform SRE Team");
   });

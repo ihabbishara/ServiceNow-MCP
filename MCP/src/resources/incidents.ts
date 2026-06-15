@@ -91,20 +91,14 @@ export const registerTeamResources = (server: McpServer, runtime: McpRuntime): v
     safeResource(async (uri, variables) => {
       const teamName = decodeURIComponent(String(variables.name));
 
+      // Fetch the team's open incidents once, then run the pure assessors over that
+      // same list — listSlaRisks/listStaleIncidents would each re-fetch the incidents.
       const incidents = await runtime.serviceNowClient.listIncidents({
         onlyOpen: true,
         assignmentGroup: teamName
       });
-
-      const slaRisks = await runtime.incidentService.listSlaRisks({
-        onlyOpen: true,
-        assignmentGroup: teamName
-      });
-
-      const staleTickets = await runtime.incidentService.listStaleIncidents({
-        onlyOpen: true,
-        assignmentGroup: teamName
-      });
+      const slaRisks = runtime.slaRiskService.assess(incidents);
+      const staleTickets = runtime.staleTicketService.findStale(incidents);
 
       // Group by priority
       const byPriority: Record<string, Incident[]> = {};
