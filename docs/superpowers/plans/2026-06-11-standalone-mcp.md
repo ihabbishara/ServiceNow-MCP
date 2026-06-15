@@ -8,7 +8,7 @@
 
 **Tech Stack:** TypeScript 5 (ESM, NodeNext), zod, native `fetch` (Node 18+), vitest, `@modelcontextprotocol/sdk`.
 
-**Working directory for all commands:** `/Users/ihabbishara/projects/ServiceNowMCP/MCP`
+**Working directory for all commands:** `/path/to/ServiceNow-MCP/MCP`
 
 **Conventions:** Tests live in `MCP/tests/`, outside `tsconfig.json`'s `include: ["src/**/*"]`, so `tsc` never compiles them; vitest transpiles on the fly. All source imports use `.js` extensions (NodeNext ESM requirement). Commit after every task from the repo root.
 
@@ -127,7 +127,7 @@ Field provenance (do not rename): `Incident` fields match `tools/incidents.ts` a
 - [ ] **Step 2: Commit**
 
 ```bash
-cd /Users/ihabbishara/projects/ServiceNowMCP
+cd /path/to/ServiceNow-MCP
 git add MCP/src/types.ts
 git commit -m "feat: add standalone domain types for MCP server"
 ```
@@ -305,7 +305,7 @@ Expected: PASS (6 tests)
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/ihabbishara/projects/ServiceNowMCP
+cd /path/to/ServiceNow-MCP
 git add MCP/src/config.ts MCP/tests/config.test.ts
 git commit -m "feat: add zod-validated env config loader"
 ```
@@ -663,7 +663,7 @@ Expected: PASS (7 tests)
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/ihabbishara/projects/ServiceNowMCP
+cd /path/to/ServiceNow-MCP
 git add MCP/src/clients/servicenow.ts MCP/tests/clients/servicenow.test.ts
 git commit -m "feat: add ServiceNow Table API client with basic auth"
 ```
@@ -944,7 +944,7 @@ Expected: PASS (7 tests)
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/ihabbishara/projects/ServiceNowMCP
+cd /path/to/ServiceNow-MCP
 git add MCP/src/clients/ado.ts MCP/tests/clients/ado.test.ts
 git commit -m "feat: add Azure DevOps client (WIQL search, bug creation)"
 ```
@@ -1073,7 +1073,7 @@ Expected: PASS (4 tests)
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/ihabbishara/projects/ServiceNowMCP
+cd /path/to/ServiceNow-MCP
 git add MCP/src/services/slaRisk.ts MCP/tests/services/slaRisk.test.ts
 git commit -m "feat: add SLA risk assessment service"
 ```
@@ -1178,7 +1178,7 @@ Expected: PASS (4 tests)
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/ihabbishara/projects/ServiceNowMCP
+cd /path/to/ServiceNow-MCP
 git add MCP/src/services/staleTickets.ts MCP/tests/services/staleTickets.test.ts
 git commit -m "feat: add stale ticket detection service"
 ```
@@ -1330,7 +1330,7 @@ Expected: PASS (5 tests)
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/ihabbishara/projects/ServiceNowMCP
+cd /path/to/ServiceNow-MCP
 git add MCP/src/services/correlation.ts MCP/tests/services/correlation.test.ts
 git commit -m "feat: add change correlation scoring service"
 ```
@@ -1527,7 +1527,7 @@ Expected: PASS (5 tests)
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/ihabbishara/projects/ServiceNowMCP
+cd /path/to/ServiceNow-MCP
 git add MCP/src/services/incidents.ts MCP/tests/services/incidents.test.ts
 git commit -m "feat: add incident service facade"
 ```
@@ -1680,7 +1680,7 @@ Expected: PASS (1 test)
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/ihabbishara/projects/ServiceNowMCP
+cd /path/to/ServiceNow-MCP
 git add MCP/src/services/report.ts MCP/tests/services/report.test.ts
 git commit -m "feat: add daily ops report service"
 ```
@@ -1796,7 +1796,7 @@ Expected: `[sre-ops-mcp] Server started` and `ServiceNow: enabled` on stderr (se
 - [ ] **Step 6: Commit**
 
 ```bash
-cd /Users/ihabbishara/projects/ServiceNowMCP
+cd /path/to/ServiceNow-MCP
 git add MCP/src/runtime.ts MCP/src/resources/incidents.ts MCP/src/resources/changes.ts
 git commit -m "feat: rewire runtime to standalone service layer"
 ```
@@ -1843,7 +1843,7 @@ All configuration is via environment variables (set them in the `env` block of y
 - [ ] **Step 2: Final verification**
 
 ```bash
-cd /Users/ihabbishara/projects/ServiceNowMCP/MCP
+cd /path/to/ServiceNow-MCP/MCP
 npm run build && npm test
 ```
 Expected: build exit 0, all 39 tests pass.
@@ -1856,7 +1856,7 @@ Expected: `CLEAN`
 - [ ] **Step 3: Commit**
 
 ```bash
-cd /Users/ihabbishara/projects/ServiceNowMCP
+cd /path/to/ServiceNow-MCP
 git add MCP/README.md
 git commit -m "docs: update README for standalone configuration"
 ```

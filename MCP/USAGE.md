@@ -121,7 +121,7 @@ The server runs as a subprocess. Point your client's MCP config at the built `di
   "mcpServers": {
     "sre-ops": {
       "command": "node",
-      "args": ["/Users/ihabbishara/projects/ServiceNowMCP/MCP/dist/index.js"],
+      "args": ["/path/to/ServiceNow-MCP/MCP/dist/index.js"],
       "env": {
         "SERVICENOW_BASE_URL": "https://yourcompany.service-now.com",
         "SERVICENOW_USERNAME": "svc.user",
