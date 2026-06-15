@@ -3,8 +3,7 @@ import { Incident, SlaRiskItem, SlaRiskLevel } from "../types.js";
 const ACTIONS: Record<SlaRiskLevel, string> = {
   Critical: "Escalate immediately — SLA breach imminent or already breached",
   High: "Prioritize now and post an update on the ticket",
-  Medium: "Review today and confirm the owner is actively working it",
-  Low: "Monitor"
+  Medium: "Review today and confirm the owner is actively working it"
 };
 
 export class SlaRiskService {

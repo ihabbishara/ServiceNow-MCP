@@ -52,7 +52,7 @@ export interface RelatedChange {
   confidenceScore: number; // 0..1
 }
 
-export type SlaRiskLevel = "Critical" | "High" | "Medium" | "Low";
+export type SlaRiskLevel = "Critical" | "High" | "Medium";
 
 export interface SlaRiskItem {
   incidentNumber: string;

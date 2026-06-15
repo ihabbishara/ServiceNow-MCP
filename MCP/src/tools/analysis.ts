@@ -23,7 +23,7 @@ export const registerAnalysisTools = (server: McpServer, runtime: McpRuntime): v
         // Filter by risk level if specified
         let filteredRisks = risks;
         if (args.risk_level) {
-          const riskOrder = { Critical: 0, High: 1, Medium: 2, Low: 3 };
+          const riskOrder = { Critical: 0, High: 1, Medium: 2 };
           const minLevel = riskOrder[args.risk_level];
           filteredRisks = risks.filter((r) => riskOrder[r.riskLevel] <= minLevel);
         }
