@@ -21,7 +21,11 @@ const makeRuntime = (over: Record<string, unknown> = {}) => {
     ...over
   };
   const runtime = {
-    config: { azureDevOps: { enabled: true, disabledMode: "noop" }, features: { createAdoBug: true } },
+    config: {
+      azureDevOps: { enabled: true, disabledMode: "noop" },
+      features: { createAdoBug: true },
+      thresholds: { relatedChangeWindow: { beforeHours: 24, afterHours: 4 } }
+    },
     serviceNowClient: { listChangesWithFilters: fns.listChangesWithFilters },
     azureDevOpsClient: { searchWorkItems: fns.searchWorkItems },
     incidentService: { findRelatedChanges: fns.findRelatedChanges },
@@ -60,5 +64,32 @@ describe("search_changes tool", () => {
     );
     // No client-side date filter remains, so whatever the server returned is reported verbatim.
     expect(JSON.parse(text).count).toBe(1);
+  });
+});
+
+describe("correlate_changes tool", () => {
+  it("passes a caller-supplied window through to findRelatedChanges", async () => {
+    const { runtime, fns } = makeRuntime();
+    const client = await connect(runtime);
+    await callJson(client, "correlate_changes", {
+      incident_number: "INC0001",
+      window_hours_before: 12,
+      window_hours_after: 1
+    });
+    expect(fns.findRelatedChanges).toHaveBeenCalledWith("INC0001", { beforeHours: 12, afterHours: 1 });
+  });
+
+  it("fills the unspecified bound from config defaults", async () => {
+    const { runtime, fns } = makeRuntime();
+    const client = await connect(runtime);
+    await callJson(client, "correlate_changes", { incident_number: "INC0001", window_hours_before: 6 });
+    expect(fns.findRelatedChanges).toHaveBeenCalledWith("INC0001", { beforeHours: 6, afterHours: 4 });
+  });
+
+  it("passes undefined window when no override is given", async () => {
+    const { runtime, fns } = makeRuntime();
+    const client = await connect(runtime);
+    await callJson(client, "correlate_changes", { incident_number: "INC0001" });
+    expect(fns.findRelatedChanges).toHaveBeenCalledWith("INC0001", undefined);
   });
 });

@@ -101,8 +101,17 @@ export const registerChangeTools = (server: McpServer, runtime: McpRuntime): voi
     },
     async (args) => {
       try {
-        // Use custom window if provided, otherwise use defaults from config
-        const relatedChanges = await runtime.incidentService.findRelatedChanges(args.incident_number);
+        // Build a per-call window only if the caller overrode either bound; otherwise
+        // pass undefined so the service uses the configured CORRELATION_HOURS_* defaults.
+        const defaults = runtime.config.thresholds.relatedChangeWindow;
+        const window =
+          args.window_hours_before !== undefined || args.window_hours_after !== undefined
+            ? {
+                beforeHours: args.window_hours_before ?? defaults.beforeHours,
+                afterHours: args.window_hours_after ?? defaults.afterHours
+              }
+            : undefined;
+        const relatedChanges = await runtime.incidentService.findRelatedChanges(args.incident_number, window);
 
         const result = {
           incidentNumber: args.incident_number,

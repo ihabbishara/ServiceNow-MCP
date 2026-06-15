@@ -9,11 +9,15 @@ const sameValue = (a?: string, b?: string): boolean =>
 export class ChangeCorrelationService {
   constructor(private readonly window: { beforeHours: number; afterHours: number }) {}
 
-  correlate(incident: Incident, changes: ChangeRecord[]): RelatedChange[] {
+  correlate(
+    incident: Incident,
+    changes: ChangeRecord[],
+    window: { beforeHours: number; afterHours: number } = this.window
+  ): RelatedChange[] {
     const openedMs = Date.parse(incident.openedAt);
     if (!Number.isFinite(openedMs)) return [];
-    const windowStart = openedMs - this.window.beforeHours * HOUR_MS;
-    const windowEnd = openedMs + this.window.afterHours * HOUR_MS;
+    const windowStart = openedMs - window.beforeHours * HOUR_MS;
+    const windowEnd = openedMs + window.afterHours * HOUR_MS;
 
     const related: RelatedChange[] = [];
     for (const change of changes) {

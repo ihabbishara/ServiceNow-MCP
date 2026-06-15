@@ -42,10 +42,13 @@ export class IncidentService {
     return { incident, relatedChanges, relatedWorkItems };
   }
 
-  async findRelatedChanges(number: string): Promise<RelatedChange[]> {
+  async findRelatedChanges(
+    number: string,
+    window?: { beforeHours: number; afterHours: number }
+  ): Promise<RelatedChange[]> {
     const incident = await this.serviceNow.getIncidentByNumber(number);
     if (!incident) throw new Error(`Incident ${number} not found`);
-    return this.correlateFor(incident);
+    return this.correlateFor(incident, window);
   }
 
   async listSlaRisks(filters: IncidentQueryFilters): Promise<SlaRiskItem[]> {
@@ -56,12 +59,15 @@ export class IncidentService {
     return this.staleTickets.findStale(await this.fetchIncidents(filters));
   }
 
-  private async correlateFor(incident: Incident): Promise<RelatedChange[]> {
+  private async correlateFor(
+    incident: Incident,
+    window: { beforeHours: number; afterHours: number } = this.window
+  ): Promise<RelatedChange[]> {
     const openedMs = Date.parse(incident.openedAt);
     if (!Number.isFinite(openedMs)) return []; // blank/invalid openedAt → no change correlation, don't crash
-    const startedAfter = new Date(openedMs - this.window.beforeHours * HOUR_MS).toISOString();
+    const startedAfter = new Date(openedMs - window.beforeHours * HOUR_MS).toISOString();
     const changes = await this.serviceNow.listChangesWithFilters({ startedAfter, limit: 200 });
-    return this.correlation.correlate(incident, changes);
+    return this.correlation.correlate(incident, changes, window);
   }
 
   private async fetchIncidents(filters: IncidentQueryFilters): Promise<Incident[]> {

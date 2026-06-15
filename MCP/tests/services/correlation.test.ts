@@ -27,6 +27,13 @@ const change = (overrides: Partial<ChangeRecord>): ChangeRecord => ({
 });
 
 describe("ChangeCorrelationService", () => {
+  it("honors a per-call window override", () => {
+    // change 3h after open: inside the default 4h after-window, outside a 1h override
+    const c = change({ cmdbCi: "db-prod-01", actualStartDate: "2026-06-11T13:00:00Z" });
+    expect(svc.correlate(incident, [c])).toHaveLength(1);
+    expect(svc.correlate(incident, [c], { beforeHours: 24, afterHours: 1 })).toHaveLength(0);
+  });
+
   it("scores CI + service + group + time proximity matches", () => {
     const result = svc.correlate(incident, [
       change({
