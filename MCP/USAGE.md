@@ -174,9 +174,8 @@ You normally invoke these by asking the assistant in natural language; it picks 
 
 **`get_change`** — full detail of one change. `number` (e.g. `CHG0005432`).
 
-**`correlate_changes`** — find changes that may have caused an incident (matches CI, business service, assignment group, time window; scored). `incident_number`.
+**`correlate_changes`** — find changes that may have caused an incident (matches CI, business service, assignment group, time window; scored). `incident_number`, `window_hours_before`, `window_hours_after` (override the configured `CORRELATION_HOURS_*` window; either bound may be omitted).
 > "What changes might have caused INC0012345?"
-> ⚠️ `window_hours_before` / `window_hours_after` are accepted but currently ignored — the configured `CORRELATION_HOURS_*` window is always used. See Known Limitations.
 
 ### Analysis
 
@@ -186,9 +185,8 @@ You normally invoke these by asking the assistant in natural language; it picks 
 **`find_stale_tickets`** — open incidents not updated within the priority threshold (defaults P1 30m / P2 2h / P3 24h / P4 72h). `assignment_group`, `priorities`.
 > "Which P1/P2 tickets are going stale?"
 
-**`generate_ops_summary`** — daily operations report (open counts by priority, SLA risks, stale tickets, major incidents, failed/high-risk changes, upcoming changes, recommended actions). `date`, `assignment_group`.
-> "Give me today's ops summary."
-> ⚠️ `date` / `assignment_group` are accepted but currently ignored — the report always covers today, org-wide. See Known Limitations.
+**`generate_ops_summary`** — daily operations report (open counts by priority, SLA risks, stale tickets, major incidents, failed/high-risk changes, upcoming changes, recommended actions). `date` (ISO 8601 reference day, default today), `assignment_group` (scope to one team).
+> "Give me today's ops summary for the Platform SRE team."
 
 ### Azure DevOps *(only when `ADO_ENABLED=true`)*
 
@@ -203,17 +201,15 @@ You normally invoke these by asking the assistant in natural language; it picks 
 
 ## 8. Resources
 
-Resources are read-only context a user attaches in the client UI. Two work today; three are pending a fix.
+Resources are read-only context a user attaches in the client UI. The parameterized URIs are registered as MCP resource templates; substitute a real number/name (URL-encode names with spaces, e.g. `team://Platform%20SRE/incidents`).
 
-| URI | Renders | Status |
-|---|---|---|
-| `sla-dashboard://current` | SLA risk dashboard (markdown) | ✅ works |
-| `stale-dashboard://current` | Stale-ticket dashboard (markdown) | ✅ works |
-| `incident://{number}` | One incident as markdown | ⚠️ **non-functional** — see Known Limitations |
-| `change://{number}` | One change as markdown | ⚠️ **non-functional** |
-| `team://{name}/incidents` | A team's open incidents + SLA/stale rollup | ⚠️ **non-functional** |
-
-Until the parameterized resources are fixed, use the equivalent **tools** (`get_incident`, `get_change`, `search_incidents` + `find_sla_risks`/`find_stale_tickets`) which return the same data.
+| URI | Renders |
+|---|---|
+| `sla-dashboard://current` | SLA risk dashboard (markdown) |
+| `stale-dashboard://current` | Stale-ticket dashboard (markdown) |
+| `incident://{number}` | One incident as markdown (e.g. `incident://INC0012345`) |
+| `change://{number}` | One change as markdown (e.g. `change://CHG0005432`) |
+| `team://{name}/incidents` | A team's open incidents + SLA/stale rollup |
 
 ---
 
@@ -276,20 +272,17 @@ tests/                                 vitest (mirrors src/)
 | Tools don't appear in the client | Config path wrong, or `args` path to `dist/index.js` not absolute; rebuild (`npm run build`) and restart the client. |
 | ServiceNow calls fail with 401 | Bad credentials or user lacks table read. Verify: `curl -u user:pass "$SERVICENOW_BASE_URL/api/now/table/incident?sysparm_limit=1"`. |
 | ADO tools say "disabled" | `ADO_ENABLED` not `true`, or the ADO vars are missing (the server fails fast on that). |
-| `search_changes` returns nothing for a state name | `state_not` needs a numeric change state code here (see Known Limitations). |
-| Empty `search_work_items` result | Could be "no matches" **or** ADO disabled — check `ADO_ENABLED`. |
+| `search_changes` returns nothing for a state name | `state_not` needs a numeric change state code here (unlike `search_incidents`). |
+| `search_work_items` says ADO is disabled | Set `ADO_ENABLED=true` and the ADO connection vars. |
 
 ---
 
 ## 13. Known limitations
 
-Tracked issues a developer should know before relying on a feature. (A full code review with file:line references accompanies this document.)
+Remaining behaviors a developer should know:
 
-- **Parameterized resources are non-functional.** `incident://`, `change://`, `team://{name}/incidents` are registered as fixed URI strings instead of MCP `ResourceTemplate`s, so the client cannot resolve a concrete URI to them, and the URI parsing reads the wrong segment. Use the equivalent tools meanwhile. **Fix is small and known.**
-- **`correlate_changes` ignores its `window_hours_*` arguments** — always uses the configured `CORRELATION_HOURS_*`.
-- **`generate_ops_summary` ignores `date` and `assignment_group`** — always today, org-wide.
-- **`search_changes` `state_not` takes a numeric code**, not a state name (asymmetric with `search_incidents`), and `state_not` is not run through `snSafe`.
-- **`search_changes` `started_before`** is filtered client-side after the row limit, so its count can under-report; changes with no start date are also not excluded.
-- **`listIncidents` caps at 200 rows** — teams/dashboards with >200 open incidents are silently truncated.
-- **Work notes/comments** are a single concatenated journal blob, not per-entry history.
-- **`search_work_items` returns empty (not an error) when ADO is disabled.**
+- **Incident queries cap at 200 rows.** `find_sla_risks`, `find_stale_tickets`, the dashboards, and the ops report fetch at most 200 open incidents per assignment group; teams with more are silently truncated. Pagination is not yet implemented.
+- **`search_changes` `state_not` takes a numeric change state code**, not a state name (ServiceNow change states are instance-specific; `search_incidents` maps common state names but changes do not).
+- **Work notes / comments** are returned by ServiceNow as a single concatenated history blob, not discrete timestamped entries (true per-entry history would require querying `sys_journal_field`).
+
+A full code review with `file:line` references accompanies this document; the issues it raised have been fixed except the items above.
