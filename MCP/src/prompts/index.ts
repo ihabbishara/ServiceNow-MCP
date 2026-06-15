@@ -11,7 +11,7 @@ export const registerPrompts = (server: McpServer, _runtime: McpRuntime): void =
       incident_number: z.string().describe("Incident to triage (e.g., INC0012345)")
     },
     async (args) => {
-      const incidentNumber = args.incident_number ?? "INC0000000";
+      const incidentNumber = args.incident_number;
 
       return {
         messages: [
@@ -59,11 +59,11 @@ Be concise and actionable. Focus on what to do now.`
     "Generate comprehensive shift handover summary",
     {
       team_name: z.string().describe("Team to generate handover for"),
-      hours_back: z.string().optional().describe("Hours to look back (default: 8)")
+      hours_back: z.coerce.number().int().positive().optional().describe("Hours to look back (default: 8)")
     },
     async (args) => {
-      const teamName = args.team_name ?? "SRE";
-      const hoursBack = args.hours_back ?? "8";
+      const teamName = args.team_name;
+      const hoursBack = args.hours_back ?? 8;
 
       return {
         messages: [
@@ -114,7 +114,7 @@ Keep it actionable and prioritized. The incoming shift should know exactly what 
       change_number: z.string().describe("Change to review (e.g., CHG0005432)")
     },
     async (args) => {
-      const changeNumber = args.change_number ?? "CHG0000000";
+      const changeNumber = args.change_number;
 
       return {
         messages: [
@@ -169,7 +169,7 @@ Be thorough but concise.`
       incident_number: z.string().describe("Incident for postmortem (e.g., INC0012345)")
     },
     async (args) => {
-      const incidentNumber = args.incident_number ?? "INC0000000";
+      const incidentNumber = args.incident_number;
 
       return {
         messages: [
