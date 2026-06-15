@@ -1,12 +1,13 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { McpRuntime } from "../runtime.js";
+import { safeResource } from "./util.js";
 
 export const registerDashboardResources = (server: McpServer, runtime: McpRuntime): void => {
   // SLA Dashboard resource
   server.resource(
     "sla-dashboard",
     "sla-dashboard://current",
-    async (uri) => {
+    safeResource(async (uri) => {
       const risks = await runtime.incidentService.listSlaRisks({ onlyOpen: true });
 
       const critical = risks.filter((r) => r.riskLevel === "Critical");
@@ -82,14 +83,14 @@ export const registerDashboardResources = (server: McpServer, runtime: McpRuntim
           }
         ]
       };
-    }
+    })
   );
 
   // Stale Tickets Dashboard resource
   server.resource(
     "stale-dashboard",
     "stale-dashboard://current",
-    async (uri) => {
+    safeResource(async (uri) => {
       const staleTickets = await runtime.incidentService.listStaleIncidents({ onlyOpen: true });
 
       // Group by priority
@@ -147,6 +148,6 @@ export const registerDashboardResources = (server: McpServer, runtime: McpRuntim
           }
         ]
       };
-    }
+    })
   );
 };

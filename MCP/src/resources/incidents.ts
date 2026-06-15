@@ -1,6 +1,7 @@
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { McpRuntime } from "../runtime.js";
 import { Incident } from "../types.js";
+import { safeResource } from "./util.js";
 
 const formatIncidentAsMarkdown = (incident: Incident): string => {
   const timeline = [
@@ -53,7 +54,7 @@ export const registerIncidentResources = (server: McpServer, runtime: McpRuntime
   server.resource(
     "incident",
     new ResourceTemplate("incident://{number}", { list: undefined }),
-    async (uri, variables) => {
+    safeResource(async (uri, variables) => {
       const number = decodeURIComponent(String(variables.number));
       const incident = await runtime.serviceNowClient.getIncidentByNumber(number);
 
@@ -78,7 +79,7 @@ export const registerIncidentResources = (server: McpServer, runtime: McpRuntime
           }
         ]
       };
-    }
+    })
   );
 };
 
@@ -87,7 +88,7 @@ export const registerTeamResources = (server: McpServer, runtime: McpRuntime): v
   server.resource(
     "team-incidents",
     new ResourceTemplate("team://{name}/incidents", { list: undefined }),
-    async (uri, variables) => {
+    safeResource(async (uri, variables) => {
       const teamName = decodeURIComponent(String(variables.name));
 
       const incidents = await runtime.serviceNowClient.listIncidents({
@@ -167,6 +168,6 @@ export const registerTeamResources = (server: McpServer, runtime: McpRuntime): v
           }
         ]
       };
-    }
+    })
   );
 };

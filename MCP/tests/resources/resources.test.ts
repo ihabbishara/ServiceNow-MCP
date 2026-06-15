@@ -82,4 +82,13 @@ describe("MCP resource surface", () => {
     const res = await client.readResource({ uri: "sla-dashboard://current" });
     expect(res.contents[0].text).toContain("SLA Risk Dashboard");
   });
+
+  it("returns a graceful error instead of rejecting when the backend throws", async () => {
+    const made = makeRuntime();
+    (made.runtime.serviceNowClient.getIncidentByNumber as ReturnType<typeof vi.fn>)
+      .mockRejectedValue(new Error("ServiceNow 503"));
+    const c = await connect(made.runtime);
+    const res = await c.readResource({ uri: "incident://INC0000001" });
+    expect(res.contents[0].text).toMatch(/Error.*503/);
+  });
 });

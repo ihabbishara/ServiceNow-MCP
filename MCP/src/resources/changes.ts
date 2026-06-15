@@ -1,6 +1,7 @@
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { McpRuntime } from "../runtime.js";
 import { ChangeRecord } from "../types.js";
+import { safeResource } from "./util.js";
 
 const formatChangeAsMarkdown = (change: ChangeRecord): string => {
   const schedule = [
@@ -52,7 +53,7 @@ export const registerChangeResources = (server: McpServer, runtime: McpRuntime):
   server.resource(
     "change",
     new ResourceTemplate("change://{number}", { list: undefined }),
-    async (uri, variables) => {
+    safeResource(async (uri, variables) => {
       const number = decodeURIComponent(String(variables.number));
       const change = await runtime.serviceNowClient.getChangeByNumber(number);
 
@@ -77,6 +78,6 @@ export const registerChangeResources = (server: McpServer, runtime: McpRuntime):
           }
         ]
       };
-    }
+    })
   );
 };
