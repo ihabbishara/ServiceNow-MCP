@@ -1,3 +1,4 @@
+import { fetch, RequestInit } from "undici";
 import { WorkItem } from "../types.js";
 import { AdoConfig } from "../config.js";
 import { proxyDispatcher, FetchDispatcher } from "./proxy.js";

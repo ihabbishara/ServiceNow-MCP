@@ -1,20 +1,17 @@
-import { ProxyAgent } from "undici";
+import { ProxyAgent, Dispatcher } from "undici";
 
-// IMPORTANT: the `undici` dependency major MUST match the undici bundled in the
-// Node runtime (Node's global fetch is that bundled undici). A ProxyAgent from a
-// different major fails at runtime with "invalid onRequestStart method". Node
-// 18–23 bundle undici 6, so this package pins undici ^6 and engines node <24.
-
-// The dispatcher type the global fetch's RequestInit expects (from @types/node's
-// bundled undici-types). The installed `undici` package ships its own slightly
-// different Dispatcher type, so we cast the ProxyAgent to this once, here.
-export type FetchDispatcher = NonNullable<RequestInit["dispatcher"]>;
+// We use undici's own `fetch` (not Node's global fetch) together with this
+// ProxyAgent so both come from the same pinned undici package. That decouples
+// proxying from whatever undici the Node runtime happens to bundle (Node 18/20
+// ship undici 5, 22/23 ship 6, 24 ships 7) — a dispatcher from a different
+// undici major than the fetch driving it throws at request setup.
+export type FetchDispatcher = Dispatcher;
 
 /**
  * Build an undici dispatcher that routes fetch through the given HTTP proxy,
- * or undefined for a direct connection. Node's global fetch ignores the
- * HTTP(S)_PROXY environment variables, so passing a dispatcher is the only way
- * to send a fetch request through a proxy.
+ * or undefined for a direct connection. Use with undici's `fetch` (see above);
+ * Node's global fetch also ignores the HTTP(S)_PROXY environment variables, so
+ * a dispatcher is the only way to proxy a fetch request regardless.
  */
-export const proxyDispatcher = (proxyUrl?: string): FetchDispatcher | undefined =>
-  proxyUrl ? (new ProxyAgent(proxyUrl) as unknown as FetchDispatcher) : undefined;
+export const proxyDispatcher = (proxyUrl?: string): Dispatcher | undefined =>
+  proxyUrl ? new ProxyAgent(proxyUrl) : undefined;

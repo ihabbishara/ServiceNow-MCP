@@ -1,5 +1,13 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { Mock } from "vitest";
+import { fetch } from "undici";
 import { ServiceNowClient } from "../../src/clients/servicenow.js";
+
+// Clients use undici's fetch (not Node's global fetch); mock that named export.
+vi.mock("undici", async (orig) => {
+  const actual = await orig<typeof import("undici")>();
+  return { ...actual, fetch: vi.fn() };
+});
 
 const cfg = { enabled: true, baseUrl: "https://example.service-now.com", username: "u", password: "p" };
 
@@ -44,12 +52,8 @@ const okResponse = (rows: unknown[]) =>
   ({ ok: true, status: 200, json: async () => ({ result: rows }), text: async () => "" }) as unknown as Response;
 
 describe("ServiceNowClient", () => {
-  const fetchMock = vi.fn();
-  beforeEach(() => {
-    fetchMock.mockReset();
-    vi.stubGlobal("fetch", fetchMock);
-  });
-  afterEach(() => vi.unstubAllGlobals());
+  const fetchMock = fetch as unknown as Mock;
+  beforeEach(() => fetchMock.mockReset());
 
   it("builds encoded query, caps limit at 200, maps incident fields", async () => {
     fetchMock.mockResolvedValue(okResponse([incidentRow]));

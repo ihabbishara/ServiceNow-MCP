@@ -1,5 +1,13 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { Mock } from "vitest";
+import { fetch } from "undici";
 import { AzureDevOpsClient } from "../../src/clients/ado.js";
+
+// Clients use undici's fetch (not Node's global fetch); mock that named export.
+vi.mock("undici", async (orig) => {
+  const actual = await orig<typeof import("undici")>();
+  return { ...actual, fetch: vi.fn() };
+});
 
 const cfg = {
   enabled: true,
@@ -15,12 +23,8 @@ const jsonResponse = (body: unknown) =>
   ({ ok: true, status: 200, json: async () => body, text: async () => "" }) as unknown as Response;
 
 describe("AzureDevOpsClient", () => {
-  const fetchMock = vi.fn();
-  beforeEach(() => {
-    fetchMock.mockReset();
-    vi.stubGlobal("fetch", fetchMock);
-  });
-  afterEach(() => vi.unstubAllGlobals());
+  const fetchMock = fetch as unknown as Mock;
+  beforeEach(() => fetchMock.mockReset());
 
   it("searchWorkItems posts WIQL then fetches details", async () => {
     fetchMock

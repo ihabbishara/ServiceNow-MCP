@@ -1,3 +1,4 @@
+import { fetch } from "undici";
 import { Incident, ChangeRecord } from "../types.js";
 import { ServiceNowConfig } from "../config.js";
 import { proxyDispatcher, FetchDispatcher } from "./proxy.js";
