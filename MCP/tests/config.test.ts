@@ -78,6 +78,10 @@ describe("loadConfig", () => {
     expect(() => loadConfig({ ...validEnv, SERVICENOW_PROXY: "not a url" })).toThrow(/SERVICENOW_PROXY/);
   });
 
+  it("rejects a non-http(s) proxy scheme", () => {
+    expect(() => loadConfig({ ...validEnv, ADO_PROXY: "ftp://proxy.example:21" })).toThrow(/ADO_PROXY/);
+  });
+
   it("applies threshold overrides from env", () => {
     const cfg = loadConfig({ ...validEnv, STALE_P1_MIN: "15", CORRELATION_HOURS_BEFORE: "48" });
     expect(cfg.thresholds.staleByPriorityMinutes["1"]).toBe(15);

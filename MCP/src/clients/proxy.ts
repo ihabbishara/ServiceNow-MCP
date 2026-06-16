@@ -1,5 +1,10 @@
 import { ProxyAgent } from "undici";
 
+// IMPORTANT: the `undici` dependency major MUST match the undici bundled in the
+// Node runtime (Node's global fetch is that bundled undici). A ProxyAgent from a
+// different major fails at runtime with "invalid onRequestStart method". Node
+// 18–23 bundle undici 6, so this package pins undici ^6 and engines node <24.
+
 // The dispatcher type the global fetch's RequestInit expects (from @types/node's
 // bundled undici-types). The installed `undici` package ships its own slightly
 // different Dispatcher type, so we cast the ProxyAgent to this once, here.

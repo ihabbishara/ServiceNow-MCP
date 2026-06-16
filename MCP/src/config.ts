@@ -2,8 +2,11 @@ import { z } from "zod";
 
 const boolString = z.enum(["true", "false"]).default("false").transform((v) => v === "true");
 const trueBoolString = z.enum(["true", "false"]).default("true").transform((v) => v === "true");
-// Empty string → undefined, then validate as a URL only when present.
-const optionalUrl = z.preprocess((v) => (v === "" ? undefined : v), z.string().url().optional());
+// Empty string → undefined, then validate as an http(s) URL only when present.
+const optionalUrl = z.preprocess(
+  (v) => (v === "" ? undefined : v),
+  z.string().url().refine((u) => /^https?:\/\//i.test(u), "must be an http(s) URL").optional()
+);
 
 const envSchema = z.object({
   SERVICENOW_BASE_URL: z.string({ required_error: "SERVICENOW_BASE_URL is required" }).url(),
