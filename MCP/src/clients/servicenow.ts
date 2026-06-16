@@ -1,5 +1,6 @@
 import { Incident, ChangeRecord } from "../types.js";
 import { ServiceNowConfig } from "../config.js";
+import { proxyDispatcher, FetchDispatcher } from "./proxy.js";
 
 interface SnField {
   value: string;
@@ -109,7 +110,11 @@ export interface ChangeListFilters {
 }
 
 export class ServiceNowClient {
-  constructor(private readonly cfg: ServiceNowConfig) {}
+  private readonly dispatcher?: FetchDispatcher;
+
+  constructor(private readonly cfg: ServiceNowConfig) {
+    this.dispatcher = proxyDispatcher(cfg.proxyUrl);
+  }
 
   private async request(table: string, query: string, limit: number, fields: string): Promise<SnRow[]> {
     const url = new URL(`/api/now/table/${table}`, this.cfg.baseUrl);
@@ -123,7 +128,8 @@ export class ServiceNowClient {
       headers: {
         Accept: "application/json",
         Authorization: "Basic " + Buffer.from(`${this.cfg.username}:${this.cfg.password}`).toString("base64")
-      }
+      },
+      dispatcher: this.dispatcher
     });
     if (!res.ok) {
       const body = (await res.text()).slice(0, 200);

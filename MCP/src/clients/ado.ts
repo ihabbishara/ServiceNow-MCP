@@ -1,5 +1,6 @@
 import { WorkItem } from "../types.js";
 import { AdoConfig } from "../config.js";
+import { proxyDispatcher, FetchDispatcher } from "./proxy.js";
 
 interface AdoWorkItemRow {
   id: number;
@@ -41,7 +42,11 @@ export interface CreateBugPayload {
 }
 
 export class AzureDevOpsClient {
-  constructor(private readonly cfg: AdoConfig) {}
+  private readonly dispatcher?: FetchDispatcher;
+
+  constructor(private readonly cfg: AdoConfig) {
+    this.dispatcher = proxyDispatcher(cfg.proxyUrl);
+  }
 
   private get authHeader(): string {
     return "Basic " + Buffer.from(`:${this.cfg.pat ?? ""}`).toString("base64");
@@ -58,7 +63,7 @@ export class AzureDevOpsClient {
   }
 
   private async requestJson<T>(url: string, init: RequestInit): Promise<T> {
-    const res = await fetch(url, init);
+    const res = await fetch(url, { ...init, dispatcher: this.dispatcher });
     if (!res.ok) {
       const body = (await res.text()).slice(0, 200);
       throw new Error(`Azure DevOps request failed: ${res.status} ${body}`);

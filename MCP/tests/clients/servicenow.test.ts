@@ -169,6 +169,16 @@ describe("ServiceNowClient", () => {
     expect(url.searchParams.get("sysparm_query")).toContain("start_date<=2026-06-10 00:00:00");
   });
 
+  it("passes a proxy dispatcher to fetch when proxyUrl is set, none otherwise", async () => {
+    fetchMock.mockResolvedValue(okResponse([]));
+    await new ServiceNowClient({ ...cfg, proxyUrl: "http://proxy.example:8080" }).listIncidents({ onlyOpen: true });
+    expect((fetchMock.mock.calls[0][1] as { dispatcher?: unknown }).dispatcher).toBeDefined();
+
+    fetchMock.mockClear();
+    await new ServiceNowClient(cfg).listIncidents({ onlyOpen: true });
+    expect((fetchMock.mock.calls[0][1] as { dispatcher?: unknown }).dispatcher).toBeUndefined();
+  });
+
   it("throws with status and body snippet on non-2xx", async () => {
     fetchMock.mockResolvedValue({
       ok: false, status: 401, json: async () => ({}), text: async () => "User Not Authenticated"

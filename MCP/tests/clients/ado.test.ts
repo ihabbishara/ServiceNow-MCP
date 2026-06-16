@@ -141,6 +141,17 @@ describe("AzureDevOpsClient", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("passes a proxy dispatcher to fetch when proxyUrl is set", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ workItems: [] }));
+    await new AzureDevOpsClient({ ...cfg, proxyUrl: "http://proxy.example:8080" }).searchWorkItems({ text: "x" });
+    expect((fetchMock.mock.calls[0][1] as { dispatcher?: unknown }).dispatcher).toBeDefined();
+
+    fetchMock.mockClear();
+    fetchMock.mockResolvedValueOnce(jsonResponse({ workItems: [] }));
+    await new AzureDevOpsClient(cfg).searchWorkItems({ text: "x" });
+    expect((fetchMock.mock.calls[0][1] as { dispatcher?: unknown }).dispatcher).toBeUndefined();
+  });
+
   it("throws with status and body snippet on non-2xx", async () => {
     fetchMock.mockResolvedValueOnce({
       ok: false, status: 403, json: async () => ({}), text: async () => "TF401027 denied"
