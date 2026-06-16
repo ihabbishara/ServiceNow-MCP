@@ -2,13 +2,17 @@ import { z } from "zod";
 
 const boolString = z.enum(["true", "false"]).default("false").transform((v) => v === "true");
 const trueBoolString = z.enum(["true", "false"]).default("true").transform((v) => v === "true");
+// Empty string → undefined, then validate as a URL only when present.
+const optionalUrl = z.preprocess((v) => (v === "" ? undefined : v), z.string().url().optional());
 
 const envSchema = z.object({
   SERVICENOW_BASE_URL: z.string({ required_error: "SERVICENOW_BASE_URL is required" }).url(),
   SERVICENOW_USERNAME: z.string({ required_error: "SERVICENOW_USERNAME is required" }).min(1),
   SERVICENOW_PASSWORD: z.string({ required_error: "SERVICENOW_PASSWORD is required" }).min(1),
+  SERVICENOW_PROXY: optionalUrl,
   ADO_ENABLED: boolString,
   ADO_ORG_URL: z.string().url().optional(),
+  ADO_PROXY: optionalUrl,
   ADO_PROJECT: z.string().min(1).optional(),
   ADO_PAT: z.string().min(1).optional(),
   ADO_AREA_PATH: z.string().optional().transform((v) => v || undefined),
@@ -28,6 +32,7 @@ export interface ServiceNowConfig {
   baseUrl: string;
   username: string;
   password: string;
+  proxyUrl?: string; // HTTP proxy for ServiceNow calls (SERVICENOW_PROXY)
 }
 
 export interface AdoConfig {
@@ -38,6 +43,7 @@ export interface AdoConfig {
   defaultAreaPath?: string;
   defaultIterationPath?: string;
   defaultAssignedTeam?: string;
+  proxyUrl?: string; // HTTP proxy for Azure DevOps calls (ADO_PROXY)
 }
 
 export interface AppConfig {
@@ -65,7 +71,8 @@ export const loadConfig = (env: Record<string, string | undefined> = process.env
       enabled: true,
       baseUrl: e.SERVICENOW_BASE_URL.replace(/\/+$/, ""),
       username: e.SERVICENOW_USERNAME,
-      password: e.SERVICENOW_PASSWORD
+      password: e.SERVICENOW_PASSWORD,
+      proxyUrl: e.SERVICENOW_PROXY
     },
     azureDevOps: {
       enabled: e.ADO_ENABLED,
@@ -74,7 +81,8 @@ export const loadConfig = (env: Record<string, string | undefined> = process.env
       pat: e.ADO_PAT,
       defaultAreaPath: e.ADO_AREA_PATH ?? e.ADO_PROJECT,
       defaultIterationPath: e.ADO_ITERATION_PATH ?? e.ADO_PROJECT,
-      defaultAssignedTeam: e.ADO_ASSIGNED_TEAM
+      defaultAssignedTeam: e.ADO_ASSIGNED_TEAM,
+      proxyUrl: e.ADO_PROXY
     },
     features: { createAdoBug: e.ADO_CREATE_BUG_ENABLED },
     thresholds: {

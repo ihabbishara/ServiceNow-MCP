@@ -59,6 +59,25 @@ describe("loadConfig", () => {
     expect(cfg.azureDevOps.defaultIterationPath).toBe("Platform");
   });
 
+  it("parses per-service proxy URLs", () => {
+    const cfg = loadConfig({
+      ...validEnv,
+      SERVICENOW_PROXY: "http://giba-proxy.example.net:8080",
+      ADO_PROXY: "http://ado-proxy.example.net:3128"
+    });
+    expect(cfg.serviceNow.proxyUrl).toBe("http://giba-proxy.example.net:8080");
+    expect(cfg.azureDevOps.proxyUrl).toBe("http://ado-proxy.example.net:3128");
+  });
+
+  it("treats absent or empty proxy as undefined", () => {
+    expect(loadConfig(validEnv).serviceNow.proxyUrl).toBeUndefined();
+    expect(loadConfig({ ...validEnv, SERVICENOW_PROXY: "" }).serviceNow.proxyUrl).toBeUndefined();
+  });
+
+  it("rejects a malformed proxy URL", () => {
+    expect(() => loadConfig({ ...validEnv, SERVICENOW_PROXY: "not a url" })).toThrow(/SERVICENOW_PROXY/);
+  });
+
   it("applies threshold overrides from env", () => {
     const cfg = loadConfig({ ...validEnv, STALE_P1_MIN: "15", CORRELATION_HOURS_BEFORE: "48" });
     expect(cfg.thresholds.staleByPriorityMinutes["1"]).toBe(15);
