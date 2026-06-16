@@ -104,10 +104,12 @@ All configuration is via environment variables (set them in the `env` block of y
 | `SERVICENOW_BASE_URL` | yes | — | e.g. `https://yourcompany.service-now.com` |
 | `SERVICENOW_USERNAME` | yes | — | Basic auth user |
 | `SERVICENOW_PASSWORD` | yes | — | Basic auth password |
+| `SERVICENOW_PROXY` | no | — | HTTP proxy for ServiceNow calls, e.g. `http://proxy.corp.net:8080` |
 | `ADO_ENABLED` | no | `false` | Enable Azure DevOps integration |
 | `ADO_ORG_URL` | if ADO enabled | — | e.g. `https://dev.azure.com/yourorg` |
 | `ADO_PROJECT` | if ADO enabled | — | ADO project name |
 | `ADO_PAT` | if ADO enabled | — | Personal Access Token (Work Items read/write) |
+| `ADO_PROXY` | no | — | HTTP proxy for Azure DevOps calls |
 | `ADO_AREA_PATH` | no | project name | Default area path for created bugs |
 | `ADO_ITERATION_PATH` | no | project name | Default iteration path for created bugs |
 | `ADO_ASSIGNED_TEAM` | no | — | Default team for created bugs |

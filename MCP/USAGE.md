@@ -95,10 +95,12 @@ All configuration is environment variables, set in the `env` block of your MCP c
 | `SERVICENOW_BASE_URL` | yes | — | e.g. `https://yourcompany.service-now.com` |
 | `SERVICENOW_USERNAME` | yes | — | Basic auth user |
 | `SERVICENOW_PASSWORD` | yes | — | Basic auth password |
+| `SERVICENOW_PROXY` | no | — | HTTP proxy for ServiceNow calls, e.g. `http://proxy.corp.net:8080` |
 | `ADO_ENABLED` | no | `false` | Enable Azure DevOps tools |
 | `ADO_ORG_URL` | if ADO enabled | — | e.g. `https://dev.azure.com/yourorg` |
 | `ADO_PROJECT` | if ADO enabled | — | ADO project name |
 | `ADO_PAT` | if ADO enabled | — | Personal Access Token (Work Items r/w) |
+| `ADO_PROXY` | no | — | HTTP proxy for Azure DevOps calls |
 | `ADO_AREA_PATH` | no | project name | Default area path for created bugs |
 | `ADO_ITERATION_PATH` | no | project name | Default iteration path for created bugs |
 | `ADO_ASSIGNED_TEAM` | no | — | Default team for created bugs |
@@ -232,6 +234,7 @@ Pre-built workflow templates that appear in the client's prompt picker. Each gat
 - **Field assumptions:** the ServiceNow client requests `sysparm_display_value=all` and reads machine values for priority/sys_id/dates and display values for reference fields (assignment group, CI, …). "Open" incidents are `state NOT IN 6,7,8` (Resolved/Closed/Canceled). If your instance customizes state codes or omits `sla_due`, adjust the two constants at the top of `src/clients/servicenow.ts` — `INCIDENT_FIELDS` / `OPEN_INCIDENT_QUERY` — and the `STATE_CODES` map.
 - **Work notes / comments** come from the journal fields as a single concatenated blob (full per-entry history would require `sys_journal_field`).
 - **Injection safety:** free-text filter values are stripped of the ServiceNow `^` query separator (`snSafe`) and WIQL strings double single quotes (`escapeWiql`).
+- **Proxy:** set `SERVICENOW_PROXY` / `ADO_PROXY` to route each service's HTTPS calls through a corporate HTTP proxy. Node's global `fetch` ignores `HTTP(S)_PROXY` env vars, so the clients build an undici `ProxyAgent` and pass it as the fetch dispatcher (`src/clients/proxy.ts`). Per-service and independent — no shared/standard-env fallback. Unset → direct connection.
 
 ---
 
