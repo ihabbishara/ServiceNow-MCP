@@ -8,11 +8,15 @@ import { proxyDispatcher } from "../../src/clients/proxy.js";
 // Real end-to-end check of the production proxy path: an HTTPS origin reached
 // through an HTTP proxy via a CONNECT tunnel (what ServiceNow/ADO actually use).
 // Uses undici's real fetch + our proxyDispatcher (no mocks). The local proxy
-// records the CONNECT request and drops the socket, so the TLS handshake never
+// records the CONNECT request and refuses it, so the TLS handshake never
 // completes — but receiving the CONNECT for the right host:443 proves our
-// dispatcher routed an HTTPS request through the proxy as a tunnel, and that
-// undici's fetch accepted the dispatcher (a cross-major undici mismatch throws
-// "invalid onRequestStart method" at setup, before any CONNECT is sent).
+// dispatcher routed an HTTPS request through the proxy as a tunnel.
+//
+// Note: the original cross-major bug (global fetch vs package ProxyAgent) is
+// designed out — this test drives undici's own fetch with undici's own
+// ProxyAgent, so both are always the same major. The /onRequestStart/ guard
+// below therefore protects the fetch↔dispatcher contract within the pinned
+// undici (e.g. a future bad bump), not the historical global-fetch mismatch.
 
 describe("proxy dispatcher (real CONNECT tunnel)", () => {
   let proxy: http.Server | undefined;
