@@ -1,43 +1,46 @@
 import * as readline from "node:readline/promises";
 import { stdin, stdout } from "node:process";
-import { defineTool } from "@github/copilot-sdk";
-import { z } from "zod";
 import { createMcpRuntime } from "@sre/core";
 import { loadAgentConfig } from "../config.js";
 import { ChatEngine } from "../engine/engine.js";
+import { buildTools } from "../tools/index.js";
+import { runDoctor } from "../doctor.js";
 
 const main = async () => {
-  // Fail fast on bad/missing agent config before touching the SDK or runtime.
+  // Fail fast on bad/missing agent config before touching the SDK, runtime, or az.
   const config = loadAgentConfig();
+
+  // When ADO runs through the Azure CLI, verify the session is logged in before
+  // we spin up the SDK — a clear "run az login" beats an opaque tool failure
+  // mid-conversation. PAT mode skips this preflight.
+  if (config.adoAuthMode === "azcli") {
+    await runDoctor(config.raw.AZ_PATH);
+  }
+
   const runtime = createMcpRuntime(); // reuses core config from process.env
 
-  const getIncident = defineTool("get_incident", {
-    description:
-      "Get complete details of a specific ServiceNow incident by number (e.g., INC0012345)",
-    parameters: z.object({
-      number: z.string().describe("Incident number, e.g. INC0012345")
-    }),
-    skipPermission: true,
-    handler: async ({ number }: { number: string }) => {
-      const inc = await runtime.serviceNowClient.getIncidentByNumber(number);
-      return inc ?? { error: `Incident ${number} not found` };
-    }
-  });
+  // readline owns the terminal; create it before the engine so the write
+  // confirm prompt can reuse the same interface during a tool call.
+  const rl = readline.createInterface({ input: stdin, output: stdout });
+
+  const confirm = async (summary: string): Promise<boolean> => {
+    const ans = (await rl.question(`${summary} [y/N] `)).trim().toLowerCase();
+    return ans === "y" || ans === "yes";
+  };
 
   const engine = new ChatEngine({
     config,
-    tools: [getIncident],
-    confirm: async () => true,
+    tools: buildTools(runtime),
+    confirm,
     onDelta: (t) => stdout.write(t),
     onToolStart: (n) => stdout.write(`\n  ↳ ${n}…\n`)
   });
 
   await engine.start();
   stdout.write(
-    "SRE agent ready. Ask about incidents. Ctrl-C aborts the current turn; press it again (or type /exit) to quit.\n"
+    "SRE agent ready. Ask about incidents, changes, SLA risk, or ADO work items. " +
+      "Ctrl-C aborts the current turn; press it again (or type /exit) to quit.\n"
   );
-
-  const rl = readline.createInterface({ input: stdin, output: stdout });
 
   // First Ctrl-C aborts the in-flight turn; a second one within the window
   // (i.e. when nothing is running to abort) quits. This keeps the banner's
