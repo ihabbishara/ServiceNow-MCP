@@ -21,6 +21,12 @@ export interface EngineDeps {
    * gated; pass an explicit handler only to bypass that wiring (e.g. tests).
    */
   onPermissionRequest?: PermissionHandler;
+  /**
+   * Seam for injecting the Copilot client. Defaults to `() => new CopilotClient()`
+   * so production behavior is unchanged; tests pass a fake client to assert the
+   * `createSession` config (seat vs BYOK) without a live Copilot seat.
+   */
+  clientFactory?: () => CopilotClient;
 }
 
 /**
@@ -38,7 +44,9 @@ export class ChatEngine {
   constructor(private readonly deps: EngineDeps) {}
 
   async start(): Promise<void> {
-    this.client = new CopilotClient(); // seat auth auto-detected
+    // Seat auth is auto-detected by the default factory; tests inject a fake.
+    const clientFactory = this.deps.clientFactory ?? (() => new CopilotClient());
+    this.client = clientFactory();
     await this.client.start();
 
     // If anything after start() fails, stop the client so the engine stays
