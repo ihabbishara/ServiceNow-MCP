@@ -66,8 +66,8 @@ export const loadAgentConfig = (
     throw new Error(`Invalid configuration:\n  ${issues}`);
   }
   const e = parsed.data;
-  if (e.LLM_MODE === "byok" && (!e.LLM_MODEL || !e.LLM_PROVIDER || !e.LLM_BASE_URL)) {
-    throw new Error("LLM_MODE=byok requires LLM_MODEL, LLM_PROVIDER, and LLM_BASE_URL");
+  if (e.LLM_MODE === "byok" && (!e.LLM_PROVIDER || !e.LLM_BASE_URL)) {
+    throw new Error("LLM_MODE=byok requires LLM_PROVIDER and LLM_BASE_URL");
   }
   if (e.ADO_AUTH_MODE === "azcli" && (!e.ADO_ORG_URL || !e.ADO_PROJECT)) {
     throw new Error("ADO_AUTH_MODE=azcli requires ADO_ORG_URL and ADO_PROJECT");

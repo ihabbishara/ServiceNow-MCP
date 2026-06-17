@@ -36,40 +36,51 @@ export class ChatEngine {
     this.client = new CopilotClient(); // seat auth auto-detected
     await this.client.start();
 
-    const cfg = this.deps.config;
-    const sessionConfig: SessionConfig = {
-      model: cfg.llm.model,
-      streaming: true,
-      tools: this.deps.tools,
-      ...(this.deps.onPermissionRequest
-        ? { onPermissionRequest: this.deps.onPermissionRequest }
-        : {}),
-      ...(cfg.llm.mode === "byok" && cfg.llm.provider
-        ? {
-            provider: {
-              type: cfg.llm.provider.type,
-              baseUrl: cfg.llm.provider.baseUrl,
-              apiKey: cfg.llm.provider.apiKey,
-              ...(cfg.llm.provider.type === "azure"
-                ? { azure: { apiVersion: cfg.llm.provider.apiVersion } }
-                : {})
+    // If anything after start() fails, stop the client so the engine stays
+    // self-contained (no dangling CLI process) before rethrowing.
+    try {
+      const cfg = this.deps.config;
+      const sessionConfig: SessionConfig = {
+        model: cfg.llm.model,
+        streaming: true,
+        tools: this.deps.tools,
+        ...(this.deps.onPermissionRequest
+          ? { onPermissionRequest: this.deps.onPermissionRequest }
+          : {}),
+        ...(cfg.llm.mode === "byok" && cfg.llm.provider
+          ? {
+              provider: {
+                type: cfg.llm.provider.type,
+                baseUrl: cfg.llm.provider.baseUrl,
+                apiKey: cfg.llm.provider.apiKey,
+                ...(cfg.llm.provider.type === "azure"
+                  ? { azure: { apiVersion: cfg.llm.provider.apiVersion } }
+                  : {})
+              }
             }
-          }
-        : {})
-    };
+          : {})
+      };
 
-    this.session = await this.client.createSession(sessionConfig);
+      this.session = await this.client.createSession(sessionConfig);
 
-    this.unsubscribe.push(
-      this.session.on("assistant.message_delta", (e) =>
-        this.deps.onDelta(e.data.deltaContent)
-      )
-    );
-    this.unsubscribe.push(
-      this.session.on("tool.execution_start", (e) =>
-        this.deps.onToolStart?.(e.data.toolName)
-      )
-    );
+      this.unsubscribe.push(
+        this.session.on("assistant.message_delta", (e) =>
+          this.deps.onDelta(e.data.deltaContent)
+        )
+      );
+      this.unsubscribe.push(
+        this.session.on("tool.execution_start", (e) =>
+          this.deps.onToolStart?.(e.data.toolName)
+        )
+      );
+    } catch (err) {
+      const stopErrors = await this.client.stop().catch(() => []);
+      if (stopErrors.length > 0) {
+        console.error("[sre-agent] cleanup after failed start:", stopErrors);
+      }
+      this.client = undefined;
+      throw err;
+    }
   }
 
   /**
@@ -89,6 +100,9 @@ export class ChatEngine {
   async stop(): Promise<void> {
     for (const off of this.unsubscribe.splice(0)) off();
     await this.session?.disconnect();
-    await this.client?.stop();
+    const stopErrors = (await this.client?.stop()) ?? [];
+    if (stopErrors.length > 0) {
+      console.error("[sre-agent] errors during shutdown:", stopErrors);
+    }
   }
 }

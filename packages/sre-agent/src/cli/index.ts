@@ -33,18 +33,42 @@ const main = async () => {
   });
 
   await engine.start();
-  stdout.write("SRE agent ready. Ask about incidents. Ctrl-C to quit.\n");
+  stdout.write(
+    "SRE agent ready. Ask about incidents. Ctrl-C aborts the current turn; press it again (or type /exit) to quit.\n"
+  );
 
   const rl = readline.createInterface({ input: stdin, output: stdout });
+
+  // First Ctrl-C aborts the in-flight turn; a second one within the window
+  // (i.e. when nothing is running to abort) quits. This keeps the banner's
+  // promise without letting a rejected abort become an unhandled rejection.
+  let interrupted = false;
   process.on("SIGINT", () => {
-    void engine.abort();
+    if (interrupted) {
+      stdout.write("\nQuitting.\n");
+      process.exit(0);
+    }
+    interrupted = true;
+    stdout.write("\n(aborting current turn — Ctrl-C again to quit)\n");
+    engine.abort().catch((e) => {
+      console.error("[sre-agent] abort failed:", e instanceof Error ? e.message : e);
+    });
   });
 
   for (;;) {
     const line = (await rl.question("\n> ")).trim();
     if (!line || line === "/exit") break;
-    await engine.send(line);
-    stdout.write("\n");
+    interrupted = false;
+    try {
+      await engine.send(line);
+      stdout.write("\n");
+    } catch (e) {
+      // A transport failure or sendAndWait timeout must not kill the REPL.
+      process.stderr.write(
+        `\n[sre-agent] turn failed: ${e instanceof Error ? e.message : String(e)}\n`
+      );
+      continue;
+    }
   }
 
   await engine.stop();
