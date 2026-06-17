@@ -1,7 +1,11 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
-type ExecFn = (file: string, args: string[]) => Promise<{ stdout: string; stderr: string }>;
+type ExecFn = (
+  file: string,
+  args: string[],
+  options?: { timeout?: number }
+) => Promise<{ stdout: string; stderr: string }>;
 const defaultExec = promisify(execFile) as unknown as ExecFn;
 
 /**
@@ -11,7 +15,8 @@ const defaultExec = promisify(execFile) as unknown as ExecFn;
  */
 export const runDoctor = async (azPath = "az", exec: ExecFn = defaultExec): Promise<void> => {
   try {
-    await exec(azPath, ["account", "show", "--output", "json", "--only-show-errors"]);
+    // Bound a hung `az account show` so preflight can't stall forever.
+    await exec(azPath, ["account", "show", "--output", "json", "--only-show-errors"], { timeout: 15000 });
   } catch {
     throw new Error(
       "Azure CLI is not logged in. Run `az login` (and `az extension add --name azure-devops`) before starting the agent."

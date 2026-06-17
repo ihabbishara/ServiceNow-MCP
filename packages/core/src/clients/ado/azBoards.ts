@@ -57,6 +57,8 @@ export class AzBoardsClient implements AzureDevOpsClient {
     const row = await this.runner.json<AzWorkItemRaw | null>([
       "boards", "work-item", "show", "--id", String(id), "--expand", "fields", "--org", this.cfg.orgUrl
     ]);
+    // A missing work item makes `az` exit non-zero (AzRunner throws); the null
+    // branch only guards an explicit null/empty response, never "not found".
     return row ? mapAzWorkItem(row) : null;
   }
 

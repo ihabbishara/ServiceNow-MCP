@@ -98,6 +98,8 @@ export class AdoPatClient implements AzureDevOpsClient {
       this.apiUrl(`wit/workitems/${id}?$expand=fields&api-version=7.1`),
       { headers: { Accept: "application/json", Authorization: this.authHeader } }
     );
+    // A missing work item makes the REST call return non-2xx (requestJson
+    // throws); the null branch only guards an explicit null/empty response.
     return row ? mapAzWorkItem(row) : null;
   }
 

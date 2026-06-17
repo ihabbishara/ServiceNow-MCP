@@ -1,7 +1,15 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
-export type ExecFn = (file: string, args: string[]) => Promise<{ stdout: string; stderr: string }>;
+export interface ExecOptions {
+  timeout?: number;
+  maxBuffer?: number;
+}
+export type ExecFn = (
+  file: string,
+  args: string[],
+  options?: ExecOptions
+) => Promise<{ stdout: string; stderr: string }>;
 const defaultExec: ExecFn = promisify(execFile) as unknown as ExecFn;
 
 /**
@@ -19,7 +27,10 @@ export class AzRunner {
   async json<T>(args: string[]): Promise<T> {
     const full = [...args, "--output", "json", "--only-show-errors"];
     try {
-      const { stdout } = await this.exec(this.azPath, full);
+      // Bound a hung `az` (e.g. an interactive auth stall) and allow large
+      // `az boards query` payloads (full-field results can exceed the ~1 MB
+      // execFile default and reject with a confusing maxBuffer error).
+      const { stdout } = await this.exec(this.azPath, full, { timeout: 30000, maxBuffer: 16 * 1024 * 1024 });
       return JSON.parse(stdout) as T;
     } catch (err: unknown) {
       const e = err as { stderr?: string; message?: string };
