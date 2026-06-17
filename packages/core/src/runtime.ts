@@ -1,6 +1,7 @@
 import { loadConfig, AppConfig } from "./config.js";
 import { ServiceNowClient } from "./clients/servicenow.js";
-import { AzureDevOpsClient } from "./clients/ado/index.js";
+import { createAdoClient } from "./clients/ado/index.js";
+import type { AzureDevOpsClient } from "./clients/ado/types.js";
 import { SlaRiskService } from "./services/slaRisk.js";
 import { StaleTicketService } from "./services/staleTickets.js";
 import { ChangeCorrelationService } from "./services/correlation.js";
@@ -22,7 +23,7 @@ export const createMcpRuntime = (): McpRuntime => {
   const config = loadConfig();
 
   const serviceNowClient = new ServiceNowClient(config.serviceNow);
-  const azureDevOpsClient = new AzureDevOpsClient(config.azureDevOps);
+  const azureDevOpsClient = createAdoClient(config.azureDevOps);
 
   const slaRiskService = new SlaRiskService();
   const staleTicketService = new StaleTicketService(config.thresholds.staleByPriorityMinutes);

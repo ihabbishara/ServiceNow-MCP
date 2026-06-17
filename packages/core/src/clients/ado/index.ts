@@ -2,6 +2,11 @@ import { fetch, RequestInit } from "undici";
 import { WorkItem } from "../../types.js";
 import { AdoConfig } from "../../config.js";
 import { proxyDispatcher, FetchDispatcher } from "../proxy.js";
+import type { AzureDevOpsClient, WorkItemSearchFilters, CreateBugPayload } from "./types.js";
+import { mapAzWorkItem, AzWorkItemRaw } from "./map.js";
+import { AzBoardsClient } from "./azBoards.js";
+
+export type { AzureDevOpsClient, WorkItemSearchFilters, CreateBugPayload } from "./types.js";
 
 interface AdoWorkItemRow {
   id: number;
@@ -25,24 +30,7 @@ const mapWorkItem = (row: AdoWorkItemRow): WorkItem => ({
   tags: row.fields["System.Tags"]?.split(";").map((t) => t.trim()).filter(Boolean)
 });
 
-export interface WorkItemSearchFilters {
-  text: string;
-  workItemType?: string;
-  state?: string;
-}
-
-export interface CreateBugPayload {
-  title: string;
-  description: string;
-  areaPath?: string;
-  iterationPath?: string;
-  tags?: string[];
-  assignedTeam?: string;
-  priority?: string; // ServiceNow priority "1".."4"; mapped to Microsoft.VSTS.Common.Priority when in range
-  incidentNumber: string; // included in the title by the caller; not written as a separate ADO field
-}
-
-export class AzureDevOpsClient {
+export class AdoPatClient implements AzureDevOpsClient {
   private readonly dispatcher?: FetchDispatcher;
 
   constructor(private readonly cfg: AdoConfig) {
@@ -76,11 +64,12 @@ export class AzureDevOpsClient {
     if (!this.cfg.enabled) return [];
     this.assertConfigured();
 
-    const conditions = [`[System.Title] CONTAINS '${escapeWiql(f.text)}'`];
+    const conditions: string[] = [];
+    if (f.text) conditions.push(`[System.Title] CONTAINS '${escapeWiql(f.text)}'`);
     if (f.workItemType) conditions.push(`[System.WorkItemType] = '${escapeWiql(f.workItemType)}'`);
     if (f.state) conditions.push(`[System.State] = '${escapeWiql(f.state)}'`);
-    const query =
-      `SELECT [System.Id] FROM WorkItems WHERE ${conditions.join(" AND ")} ORDER BY [System.ChangedDate] DESC`;
+    const where = conditions.length ? ` WHERE ${conditions.join(" AND ")}` : "";
+    const query = `SELECT [System.Id] FROM WorkItems${where} ORDER BY [System.ChangedDate] DESC`;
 
     const wiql = await this.requestJson<{ workItems?: Array<{ id: number }> }>(
       this.apiUrl("wit/wiql?api-version=7.1&$top=50"),
@@ -99,6 +88,17 @@ export class AzureDevOpsClient {
       { headers: { Accept: "application/json", Authorization: this.authHeader } }
     );
     return (details.value ?? []).map(mapWorkItem);
+  }
+
+  async getWorkItem(id: number): Promise<WorkItem | null> {
+    if (!this.cfg.enabled) return null;
+    this.assertConfigured();
+    if (!Number.isInteger(id)) throw new Error("work item id must be an integer");
+    const row = await this.requestJson<AzWorkItemRaw>(
+      this.apiUrl(`wit/workitems/${id}?$expand=fields&api-version=7.1`),
+      { headers: { Accept: "application/json", Authorization: this.authHeader } }
+    );
+    return row ? mapAzWorkItem(row) : null;
   }
 
   async createBug(p: CreateBugPayload): Promise<{ id: number; title: string }> {
@@ -135,3 +135,26 @@ export class AzureDevOpsClient {
     return { id: created.id, title: created.fields["System.Title"] };
   }
 }
+
+/**
+ * Build the appropriate ADO client. Lenient by design: mcp-server eagerly
+ * builds the runtime with no ADO env and must still start (it fails fast only
+ * on missing ServiceNow vars). So this factory never throws.
+ * - azcli mode WITH orgUrl + project → AzBoardsClient (no-PAT, via `az boards`).
+ * - otherwise → AdoPatClient (inert when not enabled/configured: searchWorkItems
+ *   returns [], createBug throws "disabled"). The agent-side requirement that
+ *   azcli needs org/project is enforced in sre-agent's loadAgentConfig.
+ */
+export const createAdoClient = (cfg: AdoConfig): AzureDevOpsClient => {
+  if (cfg.authMode === "azcli" && cfg.orgUrl && cfg.project) {
+    return new AzBoardsClient({
+      orgUrl: cfg.orgUrl,
+      project: cfg.project,
+      azPath: cfg.azPath ?? "az",
+      defaultAreaPath: cfg.defaultAreaPath,
+      defaultIterationPath: cfg.defaultIterationPath,
+      createBugEnabled: cfg.createBugEnabled ?? true
+    });
+  }
+  return new AdoPatClient(cfg);
+};

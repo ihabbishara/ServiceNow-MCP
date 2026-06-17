@@ -14,6 +14,8 @@ const envSchema = z.object({
   SERVICENOW_PASSWORD: z.string({ required_error: "SERVICENOW_PASSWORD is required" }).min(1),
   SERVICENOW_PROXY: optionalUrl,
   ADO_ENABLED: boolString,
+  ADO_AUTH_MODE: z.enum(["azcli", "pat"]).default("azcli"),
+  AZ_PATH: z.string().default("az"),
   ADO_ORG_URL: z.string().url().optional(),
   ADO_PROXY: optionalUrl,
   ADO_PROJECT: z.string().min(1).optional(),
@@ -40,6 +42,9 @@ export interface ServiceNowConfig {
 
 export interface AdoConfig {
   enabled: boolean;
+  authMode?: "azcli" | "pat";
+  azPath?: string;
+  createBugEnabled?: boolean;
   orgUrl?: string;
   project?: string;
   pat?: string;
@@ -79,6 +84,9 @@ export const loadConfig = (env: Record<string, string | undefined> = process.env
     },
     azureDevOps: {
       enabled: e.ADO_ENABLED,
+      authMode: e.ADO_AUTH_MODE,
+      azPath: e.AZ_PATH,
+      createBugEnabled: e.ADO_CREATE_BUG_ENABLED,
       orgUrl: e.ADO_ORG_URL?.replace(/\/+$/, ""),
       project: e.ADO_PROJECT,
       pat: e.ADO_PAT,

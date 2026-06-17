@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Mock } from "vitest";
 import { fetch } from "undici";
-import { AzureDevOpsClient } from "../../src/clients/ado/index.js";
+import { AdoPatClient } from "../../src/clients/ado/index.js";
 
 // Clients use undici's fetch (not Node's global fetch); mock that named export.
 vi.mock("undici", async (orig) => {
@@ -22,7 +22,7 @@ const cfg = {
 const jsonResponse = (body: unknown) =>
   ({ ok: true, status: 200, json: async () => body, text: async () => "" }) as unknown as Response;
 
-describe("AzureDevOpsClient", () => {
+describe("AdoPatClient", () => {
   const fetchMock = fetch as unknown as Mock;
   beforeEach(() => fetchMock.mockReset());
 
@@ -45,7 +45,7 @@ describe("AzureDevOpsClient", () => {
         ]
       }));
 
-    const client = new AzureDevOpsClient(cfg);
+    const client = new AdoPatClient(cfg);
     const items = await client.searchWorkItems({ text: "INC0001", workItemType: "Bug", state: "Active" });
 
     const [wiqlUrl, wiqlInit] = fetchMock.mock.calls[0] as [string, RequestInit];
@@ -73,27 +73,27 @@ describe("AzureDevOpsClient", () => {
 
   it("escapes single quotes in WIQL", async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({ workItems: [] }));
-    await new AzureDevOpsClient(cfg).searchWorkItems({ text: "user's incident" });
+    await new AdoPatClient(cfg).searchWorkItems({ text: "user's incident" });
     const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
     expect(body.query).toContain("CONTAINS 'user''s incident'");
   });
 
   it("returns [] without fetching details when WIQL matches nothing", async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({ workItems: [] }));
-    const items = await new AzureDevOpsClient(cfg).searchWorkItems({ text: "nope" });
+    const items = await new AdoPatClient(cfg).searchWorkItems({ text: "nope" });
     expect(items).toEqual([]);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("returns [] when integration is disabled, without any fetch", async () => {
-    const items = await new AzureDevOpsClient({ ...cfg, enabled: false }).searchWorkItems({ text: "x" });
+    const items = await new AdoPatClient({ ...cfg, enabled: false }).searchWorkItems({ text: "x" });
     expect(items).toEqual([]);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("createBug posts json-patch document", async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({ id: 99, fields: { "System.Title": "[INC0001] DB down" } }));
-    const created = await new AzureDevOpsClient(cfg).createBug({
+    const created = await new AdoPatClient(cfg).createBug({
       title: "[INC0001] DB down",
       description: "line1\nline2",
       areaPath: "Platform\\SRE",
@@ -115,44 +115,44 @@ describe("AzureDevOpsClient", () => {
 
   it("maps a 1-4 priority to Microsoft.VSTS.Common.Priority and omits out-of-range", async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({ id: 1, fields: { "System.Title": "t" } }));
-    await new AzureDevOpsClient(cfg).createBug({ title: "t", description: "d", priority: "1", incidentNumber: "INC1" });
+    await new AdoPatClient(cfg).createBug({ title: "t", description: "d", priority: "1", incidentNumber: "INC1" });
     let ops = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
     expect(ops).toContainEqual({ op: "add", path: "/fields/Microsoft.VSTS.Common.Priority", value: 1 });
 
     fetchMock.mockResolvedValueOnce(jsonResponse({ id: 2, fields: { "System.Title": "t" } }));
-    await new AzureDevOpsClient(cfg).createBug({ title: "t", description: "d", priority: "9", incidentNumber: "INC2" });
+    await new AdoPatClient(cfg).createBug({ title: "t", description: "d", priority: "9", incidentNumber: "INC2" });
     ops = JSON.parse((fetchMock.mock.calls[1][1] as RequestInit).body as string);
     expect(ops.some((o: { path: string }) => o.path === "/fields/Microsoft.VSTS.Common.Priority")).toBe(false);
   });
 
   it("createBug throws when integration is disabled", async () => {
     await expect(
-      new AzureDevOpsClient({ ...cfg, enabled: false }).createBug({ title: "t", description: "d", incidentNumber: "INC1" })
+      new AdoPatClient({ ...cfg, enabled: false }).createBug({ title: "t", description: "d", incidentNumber: "INC1" })
     ).rejects.toThrow(/disabled/);
   });
 
   it("percent-encodes the project path segment", async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({ workItems: [] }));
-    await new AzureDevOpsClient({ ...cfg, project: "My Project" }).searchWorkItems({ text: "x" });
+    await new AdoPatClient({ ...cfg, project: "My Project" }).searchWorkItems({ text: "x" });
     expect(fetchMock.mock.calls[0][0] as string).toContain("/My%20Project/_apis/");
   });
 
   it("throws when enabled but orgUrl/project missing", async () => {
     const broken = { ...cfg, orgUrl: undefined, project: undefined };
-    await expect(new AzureDevOpsClient(broken).searchWorkItems({ text: "x" })).rejects.toThrow(/not configured/);
-    await expect(new AzureDevOpsClient(broken).createBug({ title: "t", description: "d", incidentNumber: "I" }))
+    await expect(new AdoPatClient(broken).searchWorkItems({ text: "x" })).rejects.toThrow(/not configured/);
+    await expect(new AdoPatClient(broken).createBug({ title: "t", description: "d", incidentNumber: "I" }))
       .rejects.toThrow(/not configured/);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("passes a proxy dispatcher to fetch when proxyUrl is set", async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({ workItems: [] }));
-    await new AzureDevOpsClient({ ...cfg, proxyUrl: "http://proxy.example:8080" }).searchWorkItems({ text: "x" });
+    await new AdoPatClient({ ...cfg, proxyUrl: "http://proxy.example:8080" }).searchWorkItems({ text: "x" });
     expect((fetchMock.mock.calls[0][1] as { dispatcher?: unknown }).dispatcher).toBeDefined();
 
     fetchMock.mockClear();
     fetchMock.mockResolvedValueOnce(jsonResponse({ workItems: [] }));
-    await new AzureDevOpsClient(cfg).searchWorkItems({ text: "x" });
+    await new AdoPatClient(cfg).searchWorkItems({ text: "x" });
     expect((fetchMock.mock.calls[0][1] as { dispatcher?: unknown }).dispatcher).toBeUndefined();
   });
 
@@ -160,6 +160,6 @@ describe("AzureDevOpsClient", () => {
     fetchMock.mockResolvedValueOnce({
       ok: false, status: 403, json: async () => ({}), text: async () => "TF401027 denied"
     } as unknown as Response);
-    await expect(new AzureDevOpsClient(cfg).searchWorkItems({ text: "x" })).rejects.toThrow(/403.*TF401027/);
+    await expect(new AdoPatClient(cfg).searchWorkItems({ text: "x" })).rejects.toThrow(/403.*TF401027/);
   });
 });

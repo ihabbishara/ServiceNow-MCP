@@ -1,6 +1,6 @@
 import { Incident, RelatedChange, SlaRiskItem, StaleTicketItem, WorkItem } from "../types.js";
 import { ServiceNowClient } from "../clients/servicenow.js";
-import { AzureDevOpsClient } from "../clients/ado/index.js";
+import type { AzureDevOpsClient } from "../clients/ado/types.js";
 import { SlaRiskService } from "./slaRisk.js";
 import { StaleTicketService } from "./staleTickets.js";
 import { ChangeCorrelationService } from "./correlation.js";
