@@ -11,5 +11,9 @@ export default defineWorkspace([
   {
     test: { name: "mcp-server", root: "./packages/mcp-server", environment: "node" },
     resolve: { alias: { "@sre/core": coreSrc } }
+  },
+  {
+    test: { name: "sre-agent", root: "./packages/sre-agent", environment: "node" },
+    resolve: { alias: { "@sre/core": coreSrc } }
   }
 ]);
