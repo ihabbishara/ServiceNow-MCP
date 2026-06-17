@@ -6,15 +6,20 @@ import {
   type Tool
 } from "@github/copilot-sdk";
 import type { AgentConfig } from "../config.js";
+import { makePermissionHandler } from "./permissions.js";
 
 export interface EngineDeps {
   config: AgentConfig;
   tools: Tool<any>[];
-  /** Used by the permission gate (Task 2.6); accepted as a seam here. */
+  /** Used by the write permission gate to ask the user before a write executes. */
   confirm: (summary: string) => Promise<boolean>;
   onDelta: (text: string) => void;
   onToolStart?: (name: string) => void;
-  /** Optional permission handler; when omitted requests are left pending. */
+  /**
+   * Optional override for the permission handler. When omitted, the engine
+   * builds one from `config.confirmWrites` + `confirm` so the write tool is
+   * gated; pass an explicit handler only to bypass that wiring (e.g. tests).
+   */
   onPermissionRequest?: PermissionHandler;
 }
 
@@ -40,13 +45,16 @@ export class ChatEngine {
     // self-contained (no dangling CLI process) before rethrowing.
     try {
       const cfg = this.deps.config;
+      // Gate writes through the confirm seam unless the caller supplies its own
+      // handler. Built once so the write tool always prompts per config.
+      const permissionHandler =
+        this.deps.onPermissionRequest ??
+        makePermissionHandler({ confirmWrites: cfg.confirmWrites }, this.deps.confirm);
       const sessionConfig: SessionConfig = {
         model: cfg.llm.model,
         streaming: true,
         tools: this.deps.tools,
-        ...(this.deps.onPermissionRequest
-          ? { onPermissionRequest: this.deps.onPermissionRequest }
-          : {}),
+        onPermissionRequest: permissionHandler,
         ...(cfg.llm.mode === "byok" && cfg.llm.provider
           ? {
               provider: {
