@@ -4,7 +4,18 @@ import { createMcpRuntime } from "@sre/core";
 import { loadAgentConfig } from "../config.js";
 import { ChatEngine } from "../engine/engine.js";
 import { buildTools } from "../tools/index.js";
+import { buildWorkflowPrompt } from "../workflows/index.js";
 import { runDoctor } from "../doctor.js";
+
+const HELP_TEXT = `Workflow commands:
+  /triage <INC>            Triage a ServiceNow incident
+  /review <CHG>            Review a change for risks
+  /postmortem <INC>        Structure a post-incident review
+  /handover <team> [hours] Generate a shift handover (hours default: 8)
+  /help                    Show this help
+  /exit                    Quit
+Anything else is sent to the model as-is.
+`;
 
 const main = async () => {
   // Fail fast on bad/missing agent config before touching the SDK, runtime, or az.
@@ -46,6 +57,7 @@ const main = async () => {
   await engine.start();
   stdout.write(
     "SRE agent ready. Ask about incidents, changes, SLA risk, or ADO work items. " +
+      "Type /help for workflow commands. " +
       "Ctrl-C aborts the current turn; press it again (or type /exit) to quit.\n"
   );
 
@@ -68,9 +80,17 @@ const main = async () => {
   for (;;) {
     const line = (await rl.question("\n> ")).trim();
     if (!line || line === "/exit") break;
+    // /help is handled locally — never sent to the model.
+    if (line === "/help") {
+      stdout.write(HELP_TEXT);
+      continue;
+    }
     interrupted = false;
     try {
-      await engine.send(line);
+      // Slash workflow commands expand to a seed prompt; everything else is
+      // sent verbatim.
+      const wf = buildWorkflowPrompt(line);
+      await engine.send(wf ?? line);
       stdout.write("\n");
     } catch (e) {
       // A transport failure or sendAndWait timeout must not kill the REPL.
