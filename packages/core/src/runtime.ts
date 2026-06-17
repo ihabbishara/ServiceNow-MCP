@@ -1,6 +1,6 @@
 import { loadConfig, AppConfig } from "./config.js";
 import { ServiceNowClient } from "./clients/servicenow.js";
-import { AzureDevOpsClient } from "./clients/ado.js";
+import { AzureDevOpsClient } from "./clients/ado/index.js";
 import { SlaRiskService } from "./services/slaRisk.js";
 import { StaleTicketService } from "./services/staleTickets.js";
 import { ChangeCorrelationService } from "./services/correlation.js";
