@@ -1,6 +1,5 @@
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { McpRuntime } from "../runtime.js";
-import { Incident } from "../types.js";
+import { McpRuntime, Incident } from "@sre/core";
 import { safeResource } from "./util.js";
 
 const formatIncidentAsMarkdown = (incident: Incident): string => {

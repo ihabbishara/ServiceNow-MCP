@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { createMcpRuntime } from "./runtime.js";
+import { createMcpRuntime } from "@sre/core";
 import { createMcpServer } from "./server.js";
 
 const main = async () => {

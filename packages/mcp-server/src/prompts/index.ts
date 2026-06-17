@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { McpRuntime } from "../runtime.js";
+import { McpRuntime } from "@sre/core";
 
 export const registerPrompts = (server: McpServer, _runtime: McpRuntime): void => {
   // incident_triage - Guide through incident triage

@@ -1,6 +1,6 @@
 import { createRequire } from "module";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { McpRuntime } from "./runtime.js";
+import { McpRuntime } from "@sre/core";
 import { registerIncidentTools } from "./tools/incidents.js";
 import { registerChangeTools } from "./tools/changes.js";
 import { registerAnalysisTools } from "./tools/analysis.js";

@@ -1,5 +1,5 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { McpRuntime } from "../runtime.js";
+import { McpRuntime } from "@sre/core";
 import { safeResource } from "./util.js";
 
 export const registerDashboardResources = (server: McpServer, runtime: McpRuntime): void => {

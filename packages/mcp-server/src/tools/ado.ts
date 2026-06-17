@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { McpRuntime } from "../runtime.js";
+import { McpRuntime } from "@sre/core";
 
 export const registerAdoTools = (server: McpServer, runtime: McpRuntime): void => {
   // search_work_items - Search Azure DevOps work items

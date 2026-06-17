@@ -1,6 +1,5 @@
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { McpRuntime } from "../runtime.js";
-import { ChangeRecord } from "../types.js";
+import { McpRuntime, ChangeRecord } from "@sre/core";
 import { safeResource } from "./util.js";
 
 const formatChangeAsMarkdown = (change: ChangeRecord): string => {

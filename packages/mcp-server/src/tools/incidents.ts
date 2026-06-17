@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { McpRuntime } from "../runtime.js";
+import { McpRuntime } from "@sre/core";
 
 export const registerIncidentTools = (server: McpServer, runtime: McpRuntime): void => {
   // search_incidents - Search ServiceNow incidents with filters

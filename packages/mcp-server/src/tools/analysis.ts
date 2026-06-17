@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { McpRuntime } from "../runtime.js";
+import { McpRuntime } from "@sre/core";
 
 export const registerAnalysisTools = (server: McpServer, runtime: McpRuntime): void => {
   // find_sla_risks - Find incidents at risk of SLA breach
