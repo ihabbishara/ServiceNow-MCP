@@ -77,8 +77,14 @@ export interface WorkItem {
   id: number;
   title: string;
   state: string;
+  workItemType?: string;
   assignedTo?: string;
   areaPath?: string;
+  iterationPath?: string;
+  priority?: number;
+  storyPoints?: number;
+  parentId?: number;
+  url?: string;
   tags?: string[];
 }
 
