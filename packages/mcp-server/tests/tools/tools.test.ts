@@ -5,7 +5,7 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { registerChangeTools } from "../../src/tools/changes.js";
 import { registerAdoTools } from "../../src/tools/ado.js";
 import { registerAnalysisTools } from "../../src/tools/analysis.js";
-import { McpRuntime } from "../../src/runtime.js";
+import { McpRuntime } from "@sre/core";
 
 // Builds a runtime whose methods are vi mocks; pass overrides to shape responses.
 const makeRuntime = (over: Record<string, unknown> = {}) => {

@@ -4,7 +4,7 @@ import { SlaRiskService } from "../../src/services/slaRisk.js";
 import { StaleTicketService } from "../../src/services/staleTickets.js";
 import { ChangeCorrelationService } from "../../src/services/correlation.js";
 import { ServiceNowClient } from "../../src/clients/servicenow.js";
-import { AzureDevOpsClient } from "../../src/clients/ado.js";
+import { AzureDevOpsClient } from "../../src/clients/ado/index.js";
 import { Incident, ChangeRecord } from "../../src/types.js";
 
 const incident: Incident = {

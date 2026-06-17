@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Mock } from "vitest";
 import { fetch } from "undici";
-import { AzureDevOpsClient } from "../../src/clients/ado.js";
+import { AzureDevOpsClient } from "../../src/clients/ado/index.js";
 
 // Clients use undici's fetch (not Node's global fetch); mock that named export.
 vi.mock("undici", async (orig) => {

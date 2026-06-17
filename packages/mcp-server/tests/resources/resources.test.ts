@@ -5,8 +5,7 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { registerIncidentResources, registerTeamResources } from "../../src/resources/incidents.js";
 import { registerChangeResources } from "../../src/resources/changes.js";
 import { registerDashboardResources } from "../../src/resources/dashboards.js";
-import { McpRuntime } from "../../src/runtime.js";
-import { Incident, ChangeRecord } from "../../src/types.js";
+import { McpRuntime, Incident, ChangeRecord } from "@sre/core";
 
 const incident: Incident = {
   number: "INC0012345", sysId: "x", priority: "1", state: "In Progress", shortDescription: "DB down",
