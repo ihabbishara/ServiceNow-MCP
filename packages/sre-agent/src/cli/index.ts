@@ -24,6 +24,13 @@ const main = async () => {
   const rl = readline.createInterface({ input: stdin, output: stdout });
 
   const confirm = async (summary: string): Promise<boolean> => {
+    // Without an interactive terminal (piped stdin / EOF), rl.question never
+    // settles and the turn would hang forever. Decline cleanly instead so the
+    // gate rejects and the SDK denies the write.
+    if (stdin.isTTY === false) {
+      process.stderr.write("[sre-agent] write declined (no interactive terminal)\n");
+      return false;
+    }
     const ans = (await rl.question(`${summary} [y/N] `)).trim().toLowerCase();
     return ans === "y" || ans === "yes";
   };
