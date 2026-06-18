@@ -1,8 +1,9 @@
 import * as readline from "node:readline/promises";
 import { stdin, stdout } from "node:process";
 import { createMcpRuntime } from "@sre/core";
-import { loadAgentConfig } from "../config.js";
+import { loadAgentConfig, type AgentConfig } from "../config.js";
 import { ChatEngine } from "../engine/engine.js";
+import { copilotLogin, isCopilotAuthError } from "../engine/auth.js";
 import { buildTools } from "../tools/index.js";
 import { buildWorkflowPrompt } from "../workflows/index.js";
 import { runDoctor } from "../doctor.js";
@@ -12,10 +13,64 @@ const HELP_TEXT = `Workflow commands:
   /review <CHG>            Review a change for risks
   /postmortem <INC>        Structure a post-incident review
   /handover <team> [hours] Generate a shift handover (hours default: 8)
+  /login                   Re-authenticate to GitHub Copilot (device flow)
   /help                    Show this help
   /exit                    Quit
 Anything else is sent to the model as-is.
 `;
+
+/**
+ * Run the Copilot device-flow login, then reconnect the engine so the new
+ * credential takes effect. The SDK runtime resolves auth at start(), so a fresh
+ * login is invisible until we stop and restart — stop first so the running
+ * runtime releases the credential store the login writes to.
+ */
+const reloginCopilot = async (engine: ChatEngine, config: AgentConfig): Promise<void> => {
+  await engine.stop();
+  await copilotLogin({ home: config.copilot.home });
+  await engine.start();
+  process.stderr.write("[sre-agent] Copilot login complete.\n");
+};
+
+/**
+ * Seat-mode preflight, mirroring the `az` doctor: confirm the Copilot runtime
+ * resolved a usable credential before the first turn, so the user gets an
+ * actionable login prompt instead of an opaque 403 mid-conversation. On a
+ * non-interactive terminal we can't run the device flow, so fail with guidance.
+ */
+const ensureCopilotAuth = async (
+  engine: ChatEngine,
+  config: AgentConfig,
+  confirm: (summary: string) => Promise<boolean>
+): Promise<void> => {
+  let status;
+  try {
+    status = await engine.getAuthStatus();
+  } catch {
+    // A status probe failure shouldn't block startup; let the first turn surface
+    // any real transport/auth problem with its own error.
+    return;
+  }
+  if (status.isAuthenticated) {
+    const who = status.login ? `, ${status.login}` : "";
+    process.stderr.write(`[sre-agent] Copilot auth ok (${status.authType ?? "user"}${who})\n`);
+    return;
+  }
+  process.stderr.write("[sre-agent] Copilot is not authenticated.\n");
+  if (stdin.isTTY === false) {
+    throw new Error(
+      "Copilot is not logged in. Run `copilot login`, or set COPILOT_GITHUB_TOKEN " +
+        "(a gho_/ghu_/github_pat_ token) before starting the agent."
+    );
+  }
+  const ok = await confirm("Log in to GitHub Copilot now?");
+  if (!ok) {
+    throw new Error(
+      "Copilot login required. Re-run after `copilot login`, or set COPILOT_GITHUB_TOKEN."
+    );
+  }
+  await reloginCopilot(engine, config);
+};
 
 const main = async () => {
   // Fail fast on bad/missing agent config before touching the SDK, runtime, or az.
@@ -64,6 +119,13 @@ const main = async () => {
       "first run can take a while as the Copilot runtime starts\n"
   );
   await engine.start();
+
+  // Seat auth preflight: catch a missing/unusable Copilot credential here, with
+  // an in-tool login, rather than letting the first turn fail with a raw 403.
+  if (config.llm.mode === "seat") {
+    await ensureCopilotAuth(engine, config, confirm);
+  }
+
   stdout.write(
     "SRE agent ready. Ask about incidents, changes, SLA risk, or ADO work items. " +
       "Type /help for workflow commands. " +
@@ -89,9 +151,19 @@ const main = async () => {
   for (;;) {
     const line = (await rl.question("\n> ")).trim();
     if (!line || line === "/exit") break;
-    // /help is handled locally — never sent to the model.
+    // /help and /login are handled locally — never sent to the model.
     if (line === "/help") {
       stdout.write(HELP_TEXT);
+      continue;
+    }
+    if (line === "/login") {
+      try {
+        await reloginCopilot(engine, config);
+      } catch (e) {
+        process.stderr.write(
+          `[sre-agent] login failed: ${e instanceof Error ? e.message : String(e)}\n`
+        );
+      }
       continue;
     }
     interrupted = false;
@@ -106,6 +178,14 @@ const main = async () => {
       process.stderr.write(
         `\n[sre-agent] turn failed: ${e instanceof Error ? e.message : String(e)}\n`
       );
+      // Turn an opaque Copilot 403 into an actionable next step.
+      if (isCopilotAuthError(e)) {
+        process.stderr.write(
+          "[sre-agent] That looks like a Copilot auth failure. Type /login to re-authenticate. " +
+            "If GH_TOKEN/GITHUB_TOKEN is set in this shell, unset it or set COPILOT_GITHUB_TOKEN " +
+            "to a Copilot-enabled token (gho_/ghu_/github_pat_).\n"
+        );
+      }
       continue;
     }
   }
