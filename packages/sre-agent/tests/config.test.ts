@@ -64,4 +64,16 @@ describe("loadAgentConfig", () => {
     const c = loadAgentConfig({ ...base, CONFIRM_WRITES: "false" });
     expect(c.confirmWrites).toBe(false);
   });
+
+  it("treats empty-string BYOK vars (the `KEY=` .env form) as unset → seat mode", () => {
+    const c = loadAgentConfig({
+      ...base,
+      LLM_MODE: "seat",
+      LLM_PROVIDER: "",
+      LLM_BASE_URL: "",
+      LLM_API_KEY: ""
+    });
+    expect(c.llm.mode).toBe("seat");
+    expect(c.llm.provider).toBeUndefined();
+  });
 });

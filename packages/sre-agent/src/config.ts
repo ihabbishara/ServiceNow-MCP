@@ -6,27 +6,33 @@ const bool = (def: boolean) =>
     .default(def ? "true" : "false")
     .transform((v) => v === "true");
 
+// An env var written as `KEY=` in a .env file parses to "" (empty string), which
+// is NOT undefined — so a plain `.optional()` on an enum/url would reject it as
+// "present but invalid". Treat empty strings as unset, like core's config does.
+const optional = <T extends z.ZodTypeAny>(inner: T) =>
+  z.preprocess((v) => (v === "" ? undefined : v), inner.optional());
+
 const schema = z.object({
   // ServiceNow (reused by core)
   SERVICENOW_BASE_URL: z.string().url(),
   SERVICENOW_USERNAME: z.string().min(1),
   SERVICENOW_PASSWORD: z.string().min(1),
-  SERVICENOW_PROXY: z.string().optional(),
+  SERVICENOW_PROXY: optional(z.string()),
   // ADO
   ADO_AUTH_MODE: z.enum(["azcli", "pat"]).default("azcli"),
-  ADO_ORG_URL: z.string().url().optional(),
-  ADO_PROJECT: z.string().min(1).optional(),
-  ADO_PAT: z.string().optional(),
-  ADO_AREA_PATH: z.string().optional(),
-  ADO_ITERATION_PATH: z.string().optional(),
+  ADO_ORG_URL: optional(z.string().url()),
+  ADO_PROJECT: optional(z.string().min(1)),
+  ADO_PAT: optional(z.string()),
+  ADO_AREA_PATH: optional(z.string()),
+  ADO_ITERATION_PATH: optional(z.string()),
   ADO_CREATE_BUG_ENABLED: bool(true),
   AZ_PATH: z.string().default("az"),
   // LLM
   LLM_MODE: z.enum(["seat", "byok"]).default("seat"),
   LLM_MODEL: z.string().default("gpt-5"),
-  LLM_PROVIDER: z.enum(["azure", "anthropic", "openai"]).optional(),
-  LLM_BASE_URL: z.string().url().optional(),
-  LLM_API_KEY: z.string().optional(),
+  LLM_PROVIDER: optional(z.enum(["azure", "anthropic", "openai"])),
+  LLM_BASE_URL: optional(z.string().url()),
+  LLM_API_KEY: optional(z.string()),
   AZURE_API_VERSION: z.string().default("2024-10-21"),
   // behavior
   CONFIRM_WRITES: bool(true),
