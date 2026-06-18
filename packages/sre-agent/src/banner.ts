@@ -1,3 +1,5 @@
+import { LION_WIDE, LION_NARROW } from "./banner-lion.js";
+
 // ANSI-Shadow block art for "ING SRE AGENT" (generated once with figlet and
 // embedded — no runtime dependency). Two layouts: a wide single-line wordmark
 // for roomy terminals, and a stacked "ING" / "SRE AGENT" for narrow ones (and
@@ -31,7 +33,9 @@ const TAGLINE = "  ServiceNow + Azure DevOps  ·  GitHub Copilot SDK";
 /** The wide wordmark needs this many columns; below it we stack. */
 const WIDE_MIN_COLUMNS = 98;
 
+const ORANGE = "\x1b[38;2;255;98;0m"; // ING brand orange (#FF6200)
 const CYAN = "\x1b[36m";
+const BOLD = "\x1b[1m";
 const DIM = "\x1b[2m";
 const RESET = "\x1b[0m";
 
@@ -59,7 +63,13 @@ const paintLines = (block: string, code: string): string =>
     .map((line) => (line ? `${code}${line}${RESET}` : line))
     .join("\n");
 
-/** The full banner (art + tagline), adapting to width and coloring per `color`. */
+/**
+ * The full banner. With color on and a terminal at least 48 columns wide, shows
+ * the ING lion (orange) above an "ING SRE AGENT" wordmark — the wide art at >=64
+ * columns, narrow below. Without color (piped/redirected output, NO_COLOR, dumb
+ * terminals) or on a very narrow terminal, falls back to the plain ANSI-Shadow
+ * text wordmark — no escape codes, no half-block art in logs.
+ */
 export const banner = ({
   color,
   columns = process.stdout.columns ?? 80
@@ -67,6 +77,11 @@ export const banner = ({
   color: boolean;
   columns?: number;
 }): string => {
+  if (color && columns >= 48) {
+    const lion = columns >= 64 ? LION_WIDE : LION_NARROW;
+    const wordmark = `  ${BOLD}${ORANGE}ING${RESET} ${BOLD}${CYAN}SRE AGENT${RESET}`;
+    return `${paintLines(lion, ORANGE)}\n\n${wordmark}\n${DIM}${TAGLINE}${RESET}\n`;
+  }
   const art = chooseLayout(columns) === "wide" ? WIDE_ART : STACKED_ART;
   if (!color) return `${art}\n${TAGLINE}\n`;
   return `${paintLines(art, CYAN)}\n${DIM}${TAGLINE}${RESET}\n`;

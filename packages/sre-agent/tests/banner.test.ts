@@ -67,3 +67,30 @@ describe("printBanner", () => {
     expect(write.mock.calls[0][0]).toContain("ServiceNow");
   });
 });
+
+const ORANGE = "\x1b[38;2;255;98;0m";
+const hasHalfBlock = (s: string) => /[▀▄█]/.test(s) && /[▀▄]/.test(s);
+
+describe("ING lion", () => {
+  it("shows the orange lion (half-block art) when color is on and there is room", () => {
+    const out = banner({ color: true, columns: 80 });
+    expect(hasHalfBlock(out)).toBe(true); // half-block glyphs are unique to the lion
+    expect(out).toContain(ORANGE); // painted ING orange
+    expect(out).toContain("SRE AGENT");
+  });
+
+  it("falls back to the plain text wordmark (no lion, no escapes) when color is off", () => {
+    const out = banner({ color: false, columns: 120 });
+    expect(out).not.toContain("\x1b["); // no color codes
+    expect(/[▀▄]/.test(out)).toBe(false); // no half-block lion
+    expect(out).toContain("█"); // the figlet wordmark is still there
+  });
+
+  it("uses a smaller lion on a narrow (but >=48) terminal than on a wide one", () => {
+    const strip = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, "");
+    const rows = (s: string) => strip(s).split("\n").filter((l) => /[▀▄█]/.test(l)).length;
+    expect(rows(banner({ color: true, columns: 50 }))).toBeLessThan(
+      rows(banner({ color: true, columns: 80 }))
+    );
+  });
+});
