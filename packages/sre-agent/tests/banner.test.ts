@@ -1,5 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
-import { banner, supportsColor, printBanner } from "../src/banner.js";
+import { banner, supportsColor, printBanner, chooseLayout } from "../src/banner.js";
+
+/** Max display width (code-point count) across the lines of a block. */
+const maxWidth = (s: string): number => Math.max(...s.split("\n").map((l) => [...l].length));
 
 describe("supportsColor", () => {
   it("is true on a TTY with no NO_COLOR and a normal TERM", () => {
@@ -20,11 +23,31 @@ describe("supportsColor", () => {
   });
 });
 
+describe("chooseLayout", () => {
+  it("uses the wide wordmark when the terminal is at least 98 columns", () => {
+    expect(chooseLayout(120)).toBe("wide");
+    expect(chooseLayout(98)).toBe("wide");
+  });
+
+  it("stacks when the terminal is narrower than the wide wordmark", () => {
+    expect(chooseLayout(97)).toBe("stacked");
+    expect(chooseLayout(80)).toBe("stacked");
+  });
+});
+
 describe("banner", () => {
   it("contains the block art and the tagline", () => {
-    const out = banner({ color: false });
+    const out = banner({ color: false, columns: 120 });
     expect(out).toContain("█"); // block glyphs present
     expect(out).toMatch(/ServiceNow.*Azure DevOps/);
+  });
+
+  it("renders the wide single-line wordmark (98 cols) on a wide terminal", () => {
+    expect(maxWidth(banner({ color: false, columns: 120 }))).toBe(98);
+  });
+
+  it("renders the stacked wordmark (<=72 cols) on a narrow terminal", () => {
+    expect(maxWidth(banner({ color: false, columns: 80 }))).toBe(72);
   });
 
   it("emits no ANSI escape codes when color is off", () => {
