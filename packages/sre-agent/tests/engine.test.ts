@@ -171,4 +171,20 @@ describe("ChatEngine.getAuthStatus", () => {
     const engine = new ChatEngine({ config, tools: [], ...noopDeps });
     await expect(engine.getAuthStatus()).rejects.toThrow(/not started/);
   });
+
+  it("reverts to a not-started state after stop (no calls into a stopped client)", async () => {
+    const { client } = makeFakeClient();
+    const config = loadAgentConfig({ ...base });
+    const engine = new ChatEngine({
+      config,
+      tools: [],
+      ...noopDeps,
+      clientFactory: () => client as never
+    });
+    await engine.start();
+    await engine.stop();
+    // After stop the client/session are released; calling in must fail loudly
+    // rather than dispatch to a stopped client.
+    await expect(engine.getAuthStatus()).rejects.toThrow(/not started/);
+  });
 });

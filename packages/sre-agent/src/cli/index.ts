@@ -20,16 +20,57 @@ Anything else is sent to the model as-is.
 `;
 
 /**
+ * Report the resolved Copilot credential. Crucially, when the runtime resolved
+ * an AMBIENT env token (authType="env") and the user did NOT set
+ * COPILOT_GITHUB_TOKEN explicitly, this is the exact false-positive that makes
+ * turns 403 while auth "looks ok": `isAuthenticated` is true, but the ambient
+ * token — not the `copilot login` OAuth — is what gets sent and rejected. Warn
+ * loudly in that case instead of a bare "auth ok".
+ */
+const logCopilotAuthStatus = (
+  status: { isAuthenticated: boolean; authType?: string; login?: string },
+  config: AgentConfig,
+  ctx = ""
+): void => {
+  const who = status.login ? `, ${status.login}` : "";
+  const tail = ctx ? ` ${ctx}` : "";
+  if (status.authType === "env" && !config.copilot.githubToken) {
+    process.stderr.write(
+      `[sre-agent] WARNING: Copilot resolved an ambient env token (authType=env${who})${tail}. ` +
+        "If turns fail with a 403, that token — not your `copilot login` — is being used. " +
+        "Unset GH_TOKEN/GITHUB_TOKEN in this shell, or set COPILOT_GITHUB_TOKEN to a " +
+        "Copilot-enabled token (gho_/ghu_/github_pat_).\n"
+    );
+    return;
+  }
+  process.stderr.write(`[sre-agent] Copilot auth ok (${status.authType ?? "user"}${who})${tail}\n`);
+};
+
+/**
  * Run the Copilot device-flow login, then reconnect the engine so the new
- * credential takes effect. The SDK runtime resolves auth at start(), so a fresh
- * login is invisible until we stop and restart — stop first so the running
- * runtime releases the credential store the login writes to.
+ * credential takes effect (the SDK runtime resolves auth at start(), so a fresh
+ * login is invisible until we restart). Login runs FIRST, before tearing down
+ * the engine, so a cancelled/failed login leaves the running engine intact
+ * rather than wedged. After restart we re-probe auth: a clean `copilot login`
+ * exit does not prove the SDK now accepts the credential, so surface the real
+ * post-login status instead of a blind "complete".
  */
 const reloginCopilot = async (engine: ChatEngine, config: AgentConfig): Promise<void> => {
-  await engine.stop();
   await copilotLogin({ home: config.copilot.home });
+  await engine.stop();
   await engine.start();
-  process.stderr.write("[sre-agent] Copilot login complete.\n");
+  try {
+    const status = await engine.getAuthStatus();
+    if (!status.isAuthenticated) {
+      process.stderr.write("[sre-agent] Still NOT authenticated after login — see /login guidance.\n");
+      return;
+    }
+    logCopilotAuthStatus(status, config, "after login");
+  } catch (e) {
+    process.stderr.write(
+      `[sre-agent] login done, but could not confirm auth status: ${e instanceof Error ? e.message : String(e)}\n`
+    );
+  }
 };
 
 /**
@@ -58,8 +99,7 @@ const ensureCopilotAuth = async (
     return;
   }
   if (status.isAuthenticated) {
-    const who = status.login ? `, ${status.login}` : "";
-    process.stderr.write(`[sre-agent] Copilot auth ok (${status.authType ?? "user"}${who})\n`);
+    logCopilotAuthStatus(status, config);
     return;
   }
   process.stderr.write("[sre-agent] Copilot is not authenticated.\n");

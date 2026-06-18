@@ -1,6 +1,8 @@
 import { spawn } from "node:child_process";
+import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 /**
  * Minimal child-process surface the login helper needs: subscribe to the two
@@ -36,16 +38,38 @@ export interface CopilotLoginOptions {
 }
 
 /**
- * Resolve the launcher of the SAME bundled runtime the SDK spawns
- * (`@github/copilot`'s `npm-loader.js`, the `copilot` bin). Logging in through
- * this exact launcher guarantees the device-flow OAuth lands in the credential
- * store the SDK's runtime later reads — no version/path drift between "logged
- * in" and "still 403".
+ * Resolve the EXACT runtime entry point the SDK spawns, mirroring
+ * `CopilotClient`'s `getBundledCliPath` (and its `COPILOT_CLI_PATH` override):
+ * the pure-JS `@github/copilot/index.js`.
+ *
+ * Critically NOT `npm-loader.js` (the `copilot` bin): npm-loader prefers the
+ * native platform binary and falls back to a JS path that hard-requires Node
+ * v24. The SDK always runs `node index.js`, which has no such gate. Logging in
+ * through the same index.js guarantees the device-flow OAuth lands in the
+ * credential store the SDK's runtime later reads — and that login works on the
+ * Node versions the agent itself runs on (v22+).
  */
-const defaultResolveBin = (): string => {
+export const resolveSdkRuntime = (): string => {
+  // Honor the same override the SDK checks first, so login and the chat client
+  // never diverge when COPILOT_CLI_PATH is set.
+  const override = process.env.COPILOT_CLI_PATH;
+  if (override) return override;
+  // ESM `import.meta.resolve` honors the package's "import" export condition
+  // (`@github/copilot/sdk`), which CJS `require.resolve` cannot. Up two dirs
+  // from the sdk entry is the package root, where index.js lives.
+  const resolve = import.meta.resolve;
+  if (typeof resolve === "function") {
+    const sdkPath = fileURLToPath(resolve("@github/copilot/sdk"));
+    return join(dirname(dirname(sdkPath)), "index.js");
+  }
   const require = createRequire(import.meta.url);
-  const pkgJsonPath = require.resolve("@github/copilot/package.json");
-  return join(dirname(pkgJsonPath), "npm-loader.js");
+  for (const base of require.resolve.paths("@github/copilot") ?? []) {
+    const candidate = join(base, "@github", "copilot", "index.js");
+    if (existsSync(candidate)) return candidate;
+  }
+  throw new Error(
+    "Could not find the @github/copilot runtime (index.js). Ensure @github/copilot is installed."
+  );
 };
 
 /**
@@ -60,13 +84,19 @@ const defaultResolveBin = (): string => {
  */
 export const copilotLogin = (opts: CopilotLoginOptions = {}): Promise<void> => {
   const spawnFn = opts.spawnFn ?? (spawn as unknown as SpawnFn);
-  const bin = (opts.resolveBin ?? defaultResolveBin)();
+  const bin = (opts.resolveBin ?? resolveSdkRuntime)();
   const execPath = opts.execPath ?? process.execPath;
   const env: NodeJS.ProcessEnv = { ...(opts.env ?? process.env) };
   if (opts.home) env.COPILOT_HOME = opts.home;
 
+  // A .js entry runs under node (`node index.js login`), exactly as the SDK
+  // spawns it; a native binary override runs directly (`copilot login`).
+  const isJs = bin.endsWith(".js");
+  const command = isJs ? execPath : bin;
+  const args = isJs ? [bin, "login"] : ["login"];
+
   return new Promise<void>((resolve, reject) => {
-    const child = spawnFn(execPath, [bin, "login"], { stdio: "inherit", env });
+    const child = spawnFn(command, args, { stdio: "inherit", env });
     child.on("error", reject);
     child.on("close", (code) => {
       if (code === 0) resolve();
@@ -80,6 +110,12 @@ export const copilotLogin = (opts: CopilotLoginOptions = {}): Promise<void> => {
  * "Authorization error, you may need to run /login" turn failure the SDK
  * surfaces, or a bare 401/403 transport error. Used to turn an opaque turn
  * failure into an actionable "run /login" hint.
+ *
+ * Only ever applied to errors THROWN out of `session.sendAndWait` — i.e.
+ * Copilot transport/turn failures. Tool failures (ServiceNow/ADO HTTP 403 etc.)
+ * are returned to the model as tool results, not thrown out of the turn, so the
+ * bare numeric match here won't misfire on a downstream 403. Worst case it adds
+ * one extra hint line after an already-failed turn.
  */
 export const isCopilotAuthError = (err: unknown): boolean => {
   const message = err instanceof Error ? err.message : typeof err === "string" ? err : "";

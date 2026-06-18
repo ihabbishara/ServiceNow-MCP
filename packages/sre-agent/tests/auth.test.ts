@@ -1,6 +1,13 @@
 import { describe, it, expect, vi } from "vitest";
 import { EventEmitter } from "node:events";
-import { copilotLogin, isCopilotAuthError, type SpawnFn } from "../src/engine/auth.js";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import {
+  copilotLogin,
+  isCopilotAuthError,
+  resolveSdkRuntime,
+  type SpawnFn
+} from "../src/engine/auth.js";
 
 /**
  * A fake child process: an EventEmitter exposing just the `on` surface the
@@ -9,14 +16,16 @@ import { copilotLogin, isCopilotAuthError, type SpawnFn } from "../src/engine/au
  */
 const makeFakeChild = () => new EventEmitter();
 
+// The login path mirrors the SDK runtime: the pure-JS index.js, run via node.
+const indexJs = "/bundled/@github/copilot/index.js";
 const baseOpts = {
-  resolveBin: () => "/bundled/@github/copilot/npm-loader.js",
+  resolveBin: () => indexJs,
   execPath: "/usr/bin/node",
   env: {} as NodeJS.ProcessEnv
 };
 
 describe("copilotLogin", () => {
-  it("spawns the bundled copilot launcher with the `login` subcommand over inherited stdio", async () => {
+  it("runs the bundled index.js runtime via node with the `login` subcommand over inherited stdio", async () => {
     const child = makeFakeChild();
     const spawnFn = vi.fn(() => child) as unknown as SpawnFn;
 
@@ -27,8 +36,22 @@ describe("copilotLogin", () => {
     expect(spawnFn).toHaveBeenCalledOnce();
     const [cmd, args, opts] = (spawnFn as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(cmd).toBe("/usr/bin/node");
-    expect(args).toEqual(["/bundled/@github/copilot/npm-loader.js", "login"]);
+    expect(args).toEqual([indexJs, "login"]);
     expect(opts.stdio).toBe("inherit");
+  });
+
+  it("runs a native (non-.js) runtime path directly, without prefixing node", async () => {
+    const child = makeFakeChild();
+    const spawnFn = vi.fn(() => child) as unknown as SpawnFn;
+    const nativeBin = "/bundled/@github/copilot-win32-x64/copilot.exe";
+
+    const p = copilotLogin({ ...baseOpts, resolveBin: () => nativeBin, spawnFn });
+    child.emit("close", 0);
+    await p;
+
+    const [cmd, args] = (spawnFn as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(cmd).toBe(nativeBin);
+    expect(args).toEqual(["login"]);
   });
 
   it("sets COPILOT_HOME in the child env so login writes the store the SDK reads", async () => {
@@ -71,6 +94,29 @@ describe("copilotLogin", () => {
     const p = copilotLogin({ ...baseOpts, spawnFn });
     child.emit("error", new Error("ENOENT"));
     await expect(p).rejects.toThrow(/ENOENT/);
+  });
+});
+
+describe("resolveSdkRuntime", () => {
+  it("resolves the SAME bundled @github/copilot index.js the SDK spawns (not npm-loader)", () => {
+    const bin = resolveSdkRuntime();
+    // The SDK runs the pure-JS runtime; logging in through any other entry
+    // (e.g. npm-loader.js, which prefers the native binary and gates on Node
+    // v24) could write a different store than the SDK reads.
+    expect(bin.endsWith(join("@github", "copilot", "index.js"))).toBe(true);
+    expect(bin).not.toContain("npm-loader");
+    expect(existsSync(bin)).toBe(true);
+  });
+
+  it("honors COPILOT_CLI_PATH so login follows any SDK runtime override", () => {
+    const prev = process.env.COPILOT_CLI_PATH;
+    process.env.COPILOT_CLI_PATH = "/custom/copilot/index.js";
+    try {
+      expect(resolveSdkRuntime()).toBe("/custom/copilot/index.js");
+    } finally {
+      if (prev === undefined) delete process.env.COPILOT_CLI_PATH;
+      else process.env.COPILOT_CLI_PATH = prev;
+    }
   });
 });
 

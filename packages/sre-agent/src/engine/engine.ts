@@ -155,6 +155,11 @@ export class ChatEngine {
     for (const off of this.unsubscribe.splice(0)) off();
     await this.session?.disconnect();
     const stopErrors = (await this.client?.stop()) ?? [];
+    // Release the handles so post-stop calls fail loudly with "engine not
+    // started" instead of dispatching into a stopped client, and so a later
+    // start() (e.g. relogin) rebuilds from a clean slate.
+    this.session = undefined;
+    this.client = undefined;
     if (stopErrors.length > 0) {
       console.error("[sre-agent] errors during shutdown:", stopErrors);
     }
