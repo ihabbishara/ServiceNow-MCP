@@ -10,7 +10,34 @@ export type ExecFn = (
   args: string[],
   options?: ExecOptions
 ) => Promise<{ stdout: string; stderr: string }>;
-const defaultExec: ExecFn = promisify(execFile) as unknown as ExecFn;
+
+const execFileP = promisify(execFile);
+
+// Windows command-line quoting for a single argument (cross-spawn style): wrap
+// in double quotes when it contains whitespace or quotes, escaping embedded
+// double-quotes and trailing backslashes. WIQL uses single quotes + brackets,
+// which cmd treats literally inside double quotes.
+const winQuote = (a: string): string => {
+  if (a === "") return '""';
+  if (!/[\s"]/.test(a)) return a;
+  return '"' + a.replace(/(\\*)"/g, '$1$1\\"').replace(/(\\*)$/, '$1$1') + '"';
+};
+
+// On Windows the Azure CLI is `az.cmd` (a batch script). Node >= 20.12 refuses
+// to spawn `.cmd`/`.bat` without a shell (CVE-2024-27980), and execFile never
+// resolved them anyway. Run through cmd.exe with hand-quoted, verbatim args so
+// the WIQL string (spaces + single quotes) survives intact. POSIX is unchanged:
+// execFile the binary directly with the args array (no shell, no quoting).
+const defaultExec: ExecFn = ((file: string, args: string[], options?: ExecOptions) => {
+  if (process.platform === "win32") {
+    const line = [file, ...args].map(winQuote).join(" ");
+    return execFileP("cmd.exe", ["/d", "/s", "/c", line], {
+      ...options,
+      windowsVerbatimArguments: true
+    });
+  }
+  return execFileP(file, args, options);
+}) as unknown as ExecFn;
 
 /**
  * Thin wrapper around the `az` CLI. Appends `--output json --only-show-errors`,

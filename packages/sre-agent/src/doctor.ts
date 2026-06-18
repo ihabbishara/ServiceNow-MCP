@@ -1,22 +1,17 @@
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
-
-type ExecFn = (
-  file: string,
-  args: string[],
-  options?: { timeout?: number }
-) => Promise<{ stdout: string; stderr: string }>;
-const defaultExec = promisify(execFile) as unknown as ExecFn;
+import { AzRunner, type ExecFn } from "@sre/core";
 
 /**
  * Preflight: confirm the Azure CLI is logged in. `az account show` exits 0 only
  * when a session is active. On any failure, throw a remediation message guiding
  * the user to `az login` (and the azure-devops extension).
+ *
+ * Runs through AzRunner so the Windows `az.cmd` handling (cmd.exe + quoting)
+ * lives in one place and the preflight uses the exact same invocation as the
+ * real `az boards` calls.
  */
-export const runDoctor = async (azPath = "az", exec: ExecFn = defaultExec): Promise<void> => {
+export const runDoctor = async (azPath = "az", exec?: ExecFn): Promise<void> => {
   try {
-    // Bound a hung `az account show` so preflight can't stall forever.
-    await exec(azPath, ["account", "show", "--output", "json", "--only-show-errors"], { timeout: 15000 });
+    await new AzRunner(azPath, exec).json(["account", "show"]);
   } catch {
     throw new Error(
       "Azure CLI is not logged in. Run `az login` (and `az extension add --name azure-devops`) before starting the agent."
