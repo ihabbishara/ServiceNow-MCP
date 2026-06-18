@@ -23,10 +23,29 @@ import { makePermissionHandler } from "./permissions.js";
  *     same credential store the standalone CLI logged into.
  * BYOK mode authenticates via the session `provider`, so these are seat-only.
  */
-export const buildClientOptions = (config: AgentConfig): CopilotClientOptions => {
+export const buildClientOptions = (
+  config: AgentConfig,
+  env: NodeJS.ProcessEnv = process.env
+): CopilotClientOptions => {
   const options: CopilotClientOptions = {};
   if (config.llm.mode !== "seat") return options;
-  if (config.copilot.githubToken) options.gitHubToken = config.copilot.githubToken;
+  if (config.copilot.githubToken) {
+    // Explicit token wins; the SDK sets useLoggedInUser=false, so ambient env
+    // tokens are ignored already — no need to scrub the env.
+    options.gitHubToken = config.copilot.githubToken;
+  } else if (config.copilot.ignoreEnvToken) {
+    // No explicit token → use the stored `copilot login` OAuth (the identity the
+    // copilot CLI uses). The SDK tries env tokens (COPILOT_GITHUB_TOKEN→GH_TOKEN→
+    // GITHUB_TOKEN) BEFORE that OAuth, and an ambient repo/Actions token there is
+    // almost never Copilot-enabled → it's sent and 403s. Strip those three from
+    // the env handed to the runtime so the OAuth is used. Cleaning process.env
+    // (not just the shell) also catches tokens injected via `node --env-file`.
+    const cleaned = { ...env };
+    delete cleaned.COPILOT_GITHUB_TOKEN;
+    delete cleaned.GH_TOKEN;
+    delete cleaned.GITHUB_TOKEN;
+    options.env = cleaned;
+  }
   if (config.copilot.home) options.baseDirectory = config.copilot.home;
   return options;
 };

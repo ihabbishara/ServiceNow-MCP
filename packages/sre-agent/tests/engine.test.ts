@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import type { SessionConfig } from "@github/copilot-sdk";
-import { ChatEngine } from "../src/engine/engine.js";
+import { ChatEngine, buildClientOptions } from "../src/engine/engine.js";
 import { loadAgentConfig } from "../src/config.js";
 
 const base = {
@@ -141,6 +141,57 @@ describe("ChatEngine Copilot client auth options", () => {
   it("COPILOT_HOME flows to the client as baseDirectory (the CLI's store)", async () => {
     const opts = await startWithConfig({ ...base, COPILOT_HOME: "/home/me/.copilot" });
     expect(opts.baseDirectory).toBe("/home/me/.copilot");
+  });
+});
+
+describe("buildClientOptions ambient-token stripping", () => {
+  const poisonedEnv = {
+    PATH: "/usr/bin",
+    GH_TOKEN: "ghp_repo",
+    GITHUB_TOKEN: "ghp_actions",
+    COPILOT_GITHUB_TOKEN: "stale"
+  } as NodeJS.ProcessEnv;
+
+  it("seat, no explicit token: strips GH_TOKEN/GITHUB_TOKEN/COPILOT_GITHUB_TOKEN from the runtime env", () => {
+    const opts = buildClientOptions(loadAgentConfig({ ...base }), poisonedEnv);
+    expect(opts.gitHubToken).toBeUndefined();
+    expect(opts.env).toBeDefined();
+    expect(opts.env?.GH_TOKEN).toBeUndefined();
+    expect(opts.env?.GITHUB_TOKEN).toBeUndefined();
+    expect(opts.env?.COPILOT_GITHUB_TOKEN).toBeUndefined();
+    // Everything else is preserved so the runtime still finds PATH, etc.
+    expect(opts.env?.PATH).toBe("/usr/bin");
+  });
+
+  it("explicit COPILOT_GITHUB_TOKEN wins and does NOT strip the env", () => {
+    const opts = buildClientOptions(
+      loadAgentConfig({ ...base, COPILOT_GITHUB_TOKEN: "gho_explicit" }),
+      poisonedEnv
+    );
+    expect(opts.gitHubToken).toBe("gho_explicit");
+    expect(opts.env).toBeUndefined();
+  });
+
+  it("COPILOT_IGNORE_ENV_TOKEN=false leaves ambient tokens in place (opt-out)", () => {
+    const opts = buildClientOptions(
+      loadAgentConfig({ ...base, COPILOT_IGNORE_ENV_TOKEN: "false" }),
+      poisonedEnv
+    );
+    expect(opts.env).toBeUndefined();
+  });
+
+  it("byok mode: no client auth options and no env stripping", () => {
+    const opts = buildClientOptions(
+      loadAgentConfig({
+        ...base,
+        LLM_MODE: "byok",
+        LLM_PROVIDER: "azure",
+        LLM_BASE_URL: "https://x.openai.azure.com"
+      }),
+      poisonedEnv
+    );
+    expect(opts.gitHubToken).toBeUndefined();
+    expect(opts.env).toBeUndefined();
   });
 });
 

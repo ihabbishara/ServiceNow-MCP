@@ -98,4 +98,14 @@ describe("loadAgentConfig", () => {
     expect(c.copilot.githubToken).toBeUndefined();
     expect(c.copilot.home).toBeUndefined();
   });
+
+  it("defaults to ignoring ambient GitHub env tokens (use the copilot-login OAuth)", () => {
+    const c = loadAgentConfig({ ...base });
+    expect(c.copilot.ignoreEnvToken).toBe(true);
+  });
+
+  it("COPILOT_IGNORE_ENV_TOKEN=false opts back into ambient env-token auth", () => {
+    const c = loadAgentConfig({ ...base, COPILOT_IGNORE_ENV_TOKEN: "false" });
+    expect(c.copilot.ignoreEnvToken).toBe(false);
+  });
 });
