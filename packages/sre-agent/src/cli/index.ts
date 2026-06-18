@@ -20,12 +20,17 @@ Anything else is sent to the model as-is.
 const main = async () => {
   // Fail fast on bad/missing agent config before touching the SDK, runtime, or az.
   const config = loadAgentConfig();
+  process.stderr.write(
+    `[sre-agent] config ok (llm=${config.llm.mode}/${config.llm.model}, ado=${config.adoAuthMode})\n`
+  );
 
   // When ADO runs through the Azure CLI, verify the session is logged in before
   // we spin up the SDK — a clear "run az login" beats an opaque tool failure
   // mid-conversation. PAT mode skips this preflight.
   if (config.adoAuthMode === "azcli") {
+    process.stderr.write("[sre-agent] checking Azure CLI login (az account show)…\n");
     await runDoctor(config.raw.AZ_PATH);
+    process.stderr.write("[sre-agent] az login ok\n");
   }
 
   const runtime = createMcpRuntime(); // reuses core config from process.env
@@ -54,6 +59,10 @@ const main = async () => {
     onToolStart: (n) => stdout.write(`\n  ↳ ${n}…\n`)
   });
 
+  process.stderr.write(
+    `[sre-agent] connecting to Copilot (${config.llm.mode} mode, model ${config.llm.model})… ` +
+      "first run can take a while as the Copilot runtime starts\n"
+  );
   await engine.start();
   stdout.write(
     "SRE agent ready. Ask about incidents, changes, SLA risk, or ADO work items. " +
