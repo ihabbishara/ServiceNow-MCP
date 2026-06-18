@@ -1,41 +1,31 @@
-import { LION_WIDE, LION_NARROW } from "./banner-lion.js";
+import { LION_ART } from "./banner-lion.js";
 
-// ANSI-Shadow block art for "ING SRE AGENT" (generated once with figlet and
-// embedded — no runtime dependency). Two layouts: a wide single-line wordmark
-// for roomy terminals, and a stacked "ING" / "SRE AGENT" for narrow ones (and
-// for non-TTY/piped output, which defaults to the narrow width). Box-drawing
-// glyphs render in modern terminals; color is gated separately by supportsColor.
-const WIDE_ART = `
-██╗███╗   ██╗ ██████╗     ███████╗██████╗ ███████╗     █████╗  ██████╗ ███████╗███╗   ██╗████████╗
-██║████╗  ██║██╔════╝     ██╔════╝██╔══██╗██╔════╝    ██╔══██╗██╔════╝ ██╔════╝████╗  ██║╚══██╔══╝
-██║██╔██╗ ██║██║  ███╗    ███████╗██████╔╝█████╗      ███████║██║  ███╗█████╗  ██╔██╗ ██║   ██║
-██║██║╚██╗██║██║   ██║    ╚════██║██╔══██╗██╔══╝      ██╔══██║██║   ██║██╔══╝  ██║╚██╗██║   ██║
-██║██║ ╚████║╚██████╔╝    ███████║██║  ██║███████╗    ██║  ██║╚██████╔╝███████╗██║ ╚████║   ██║
-╚═╝╚═╝  ╚═══╝ ╚═════╝     ╚══════╝╚═╝  ╚═╝╚══════╝    ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝  ╚═══╝   ╚═╝`;
-
-const STACKED_ART = `
+// ANSI-Shadow block letters for the "ING SRE AGENT" headline (generated once
+// with figlet, embedded — no runtime dependency). ING renders ING orange, SRE
+// AGENT cyan; a compact lion sits centered above. Color is gated by supportsColor.
+const ING_ART = `
 ██╗███╗   ██╗ ██████╗
 ██║████╗  ██║██╔════╝
 ██║██╔██╗ ██║██║  ███╗
 ██║██║╚██╗██║██║   ██║
 ██║██║ ╚████║╚██████╔╝
 ╚═╝╚═╝  ╚═══╝ ╚═════╝
+`;
 
+const SRE_ART = `
 ███████╗██████╗ ███████╗     █████╗  ██████╗ ███████╗███╗   ██╗████████╗
 ██╔════╝██╔══██╗██╔════╝    ██╔══██╗██╔════╝ ██╔════╝████╗  ██║╚══██╔══╝
 ███████╗██████╔╝█████╗      ███████║██║  ███╗█████╗  ██╔██╗ ██║   ██║
 ╚════██║██╔══██╗██╔══╝      ██╔══██║██║   ██║██╔══╝  ██║╚██╗██║   ██║
 ███████║██║  ██║███████╗    ██║  ██║╚██████╔╝███████╗██║ ╚████║   ██║
-╚══════╝╚═╝  ╚═╝╚══════╝    ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝  ╚═══╝   ╚═╝`;
+╚══════╝╚═╝  ╚═╝╚══════╝    ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝  ╚═══╝   ╚═╝
+`;
 
+const HEADLINE_WIDTH = 72;
 const TAGLINE = "  ServiceNow + Azure DevOps  ·  GitHub Copilot SDK";
-
-/** The wide wordmark needs this many columns; below it we stack. */
-const WIDE_MIN_COLUMNS = 98;
 
 const ORANGE = "\x1b[38;2;255;98;0m"; // ING brand orange (#FF6200)
 const CYAN = "\x1b[36m";
-const BOLD = "\x1b[1m";
 const DIM = "\x1b[2m";
 const RESET = "\x1b[0m";
 
@@ -53,22 +43,25 @@ export const supportsColor = (
   return Boolean(isTTY);
 };
 
-/** Pick the wide wordmark only when the terminal is wide enough; else stack. */
-export const chooseLayout = (columns: number): "wide" | "stacked" =>
-  columns >= WIDE_MIN_COLUMNS ? "wide" : "stacked";
-
-const paintLines = (block: string, code: string): string =>
+const paintBlock = (block: string, code: string): string =>
   block
     .split("\n")
     .map((line) => (line ? `${code}${line}${RESET}` : line))
     .join("\n");
 
+/** Left-pad every line so the block is centered within `width` columns. */
+const centerBlock = (block: string, width: number): string => {
+  const lines = block.split("\n");
+  const blockW = Math.max(...lines.map((l) => [...l].length));
+  const pad = " ".repeat(Math.max(0, Math.floor((width - blockW) / 2)));
+  return lines.map((l) => (l ? pad + l : l)).join("\n");
+};
+
 /**
- * The full banner. With color on and a terminal at least 48 columns wide, shows
- * the ING lion (orange) above an "ING SRE AGENT" wordmark — the wide art at >=64
- * columns, narrow below. Without color (piped/redirected output, NO_COLOR, dumb
- * terminals) or on a very narrow terminal, falls back to the plain ANSI-Shadow
- * text wordmark — no escape codes, no half-block art in logs.
+ * The startup banner: a compact ING lion centered above the big "ING SRE AGENT"
+ * wordmark (ING orange, SRE AGENT cyan), then the tagline. The lion shows only
+ * with color and enough width; piped/redirected output, NO_COLOR, and dumb
+ * terminals get the plain text wordmark — no escape codes, no half-block art.
  */
 export const banner = ({
   color,
@@ -77,14 +70,16 @@ export const banner = ({
   color: boolean;
   columns?: number;
 }): string => {
-  if (color && columns >= 48) {
-    const lion = columns >= 64 ? LION_WIDE : LION_NARROW;
-    const wordmark = `  ${BOLD}${ORANGE}ING${RESET} ${BOLD}${CYAN}SRE AGENT${RESET}`;
-    return `${paintLines(lion, ORANGE)}\n\n${wordmark}\n${DIM}${TAGLINE}${RESET}\n`;
+  const wordmark = color
+    ? `${paintBlock(ING_ART, ORANGE)}\n${paintBlock(SRE_ART, CYAN)}`
+    : `${ING_ART}\n${SRE_ART}`;
+  const tagline = color ? `${DIM}${TAGLINE}${RESET}` : TAGLINE;
+
+  if (color && columns >= HEADLINE_WIDTH) {
+    const lion = paintBlock(centerBlock(LION_ART, HEADLINE_WIDTH), ORANGE);
+    return `\n${lion}\n\n${wordmark}\n\n${tagline}\n`;
   }
-  const art = chooseLayout(columns) === "wide" ? WIDE_ART : STACKED_ART;
-  if (!color) return `${art}\n${TAGLINE}\n`;
-  return `${paintLines(art, CYAN)}\n${DIM}${TAGLINE}${RESET}\n`;
+  return `\n${wordmark}\n\n${tagline}\n`;
 };
 
 /** Print the banner once, auto-detecting color and terminal width. */
