@@ -1,12 +1,35 @@
 import {
   CopilotClient,
+  type CopilotClientOptions,
   type CopilotSession,
+  type GetAuthStatusResponse,
   type PermissionHandler,
   type SessionConfig,
   type Tool
 } from "@github/copilot-sdk";
 import type { AgentConfig } from "../config.js";
 import { makePermissionHandler } from "./permissions.js";
+
+/**
+ * Translate the agent's seat-auth config into `CopilotClientOptions`.
+ *
+ * Without any of these, the SDK auto-detects a credential: it tries the env
+ * tokens (COPILOT_GITHUB_TOKEN→GH_TOKEN→GITHUB_TOKEN) BEFORE the stored OAuth
+ * the `copilot` CLI wrote — so a stray repo/Actions token in the environment is
+ * sent and rejected (403 with a backend Request ID). We make auth deterministic:
+ *   • `gitHubToken` — highest-priority SDK auth; it also flips `useLoggedInUser`
+ *     to false, so NO ambient env token can override it.
+ *   • `baseDirectory` (COPILOT_HOME) — points the SDK's bundled runtime at the
+ *     same credential store the standalone CLI logged into.
+ * BYOK mode authenticates via the session `provider`, so these are seat-only.
+ */
+export const buildClientOptions = (config: AgentConfig): CopilotClientOptions => {
+  const options: CopilotClientOptions = {};
+  if (config.llm.mode !== "seat") return options;
+  if (config.copilot.githubToken) options.gitHubToken = config.copilot.githubToken;
+  if (config.copilot.home) options.baseDirectory = config.copilot.home;
+  return options;
+};
 
 export interface EngineDeps {
   config: AgentConfig;
@@ -22,11 +45,13 @@ export interface EngineDeps {
    */
   onPermissionRequest?: PermissionHandler;
   /**
-   * Seam for injecting the Copilot client. Defaults to `() => new CopilotClient()`
-   * so production behavior is unchanged; tests pass a fake client to assert the
-   * `createSession` config (seat vs BYOK) without a live Copilot seat.
+   * Seam for injecting the Copilot client. Defaults to
+   * `(opts) => new CopilotClient(opts)` so production behavior is unchanged;
+   * tests pass a fake client to assert the seat-auth options
+   * (`gitHubToken`/`baseDirectory`) and the `createSession` config (seat vs
+   * BYOK) without a live Copilot seat.
    */
-  clientFactory?: () => CopilotClient;
+  clientFactory?: (options: CopilotClientOptions) => CopilotClient;
 }
 
 /**
@@ -44,9 +69,11 @@ export class ChatEngine {
   constructor(private readonly deps: EngineDeps) {}
 
   async start(): Promise<void> {
-    // Seat auth is auto-detected by the default factory; tests inject a fake.
-    const clientFactory = this.deps.clientFactory ?? (() => new CopilotClient());
-    this.client = clientFactory();
+    // Seat auth options are derived from config; tests inject a fake factory
+    // to assert what the client is constructed with.
+    const clientFactory =
+      this.deps.clientFactory ?? ((opts: CopilotClientOptions) => new CopilotClient(opts));
+    this.client = clientFactory(buildClientOptions(this.deps.config));
     await this.client.start();
 
     // If anything after start() fails, stop the client so the engine stays
@@ -97,6 +124,17 @@ export class ChatEngine {
       this.client = undefined;
       throw err;
     }
+  }
+
+  /**
+   * Current Copilot authentication status (login name, auth type, whether the
+   * credential resolved). Used by the CLI to preflight seat auth before the
+   * first turn and to drive the in-tool login flow. `authType: "env"` here is a
+   * useful tell that an ambient token — not the stored OAuth — was picked up.
+   */
+  async getAuthStatus(): Promise<GetAuthStatusResponse> {
+    if (!this.client) throw new Error("engine not started");
+    return this.client.getAuthStatus();
   }
 
   /**

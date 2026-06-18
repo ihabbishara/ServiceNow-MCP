@@ -28,15 +28,19 @@ const makeFakeSession = () => ({
  * the engine hands it, so tests can assert seat-vs-BYOK wiring without a live
  * Copilot seat. `start`/`stop` are no-op stubs.
  */
-const makeFakeClient = () => {
+const makeFakeClient = (
+  authStatus = { isAuthenticated: true, login: "octocat", authType: "user" as const }
+) => {
   const session = makeFakeSession();
   const createSession = vi.fn(async (_config: SessionConfig) => session);
+  const getAuthStatus = vi.fn(async () => authStatus);
   const client = {
     start: vi.fn(async () => undefined),
     stop: vi.fn(async () => [] as Error[]),
+    getAuthStatus,
     createSession
   };
-  return { client, createSession, session };
+  return { client, createSession, getAuthStatus, session };
 };
 
 const noopDeps = {
@@ -102,5 +106,69 @@ describe("ChatEngine clientFactory seam", () => {
     const config = loadAgentConfig({ ...base });
     const engine = new ChatEngine({ config, tools: [], ...noopDeps });
     expect(engine).toBeInstanceOf(ChatEngine);
+  });
+});
+
+describe("ChatEngine Copilot client auth options", () => {
+  const startWithConfig = async (env: Record<string, string>) => {
+    const { client } = makeFakeClient();
+    let opts: Record<string, unknown> | undefined;
+    const config = loadAgentConfig(env);
+    const engine = new ChatEngine({
+      config,
+      tools: [],
+      ...noopDeps,
+      clientFactory: (o: unknown) => {
+        opts = o as Record<string, unknown>;
+        return client as never;
+      }
+    });
+    await engine.start();
+    return opts ?? {};
+  };
+
+  it("seat mode without Copilot vars: no gitHubToken / baseDirectory passed", async () => {
+    const opts = await startWithConfig({ ...base });
+    expect(opts.gitHubToken).toBeUndefined();
+    expect(opts.baseDirectory).toBeUndefined();
+  });
+
+  it("COPILOT_GITHUB_TOKEN flows to the client as gitHubToken (priority auth)", async () => {
+    const opts = await startWithConfig({ ...base, COPILOT_GITHUB_TOKEN: "gho_seat" });
+    expect(opts.gitHubToken).toBe("gho_seat");
+  });
+
+  it("COPILOT_HOME flows to the client as baseDirectory (the CLI's store)", async () => {
+    const opts = await startWithConfig({ ...base, COPILOT_HOME: "/home/me/.copilot" });
+    expect(opts.baseDirectory).toBe("/home/me/.copilot");
+  });
+});
+
+describe("ChatEngine.getAuthStatus", () => {
+  it("delegates to the client's getAuthStatus after start", async () => {
+    const { client, getAuthStatus } = makeFakeClient({
+      isAuthenticated: false,
+      login: "octocat",
+      authType: "env" as const
+    });
+    const config = loadAgentConfig({ ...base });
+    const engine = new ChatEngine({
+      config,
+      tools: [],
+      ...noopDeps,
+      clientFactory: () => client as never
+    });
+    await engine.start();
+
+    const status = await engine.getAuthStatus();
+    expect(getAuthStatus).toHaveBeenCalledOnce();
+    expect(status.isAuthenticated).toBe(false);
+    expect(status.authType).toBe("env");
+  });
+
+  it("throws when called before start (no client)", async () => {
+    const config = loadAgentConfig({ ...base });
+    const engine = new ChatEngine({ config, tools: [], ...noopDeps });
+    await expect(engine.getAuthStatus()).rejects.toThrow(/not started/);
   });
 });

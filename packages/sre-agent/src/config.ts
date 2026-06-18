@@ -34,6 +34,14 @@ const schema = z.object({
   LLM_BASE_URL: optional(z.string().url()),
   LLM_API_KEY: optional(z.string()),
   AZURE_API_VERSION: z.string().default("2024-10-21"),
+  // Copilot seat auth (LLM_MODE=seat). Both optional:
+  //  • COPILOT_GITHUB_TOKEN — explicit token handed to the SDK as `gitHubToken`.
+  //    Highest-priority SDK auth; bypasses env-token auto-detect entirely (which
+  //    is what lets a stray GH_TOKEN/GITHUB_TOKEN poison the connection → 403).
+  //  • COPILOT_HOME — points the SDK's bundled runtime at the same credential
+  //    store the standalone `copilot` CLI logged into (default ~/.copilot).
+  COPILOT_GITHUB_TOKEN: optional(z.string()),
+  COPILOT_HOME: optional(z.string()),
   // behavior
   CONFIRM_WRITES: bool(true),
   // thresholds (passed through to core)
@@ -58,6 +66,13 @@ export interface AgentConfig {
   };
   adoAuthMode: "azcli" | "pat";
   confirmWrites: boolean;
+  /** Copilot seat auth knobs; both optional, only consulted in seat mode. */
+  copilot: {
+    /** Explicit token → SDK `gitHubToken` (priority auth, no env-token poisoning). */
+    githubToken?: string;
+    /** COPILOT_HOME → SDK `baseDirectory` so the runtime reads the CLI's store. */
+    home?: string;
+  };
   raw: z.infer<typeof schema>; // hand the rest to core's loadConfig
 }
 
@@ -93,6 +108,10 @@ export const loadAgentConfig = (
     },
     adoAuthMode: e.ADO_AUTH_MODE,
     confirmWrites: e.CONFIRM_WRITES,
+    copilot: {
+      githubToken: e.COPILOT_GITHUB_TOKEN,
+      home: e.COPILOT_HOME
+    },
     raw: e
   };
 };

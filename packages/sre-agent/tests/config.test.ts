@@ -76,4 +76,26 @@ describe("loadAgentConfig", () => {
     expect(c.llm.mode).toBe("seat");
     expect(c.llm.provider).toBeUndefined();
   });
+
+  it("Copilot seat auth fields are undefined by default", () => {
+    const c = loadAgentConfig({ ...base });
+    expect(c.copilot.githubToken).toBeUndefined();
+    expect(c.copilot.home).toBeUndefined();
+  });
+
+  it("exposes COPILOT_GITHUB_TOKEN as copilot.githubToken (explicit seat token)", () => {
+    const c = loadAgentConfig({ ...base, COPILOT_GITHUB_TOKEN: "gho_abc123" });
+    expect(c.copilot.githubToken).toBe("gho_abc123");
+  });
+
+  it("exposes COPILOT_HOME as copilot.home (points the SDK runtime at the CLI's store)", () => {
+    const c = loadAgentConfig({ ...base, COPILOT_HOME: "C:\\Users\\me\\.copilot" });
+    expect(c.copilot.home).toBe("C:\\Users\\me\\.copilot");
+  });
+
+  it("treats empty-string Copilot auth vars (the `KEY=` .env form) as unset", () => {
+    const c = loadAgentConfig({ ...base, COPILOT_GITHUB_TOKEN: "", COPILOT_HOME: "" });
+    expect(c.copilot.githubToken).toBeUndefined();
+    expect(c.copilot.home).toBeUndefined();
+  });
 });
