@@ -5,7 +5,7 @@
   "bin": { "sre-agent": "./dist/cli/index.js" },
   "files": ["dist/"],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc -b",
     "start": "node dist/cli/index.js",
     "dev": "tsx src/cli/index.ts"
   },
