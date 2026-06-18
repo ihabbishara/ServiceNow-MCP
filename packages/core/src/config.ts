@@ -7,6 +7,11 @@ const optionalUrl = z.preprocess(
   (v) => (v === "" ? undefined : v),
   z.string().url().refine((u) => /^https?:\/\//i.test(u), "must be an http(s) URL").optional()
 );
+// Empty string → undefined before validating. Without this, a `KEY=` line in
+// .env parses to "" — which is "present but invalid" for `.min(1)`/`.url()`, so
+// the optional field wrongly rejects (e.g. `ADO_PAT=` failed on startup).
+const optional = <T extends z.ZodTypeAny>(inner: T) =>
+  z.preprocess((v) => (v === "" ? undefined : v), inner.optional());
 
 const envSchema = z.object({
   SERVICENOW_BASE_URL: z.string({ required_error: "SERVICENOW_BASE_URL is required" }).url(),
@@ -16,10 +21,10 @@ const envSchema = z.object({
   ADO_ENABLED: boolString,
   ADO_AUTH_MODE: z.enum(["azcli", "pat"]).default("azcli"),
   AZ_PATH: z.string().default("az"),
-  ADO_ORG_URL: z.string().url().optional(),
+  ADO_ORG_URL: optional(z.string().url()),
   ADO_PROXY: optionalUrl,
-  ADO_PROJECT: z.string().min(1).optional(),
-  ADO_PAT: z.string().min(1).optional(),
+  ADO_PROJECT: optional(z.string().min(1)),
+  ADO_PAT: optional(z.string().min(1)),
   ADO_AREA_PATH: z.string().optional().transform((v) => v || undefined),
   ADO_ITERATION_PATH: z.string().optional().transform((v) => v || undefined),
   ADO_ASSIGNED_TEAM: z.string().optional().transform((v) => v || undefined),

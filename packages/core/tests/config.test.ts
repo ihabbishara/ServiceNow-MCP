@@ -59,6 +59,23 @@ describe("loadConfig", () => {
     expect(cfg.azureDevOps.defaultIterationPath).toBe("Platform");
   });
 
+  it("treats empty ADO_PAT/ADO_PROJECT/ADO_ORG_URL (the `KEY=` .env form) as unset when ADO is disabled", () => {
+    // Regression: `ADO_PAT=` in .env parsed to "" and failed `.min(1)`, throwing
+    // "ADO_PAT: String must contain at least 1 character(s)" on startup even in
+    // azcli mode where no PAT is used.
+    const cfg = loadConfig({
+      ...validEnv,
+      ADO_AUTH_MODE: "azcli",
+      ADO_PAT: "",
+      ADO_PROJECT: "",
+      ADO_ORG_URL: ""
+    });
+    expect(cfg.azureDevOps.enabled).toBe(false);
+    expect(cfg.azureDevOps.pat).toBeUndefined();
+    expect(cfg.azureDevOps.project).toBeUndefined();
+    expect(cfg.azureDevOps.orgUrl).toBeUndefined();
+  });
+
   it("parses per-service proxy URLs", () => {
     const cfg = loadConfig({
       ...validEnv,
