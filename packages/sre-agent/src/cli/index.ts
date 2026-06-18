@@ -10,6 +10,7 @@ import { buildTools } from "../tools/index.js";
 import { buildWorkflowPrompt } from "../workflows/index.js";
 import { runDoctor, runChecks } from "../doctor.js";
 import { runInit } from "../init.js";
+import { printBanner } from "../banner.js";
 
 const HELP_TEXT = `Workflow commands:
   /triage <INC>            Triage a ServiceNow incident
@@ -277,6 +278,7 @@ Via npm:  npm start   |   npm start -- doctor   |   npm start -- init
  * (including no argument) starts the chat REPL.
  */
 const run = async (): Promise<void> => {
+  printBanner();
   switch (process.argv[2]) {
     case "init":
       await runInit();
