@@ -43,12 +43,18 @@ const ensureCopilotAuth = async (
   config: AgentConfig,
   confirm: (summary: string) => Promise<boolean>
 ): Promise<void> => {
+  // Unmissable build stamp: if this line is absent at startup, you are running a
+  // stale dist (the preflight code did not load) — rebuild before debugging auth.
+  process.stderr.write("[sre-agent] checking Copilot seat auth (auth.getStatus)…\n");
   let status;
   try {
     status = await engine.getAuthStatus();
-  } catch {
-    // A status probe failure shouldn't block startup; let the first turn surface
-    // any real transport/auth problem with its own error.
+  } catch (e) {
+    // Don't block startup, but never swallow this silently — a failing status
+    // probe is itself evidence (e.g. the runtime can't reach the auth endpoint).
+    process.stderr.write(
+      `[sre-agent] could not read Copilot auth status: ${e instanceof Error ? e.message : String(e)}\n`
+    );
     return;
   }
   if (status.isAuthenticated) {
