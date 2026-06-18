@@ -7,6 +7,10 @@
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "test": "vitest run",
+    "setup": "npm install && npm run build",
+    "start": "node packages/sre-agent/dist/cli/index.js",
+    "init": "node packages/sre-agent/dist/cli/index.js init",
+    "doctor": "node packages/sre-agent/dist/cli/index.js doctor",
     "dev:agent": "npm run dev --workspace @sre/sre-agent"
   },
   "devDependencies": {

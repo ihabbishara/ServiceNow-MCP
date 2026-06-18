@@ -1,12 +1,15 @@
+#!/usr/bin/env node
 import * as readline from "node:readline/promises";
 import { stdin, stdout } from "node:process";
 import { createMcpRuntime } from "@sre/core";
 import { loadAgentConfig, type AgentConfig } from "../config.js";
+import { loadDotenv } from "../config/env.js";
 import { ChatEngine } from "../engine/engine.js";
 import { copilotLogin, isCopilotAuthError } from "../engine/auth.js";
 import { buildTools } from "../tools/index.js";
 import { buildWorkflowPrompt } from "../workflows/index.js";
-import { runDoctor } from "../doctor.js";
+import { runDoctor, runChecks } from "../doctor.js";
+import { runInit } from "../init.js";
 
 const HELP_TEXT = `Workflow commands:
   /triage <INC>            Triage a ServiceNow incident
@@ -119,8 +122,26 @@ const ensureCopilotAuth = async (
 };
 
 const main = async () => {
+  // Load .env from the conventional locations so users don't pass --env-file.
+  const envPath = loadDotenv();
+  if (envPath) process.stderr.write(`[sre-agent] loaded config from ${envPath}\n`);
+
   // Fail fast on bad/missing agent config before touching the SDK, runtime, or az.
-  const config = loadAgentConfig();
+  // A brand-new clone with no .env on an interactive terminal gets scaffolded
+  // here instead of dying on a validation error.
+  let config: AgentConfig;
+  try {
+    config = loadAgentConfig();
+  } catch (e) {
+    if (stdin.isTTY && !envPath) {
+      process.stderr.write("[sre-agent] no configuration found — let's create one.\n\n");
+      await runInit();
+      loadDotenv();
+      config = loadAgentConfig();
+    } else {
+      throw e;
+    }
+  }
   process.stderr.write(
     `[sre-agent] config ok (llm=${config.llm.mode}/${config.llm.model}, ado=${config.adoAuthMode})\n`
   );
@@ -240,7 +261,45 @@ const main = async () => {
   rl.close();
 };
 
-main().catch((e) => {
+const USAGE = `sre-agent — SRE ServiceNow / Azure DevOps chatbot
+
+Usage:
+  sre-agent            Start the chat REPL (default)
+  sre-agent init       Scaffold the .env configuration interactively
+  sre-agent doctor     Check prerequisites (Node, Azure CLI, Copilot, config)
+  sre-agent help       Show this help
+
+Via npm:  npm start   |   npm start -- doctor   |   npm start -- init
+`;
+
+/**
+ * Subcommand dispatcher. `init`/`doctor`/`help` are one-shot; anything else
+ * (including no argument) starts the chat REPL.
+ */
+const run = async (): Promise<void> => {
+  switch (process.argv[2]) {
+    case "init":
+      await runInit();
+      return;
+    case "doctor": {
+      const envPath = loadDotenv();
+      if (envPath) process.stderr.write(`[sre-agent] loaded config from ${envPath}\n`);
+      const { text, allOk } = await runChecks();
+      stdout.write(text + "\n");
+      process.exit(allOk ? 0 : 1);
+      return;
+    }
+    case "help":
+    case "--help":
+    case "-h":
+      stdout.write(USAGE);
+      return;
+    default:
+      await main();
+  }
+};
+
+run().catch((e) => {
   console.error("[sre-agent]", e instanceof Error ? e.message : e);
   process.exit(1);
 });
