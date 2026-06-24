@@ -6,5 +6,15 @@
   "types": "./dist/index.d.ts",
   "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
   "scripts": { "build": "tsc -b" },
-  "dependencies": { "undici": "^6.27.0", "zod": "^3.24.0" }
+  "dependencies": {
+    "@mozilla/readability": "^0.5.0",
+    "better-sqlite3": "^11.8.0",
+    "linkedom": "^0.18.5",
+    "sqlite-vec": "^0.1.6",
+    "undici": "^6.27.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11"
+  }
 }
