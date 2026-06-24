@@ -24,13 +24,13 @@ export const runCrawl = async (
   const { seeds, status } = parseArgs(argv);
   try {
     if (status) {
-      log(`[crawl] index stats: ${JSON.stringify(runtime.knowledge.stats())}`);
+      log(`[crawl] index stats: ${JSON.stringify(await runtime.knowledge.stats())}`);
       return 0;
     }
     const overrides = seeds.length > 0 ? { seeds } : {};
     const res = await runtime.knowledge.crawl(overrides, log);
     log(`[crawl] complete: ${JSON.stringify(res)}`);
-    log(`[crawl] index stats: ${JSON.stringify(runtime.knowledge.stats())}`);
+    log(`[crawl] index stats: ${JSON.stringify(await runtime.knowledge.stats())}`);
     return 0;
   } catch (err) {
     log(`[crawl] failed: ${err instanceof Error ? err.message : String(err)}`);
