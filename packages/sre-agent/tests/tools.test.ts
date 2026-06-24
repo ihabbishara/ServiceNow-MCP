@@ -52,7 +52,7 @@ const call = (t: Tool<any>, args: unknown) =>
   t.handler!(args as never, {} as never);
 
 describe("buildTools", () => {
-  it("registers exactly the 12 expected tools", () => {
+  it("registers exactly the 14 expected tools", () => {
     const names = buildTools(fakeRuntime()).map((t) => t.name).sort();
     expect(names).toEqual(
       [
@@ -64,8 +64,10 @@ describe("buildTools", () => {
         "get_change",
         "get_incident",
         "get_work_item",
+        "index_url",
         "search_changes",
         "search_incidents",
+        "search_knowledge",
         "search_work_items",
         "summarize_incident"
       ].sort()
