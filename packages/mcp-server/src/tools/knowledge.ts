@@ -42,7 +42,7 @@ export const registerKnowledgeTools = (server: McpServer, runtime: McpRuntime): 
           { seeds: [args.url], maxDepth: Math.min(args.depth ?? 1, 2), maxPages: Math.min(args.max_pages ?? 10, 25) },
           () => {}
         );
-        return asText({ pages_crawled: res.pagesCrawled, chunks_added: res.pagesIndexed, skipped: res.pagesSkipped });
+        return asText({ pages_crawled: res.pagesCrawled, chunks_added: res.chunksAdded, skipped: res.pagesSkipped });
       } catch (error) {
         return asError(error);
       }

@@ -16,7 +16,7 @@ const rt = () =>
   ({
     knowledge: {
       search: vi.fn(async () => ({ count: 0, results: [] })),
-      crawl: vi.fn(async () => ({ pagesCrawled: 1, pagesIndexed: 1, pagesSkipped: 0, dropped: 0 }))
+      crawl: vi.fn(async () => ({ pagesCrawled: 1, pagesIndexed: 1, pagesSkipped: 0, chunksAdded: 2, dropped: 0 }))
     }
   }) as any;
 

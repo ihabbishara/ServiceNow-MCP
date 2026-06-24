@@ -78,4 +78,24 @@ describe("crawl", () => {
     const fetched = (deps.fetcher.get as any).mock.calls.map((c: any[]) => c[0]);
     expect(fetched).toEqual(["https://h/seed"]);
   });
+
+  it("drops seeds outside allowDomains (SSRF guard)", async () => {
+    const deps = makeDeps();
+    const res = await crawl(deps, {
+      seeds: ["https://evil.example.com/x"], allowDomains: ["h"], maxPages: 10, maxDepth: 3,
+      concurrency: 1, rateMs: 0, maxLinksPerPage: 50
+    });
+    expect(deps.fetcher.get).not.toHaveBeenCalled();
+    expect(res.pagesCrawled).toBe(0);
+  });
+
+  it("reports chunksAdded as a number", async () => {
+    const deps = makeDeps();
+    const res = await crawl(deps, {
+      seeds: ["https://h/seed"], allowDomains: ["h"], maxPages: 10, maxDepth: 0,
+      concurrency: 1, rateMs: 0, maxLinksPerPage: 50
+    });
+    expect(typeof res.chunksAdded).toBe("number");
+    expect(res.chunksAdded).toBeGreaterThan(0);
+  });
 });

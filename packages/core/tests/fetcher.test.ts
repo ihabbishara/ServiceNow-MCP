@@ -43,4 +43,37 @@ describe("Fetcher", () => {
     const r = await f.get("https://h/big");
     expect(r.ok).toBe(false);
   });
+
+  describe("getText", () => {
+    it("returns the body for a text/plain 200 response", async () => {
+      fetchMock.mockResolvedValue(res({ ct: "text/plain", body: "User-agent: *\nDisallow: /x\n" }) as any);
+      const f = new Fetcher({ maxBytes: 1000 });
+      const txt = await f.getText("https://h/robots.txt");
+      expect(txt).toBe("User-agent: *\nDisallow: /x\n");
+    });
+
+    it("returns '' for non-text content types", async () => {
+      fetchMock.mockResolvedValue(res({ ct: "application/pdf", body: "%PDF" }) as any);
+      const f = new Fetcher({ maxBytes: 1000 });
+      expect(await f.getText("https://h/x.pdf")).toBe("");
+    });
+
+    it("returns '' for non-ok responses", async () => {
+      fetchMock.mockResolvedValue(res({ status: 404, ct: "text/plain", body: "nope" }) as any);
+      const f = new Fetcher({ maxBytes: 1000 });
+      expect(await f.getText("https://h/robots.txt")).toBe("");
+    });
+
+    it("returns '' when the body exceeds maxBytes", async () => {
+      fetchMock.mockResolvedValue(res({ ct: "text/plain", body: "x".repeat(2000) }) as any);
+      const f = new Fetcher({ maxBytes: 1000 });
+      expect(await f.getText("https://h/big.txt")).toBe("");
+    });
+
+    it("returns '' on fetch error (never throws)", async () => {
+      fetchMock.mockRejectedValue(new Error("network down"));
+      const f = new Fetcher({ maxBytes: 1000 });
+      expect(await f.getText("https://h/robots.txt")).toBe("");
+    });
+  });
 });

@@ -33,4 +33,26 @@ export class Fetcher {
       return empty(0);
     }
   }
+
+  /**
+   * GETs a text resource (e.g. robots.txt, which is text/plain). Returns the body
+   * for any ok text/* response within maxBytes; otherwise "". Never throws.
+   */
+  async getText(url: string): Promise<string> {
+    try {
+      const res = await fetch(url, {
+        method: "GET",
+        dispatcher: this.dispatcher,
+        signal: AbortSignal.timeout(this.opts.timeoutMs ?? 15000),
+        headers: { "user-agent": "sre-agent-crawler/1.0" }
+      });
+      const ct = res.headers.get("content-type") ?? "";
+      if (!res.ok || !ct.includes("text/")) return "";
+      const body = await res.text();
+      if (body.length > this.opts.maxBytes) return "";
+      return body;
+    } catch {
+      return "";
+    }
+  }
 }

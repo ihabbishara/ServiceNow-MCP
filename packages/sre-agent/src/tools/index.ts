@@ -551,7 +551,7 @@ export const buildTools = (runtime: McpRuntime) => [
           { seeds: [a.url], maxDepth: Math.min(a.depth ?? 1, 2), maxPages: Math.min(a.max_pages ?? 10, 25) },
           () => {}
         );
-        return { pages_crawled: res.pagesCrawled, chunks_added: res.pagesIndexed, skipped: res.pagesSkipped };
+        return { pages_crawled: res.pagesCrawled, chunks_added: res.chunksAdded, skipped: res.pagesSkipped };
       } catch (err) {
         return { error: String(err) };
       }

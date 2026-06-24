@@ -17,7 +17,8 @@ export const search = async (
   const results = deps.store.knn(vec, Math.min(Math.max(k, 1), 20), domain);
   return {
     count: results.length,
-    results,
+    // Drop the full chunk `text` the store returns; tool output exposes only the snippet.
+    results: results.map(({ text, ...hit }) => hit),
     hint: results.length === 0 ? "index empty or no match — run `sre-agent crawl` to populate it" : undefined
   };
 };

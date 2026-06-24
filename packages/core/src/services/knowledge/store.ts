@@ -60,6 +60,12 @@ export class KnowledgeStore {
       }
       this.dim = storedDim;
       this.model = (this.db.prepare("SELECT value FROM meta WHERE key = 'model'").get() as { value: string }).value;
+      if (this.model !== meta.model) {
+        throw new Error(
+          `embed model mismatch: store has ${this.model}, config wants ${meta.model}. ` +
+            `Delete the index or revert EMBED_MODEL.`
+        );
+      }
     } else {
       this.dim = meta.dim;
       this.model = meta.model;

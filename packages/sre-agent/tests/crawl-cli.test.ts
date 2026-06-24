@@ -6,7 +6,7 @@ describe("runCrawl", () => {
     const log = vi.fn();
     const rt = {
       knowledge: {
-        crawl: vi.fn(async (_o: any, l: (m: string) => void) => { l("progress"); return { pagesCrawled: 3, pagesIndexed: 2, pagesSkipped: 1, dropped: 0 }; }),
+        crawl: vi.fn(async (_o: any, l: (m: string) => void) => { l("progress"); return { pagesCrawled: 3, pagesIndexed: 2, pagesSkipped: 1, chunksAdded: 5, dropped: 0 }; }),
         stats: () => ({ pages: 2, chunks: 5, model: "nomic-embed-text", dim: 768 }),
         close: vi.fn()
       }

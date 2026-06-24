@@ -31,6 +31,7 @@ export interface CrawlResult {
   pagesCrawled: number;
   pagesIndexed: number;
   pagesSkipped: number;
+  chunksAdded: number; // total chunks embedded + upserted across all indexed pages
   dropped: number; // links not followed because a cap was hit
 }
 
@@ -62,10 +63,11 @@ export const crawl = async (deps: CrawlDeps, bounds: CrawlBounds): Promise<Crawl
   const queue: { url: string; depth: number }[] = [];
   for (const s of bounds.seeds) {
     const c = canonical(s);
+    if (!inScope(c, bounds.allowDomains)) { deps.log(`[crawl] seed out of scope, skipped: ${c}`); continue; }
     if (!seen.has(c)) { seen.add(c); queue.push({ url: c, depth: 0 }); }
   }
 
-  const result: CrawlResult = { pagesCrawled: 0, pagesIndexed: 0, pagesSkipped: 0, dropped: 0 };
+  const result: CrawlResult = { pagesCrawled: 0, pagesIndexed: 0, pagesSkipped: 0, chunksAdded: 0, dropped: 0 };
 
   while (queue.length > 0) {
     if (result.pagesCrawled >= bounds.maxPages) {
@@ -107,6 +109,7 @@ export const crawl = async (deps: CrawlDeps, bounds: CrawlBounds): Promise<Crawl
         }
         deps.store.upsertPage({ url, title: doc.title, hash, crawledAt: deps.now(), indexed: true, chunks: embedded });
         result.pagesIndexed++;
+        result.chunksAdded += embedded.length;
       } catch (e) {
         deps.log(`[crawl] embed/store failed for ${url}: ${String(e)}`);
         deps.store.upsertPage({ url, title: doc.title, hash, crawledAt: deps.now(), indexed: false, chunks: [] });
