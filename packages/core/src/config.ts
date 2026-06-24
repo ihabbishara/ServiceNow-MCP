@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { homedir } from "node:os";
+import { join } from "node:path";
 
 const boolString = z.enum(["true", "false"]).default("false").transform((v) => v === "true");
 const trueBoolString = z.enum(["true", "false"]).default("true").transform((v) => v === "true");
@@ -34,7 +36,22 @@ const envSchema = z.object({
   STALE_P3_MIN: z.coerce.number().int().positive().default(1440),
   STALE_P4_MIN: z.coerce.number().int().positive().default(4320),
   CORRELATION_HOURS_BEFORE: z.coerce.number().positive().default(24),
-  CORRELATION_HOURS_AFTER: z.coerce.number().positive().default(4)
+  CORRELATION_HOURS_AFTER: z.coerce.number().positive().default(4),
+  KNOWLEDGE_DB_PATH: z.string().optional(),
+  CRAWL_SEEDS: z.string().optional(),
+  CRAWL_ALLOW_DOMAINS: z.string().optional(),
+  CRAWL_MAX_PAGES: z.coerce.number().int().positive().default(200),
+  CRAWL_MAX_DEPTH: z.coerce.number().int().nonnegative().default(3),
+  CRAWL_CONCURRENCY: z.coerce.number().int().positive().default(4),
+  CRAWL_RATE_MS: z.coerce.number().int().nonnegative().default(500),
+  CRAWL_MAX_BYTES: z.coerce.number().int().positive().default(2097152),
+  CRAWL_PROXY: optionalUrl,
+  CRAWL_RESPECT_ROBOTS: trueBoolString,
+  CRAWL_TOPIC: optional(z.string().min(1)),
+  EMBED_MODEL: z.string().default("nomic-embed-text"),
+  EMBED_BASE_URL: optional(z.string().url()),
+  LLM_BASE_URL: optional(z.string().url()),
+  CRAWL_LLM_MODEL: z.string().default("qwen2.5")
 });
 
 export interface ServiceNowConfig {
@@ -59,15 +76,44 @@ export interface AdoConfig {
   proxyUrl?: string; // HTTP proxy for Azure DevOps calls (ADO_PROXY)
 }
 
+export interface KnowledgeConfig {
+  dbPath: string;
+  seeds: string[];
+  allowDomains: string[];
+  maxPages: number;
+  maxDepth: number;
+  concurrency: number;
+  rateMs: number;
+  maxBytes: number;
+  proxyUrl?: string;
+  respectRobots: boolean;
+  topic?: string;
+  embedModel: string;
+  embedBaseUrl: string;
+  crawlModel: string;
+}
+
 export interface AppConfig {
   serviceNow: ServiceNowConfig;
   azureDevOps: AdoConfig;
+  knowledge: KnowledgeConfig;
   features: { createAdoBug: boolean };
   thresholds: {
     staleByPriorityMinutes: Record<string, number>;
     relatedChangeWindow: { beforeHours: number; afterHours: number };
   };
 }
+
+const csv = (v?: string): string[] =>
+  (v ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+
+const hostOf = (u: string): string | undefined => {
+  try {
+    return new URL(u).host;
+  } catch {
+    return undefined;
+  }
+};
 
 export const loadConfig = (env: Record<string, string | undefined> = process.env): AppConfig => {
   const parsed = envSchema.safeParse(env);
@@ -79,6 +125,27 @@ export const loadConfig = (env: Record<string, string | undefined> = process.env
   if (e.ADO_ENABLED && (!e.ADO_ORG_URL || !e.ADO_PROJECT || !e.ADO_PAT)) {
     throw new Error("ADO_ENABLED=true requires ADO_ORG_URL, ADO_PROJECT, and ADO_PAT");
   }
+  const seeds = csv(e.CRAWL_SEEDS);
+  const allowDomains =
+    csv(e.CRAWL_ALLOW_DOMAINS).length > 0
+      ? csv(e.CRAWL_ALLOW_DOMAINS)
+      : [...new Set(seeds.map(hostOf).filter((h): h is string => !!h))];
+  const knowledge: KnowledgeConfig = {
+    dbPath: e.KNOWLEDGE_DB_PATH || join(homedir(), ".sre-agent", "knowledge.db"),
+    seeds,
+    allowDomains,
+    maxPages: e.CRAWL_MAX_PAGES,
+    maxDepth: e.CRAWL_MAX_DEPTH,
+    concurrency: e.CRAWL_CONCURRENCY,
+    rateMs: e.CRAWL_RATE_MS,
+    maxBytes: e.CRAWL_MAX_BYTES,
+    proxyUrl: e.CRAWL_PROXY,
+    respectRobots: e.CRAWL_RESPECT_ROBOTS,
+    topic: e.CRAWL_TOPIC,
+    embedModel: e.EMBED_MODEL,
+    embedBaseUrl: e.EMBED_BASE_URL || e.LLM_BASE_URL || "http://localhost:11434/v1",
+    crawlModel: e.CRAWL_LLM_MODEL
+  };
   return {
     serviceNow: {
       enabled: true,
@@ -87,6 +154,7 @@ export const loadConfig = (env: Record<string, string | undefined> = process.env
       password: e.SERVICENOW_PASSWORD,
       proxyUrl: e.SERVICENOW_PROXY
     },
+    knowledge,
     azureDevOps: {
       enabled: e.ADO_ENABLED,
       authMode: e.ADO_AUTH_MODE,
