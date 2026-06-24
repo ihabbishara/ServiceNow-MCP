@@ -14,6 +14,20 @@ const main = async () => {
   const transport = new StdioServerTransport();
   await server.connect(transport);
 
+  // Dispose the local ONNX embedder on shutdown. If a knowledge tool
+  // (search_knowledge/index_url) lazy-loaded onnxruntime-node, its native
+  // intra-op thread pool aborts ("mutex lock failed") when torn down by a hard
+  // process.exit(); knowledge.close() disposes the embedder + store first.
+  let shuttingDown = false;
+  const shutdown = async () => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    await runtime.knowledge.close().catch(() => {});
+    process.exit(0);
+  };
+  process.on("SIGINT", shutdown);
+  process.on("SIGTERM", shutdown);
+
   // Log to stderr (stdout is reserved for MCP protocol)
   console.error("[sre-ops-mcp] Server started");
   console.error("[sre-ops-mcp] ServiceNow: enabled");

@@ -208,7 +208,11 @@ const main = async () => {
   process.on("SIGINT", () => {
     if (interrupted) {
       stdout.write("\nQuitting.\n");
-      process.exit(0);
+      // Best-effort dispose of the local ONNX embedder before the hard exit, so
+      // a knowledge-tool session doesn't trigger the native teardown abort.
+      // The signal handler is sync, so chain the exit off close()'s settlement.
+      runtime.knowledge.close().finally(() => process.exit(0));
+      return;
     }
     interrupted = true;
     stdout.write("\n(aborting current turn — Ctrl-C again to quit)\n");
@@ -260,6 +264,11 @@ const main = async () => {
   }
 
   await engine.stop();
+  // Dispose the local ONNX embedder before exit. If a knowledge tool
+  // (search_knowledge/index_url) lazy-loaded onnxruntime-node, its native
+  // intra-op thread pool aborts ("mutex lock failed") when torn down by a hard
+  // process teardown; close() disposes the embedder + store so teardown is clean.
+  await runtime?.knowledge.close();
   rl.close();
 };
 
