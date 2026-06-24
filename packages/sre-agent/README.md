@@ -110,6 +110,24 @@ other than `y`/`yes` rejects the write. On a non-interactive stdin (piped/EOF)
 the gate declines automatically rather than hang. Set `CONFIRM_WRITES=false`
 to pre-approve writes (not recommended interactively).
 
+### Knowledge crawler
+
+Build a semantic index of internal docs the agent can search.
+
+1. Run a local Ollama with a chat model and an embedding model:
+   `ollama pull qwen2.5 && ollama pull nomic-embed-text`
+2. Set `CRAWL_SEEDS` (and optionally `CRAWL_ALLOW_DOMAINS`, `CRAWL_TOPIC`) in `.env`.
+3. Full ingest: `sre-agent crawl` (or `sre-agent crawl --seed https://wiki/x`).
+   Check the index: `sre-agent crawl --status`.
+4. In chat the agent uses `search_knowledge` to retrieve, and `index_url` for a
+   small on-demand top-up crawl.
+
+The crawler is LLM-guided (a local model decides which pages/links are relevant)
+and stores embeddings in a single SQLite + sqlite-vec file (`KNOWLEDGE_DB_PATH`).
+It fetches over the existing proxy and assumes network-trusted internal sites (no
+credentials). Changing `EMBED_MODEL` after a crawl requires deleting the index
+(embedding dim is pinned).
+
 ## Manual end-to-end checklist
 
 These steps require a live Copilot seat, live ServiceNow credentials, and an
