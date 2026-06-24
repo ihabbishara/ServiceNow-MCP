@@ -1,5 +1,5 @@
 import { CopilotClient } from "@github/copilot-sdk";
-import { AzRunner, type ExecFn } from "@sre/core";
+import { AzRunner, createMcpRuntime, type ExecFn } from "@sre/core";
 import { loadAgentConfig, type AgentConfig } from "./config.js";
 import { buildClientOptions } from "./engine/engine.js";
 
@@ -149,6 +149,22 @@ const checkCopilotAuth = async (config: AgentConfig): Promise<CheckResult> => {
   }
 };
 
+const checkKnowledge = (): CheckResult => {
+  try {
+    const rt = createMcpRuntime();
+    const s = rt.knowledge.stats();
+    rt.knowledge.close?.();
+    return { name: "Knowledge index", ok: true, detail: `pages=${s.pages}, chunks=${s.chunks}, model=${s.model ?? "?"}` };
+  } catch (e) {
+    return {
+      name: "Knowledge index",
+      ok: false,
+      detail: "sqlite-vec / store unavailable",
+      fix: e instanceof Error ? e.message : String(e)
+    };
+  }
+};
+
 /**
  * Run every prerequisite check and return a printable summary. Config is loaded
  * first; az checks run only in azcli mode; the Copilot check is skipped in BYOK
@@ -167,6 +183,7 @@ export const runChecks = async (): Promise<{ text: string; allOk: boolean }> => 
     if (config.llm.mode === "seat") {
       results.push(await checkCopilotAuth(config));
     }
+    results.push(checkKnowledge());
   }
   return summarizeDoctor(results);
 };

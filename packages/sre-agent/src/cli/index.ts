@@ -10,6 +10,7 @@ import { buildTools } from "../tools/index.js";
 import { buildWorkflowPrompt } from "../workflows/index.js";
 import { runDoctor, runChecks } from "../doctor.js";
 import { runInit } from "../init.js";
+import { runCrawl } from "./crawl.js";
 import { printBanner } from "../banner.js";
 
 const HELP_TEXT = `Workflow commands:
@@ -268,6 +269,7 @@ Usage:
   sre-agent            Start the chat REPL (default)
   sre-agent init       Scaffold the .env configuration interactively
   sre-agent doctor     Check prerequisites (Node, Azure CLI, Copilot, config)
+  sre-agent crawl      Crawl internal docs into the knowledge index ([--seed <url>] [--status])
   sre-agent help       Show this help
 
 Via npm:  npm start   |   npm start -- doctor   |   npm start -- init
@@ -290,6 +292,13 @@ const run = async (): Promise<void> => {
       stdout.write(text + "\n");
       process.exit(allOk ? 0 : 1);
       return;
+    }
+    case "crawl": {
+      const envPath = loadDotenv();
+      if (envPath) process.stderr.write(`[sre-agent] loaded config from ${envPath}\n`);
+      const runtime = createMcpRuntime();
+      const code = await runCrawl(runtime, process.argv.slice(3));
+      process.exit(code);
     }
     case "help":
     case "--help":
