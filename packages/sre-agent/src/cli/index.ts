@@ -290,7 +290,10 @@ const run = async (): Promise<void> => {
       if (envPath) process.stderr.write(`[sre-agent] loaded config from ${envPath}\n`);
       const { text, allOk } = await runChecks();
       stdout.write(text + "\n");
-      process.exit(allOk ? 0 : 1);
+      // doctor's knowledge check loads onnxruntime-node and disposes it; like
+      // crawl, set exitCode and drain instead of a hard exit to avoid the
+      // native thread-pool teardown abort.
+      process.exitCode = allOk ? 0 : 1;
       return;
     }
     case "crawl": {
@@ -298,7 +301,12 @@ const run = async (): Promise<void> => {
       if (envPath) process.stderr.write(`[sre-agent] loaded config from ${envPath}\n`);
       const runtime = createMcpRuntime();
       const code = await runCrawl(runtime, process.argv.slice(3));
-      process.exit(code);
+      // The local embedder loads onnxruntime-node, whose native intra-op thread
+      // pool aborts ("mutex lock failed") if torn down by a hard process.exit().
+      // runCrawl disposes the ONNX session in its finally; we then set exitCode
+      // and let the loop drain so the native teardown completes cleanly.
+      process.exitCode = code;
+      return;
     }
     case "help":
     case "--help":

@@ -3,7 +3,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // Mock the heavy ML lib so tests never load a real model.
 // vi.hoisted ensures these are available when vi.mock factory is hoisted to the top.
 const { pipe, pipeline, env } = vi.hoisted(() => {
-  const pipe = vi.fn(async (_text: string, _opts: unknown) => ({ data: new Float32Array([0.1, 0.2, 0.3]) }));
+  const pipe: any = vi.fn(async (_text: string, _opts: unknown) => ({ data: new Float32Array([0.1, 0.2, 0.3]) }));
+  pipe.dispose = vi.fn(async () => {});
   const pipeline = vi.fn(async () => pipe);
   const env: any = {};
   return { pipe, pipeline, env };
@@ -14,6 +15,7 @@ import { LocalEmbedder } from "../src/clients/embedder.js";
 
 beforeEach(() => {
   pipe.mockClear();
+  pipe.dispose.mockClear();
   pipeline.mockClear();
   delete env.allowRemoteModels;
   delete env.localModelPath;
@@ -43,5 +45,23 @@ describe("LocalEmbedder", () => {
     new LocalEmbedder("m", "/opt/models/bge");
     expect(env.allowRemoteModels).toBe(false);
     expect(env.localModelPath).toBe("/opt/models/bge");
+  });
+
+  it("dispose releases the pipe's native session and resets dim", async () => {
+    const e = new LocalEmbedder("m");
+    await e.ready();
+    expect(e.dim).toBe(3);
+    await e.dispose();
+    expect(pipe.dispose).toHaveBeenCalledTimes(1);
+    expect(e.dim).toBe(0);
+  });
+
+  it("ready() after dispose() reloads the pipeline", async () => {
+    const e = new LocalEmbedder("m");
+    await e.ready();
+    await e.dispose();
+    await e.ready();
+    expect(pipeline).toHaveBeenCalledTimes(2);
+    expect(e.dim).toBe(3);
   });
 });

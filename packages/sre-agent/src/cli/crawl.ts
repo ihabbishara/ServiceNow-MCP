@@ -36,6 +36,6 @@ export const runCrawl = async (
     log(`[crawl] failed: ${err instanceof Error ? err.message : String(err)}`);
     return 1;
   } finally {
-    runtime.knowledge.close?.();
+    await runtime.knowledge.close?.();
   }
 };

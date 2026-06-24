@@ -76,7 +76,9 @@ export class KnowledgeService {
     return store.stats();
   }
 
-  close(): void {
+  async close(): Promise<void> {
     this.store?.close();
+    this.store = undefined;
+    await this.embedder.dispose();
   }
 }

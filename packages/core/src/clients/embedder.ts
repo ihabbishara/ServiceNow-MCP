@@ -8,6 +8,7 @@ import type { Embedder } from "../services/knowledge/types.js";
  * local directory with remote downloads disabled (offline / locked-down nets).
  */
 type EmbedPipe = (text: string, opts: unknown) => Promise<{ data: Float32Array }>;
+type DisposablePipe = EmbedPipe & { dispose?: () => Promise<void> };
 
 export class LocalEmbedder implements Embedder {
   readonly model: string;
@@ -33,5 +34,18 @@ export class LocalEmbedder implements Embedder {
     if (!this.pipe) await this.ready();
     const out = await this.pipe!(text, { pooling: "mean", normalize: true });
     return Array.from(out.data);
+  }
+
+  /**
+   * Release the native ONNX session/threadpool. Must be called before the
+   * process exits, otherwise onnxruntime-node aborts during teardown
+   * (libc++abi: mutex lock failed) and the process SIGABRTs.
+   */
+  async dispose(): Promise<void> {
+    if (this.pipe) {
+      await (this.pipe as DisposablePipe).dispose?.();
+      this.pipe = undefined;
+      this.dim = 0;
+    }
   }
 }

@@ -153,7 +153,7 @@ const checkKnowledge = async (): Promise<CheckResult> => {
   try {
     const rt = createMcpRuntime();
     const s = await rt.knowledge.stats();
-    rt.knowledge.close?.();
+    await rt.knowledge.close?.();
     return { name: "Knowledge index", ok: true, detail: `pages=${s.pages}, chunks=${s.chunks}, model=${s.model ?? "?"}` };
   } catch (e) {
     return {
