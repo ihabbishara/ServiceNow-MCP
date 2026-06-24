@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
-import type { FetchResult, LlmClient, PageDoc } from "./types.js";
+import type { Embedder, FetchResult, PageDoc } from "./types.js";
+import type { ChatModel } from "../../clients/chat/types.js";
 import type { KnowledgeStore } from "./store.js";
 import { chunkText } from "./chunk.js";
 import { buildVerdictPrompt, parseVerdict } from "./verdict.js";
@@ -20,7 +21,9 @@ export interface CrawlBounds {
 export interface CrawlDeps {
   fetcher: { get(url: string): Promise<FetchResult> };
   extract: (html: string, baseUrl: string) => PageDoc;
-  llm: LlmClient;
+  embedder: Pick<Embedder, "embed">;
+  /** Optional verdict chat. Absent (seat mode) → heuristic crawl. */
+  chat?: ChatModel;
   store: Pick<KnowledgeStore, "getPageHash" | "upsertPage" | "stats">;
   robots: { fetchAndCheck(url: string): Promise<boolean> };
   now: () => number;
@@ -89,14 +92,20 @@ export const crawl = async (deps: CrawlDeps, bounds: CrawlBounds): Promise<Crawl
     const hash = sha256(doc.mainText);
     const unchanged = deps.store.getPageHash(url) === hash;
 
-    // Combined relevance + link-keep verdict.
-    const prompt = buildVerdictPrompt(bounds.topic, doc.title, doc.mainText.slice(0, 2000), doc.links, bounds.maxLinksPerPage);
-    let verdict;
-    try {
-      verdict = parseVerdict(await deps.llm.chat(prompt));
-    } catch (e) {
-      deps.log(`[crawl] verdict failed for ${url}; keeping page, no links: ${String(e)}`);
-      verdict = { relevant: true, keepLinks: [] as string[] };
+    // Verdict: LLM (byok) when a chat model is present; otherwise heuristic
+    // (seat mode) — index the page and follow all its links (scope/depth/cap
+    // gates below still bound it).
+    let verdict: { relevant: boolean; keepLinks: string[] };
+    if (deps.chat) {
+      const prompt = buildVerdictPrompt(bounds.topic, doc.title, doc.mainText.slice(0, 2000), doc.links, bounds.maxLinksPerPage);
+      try {
+        verdict = parseVerdict(await deps.chat.chat(prompt));
+      } catch (e) {
+        deps.log(`[crawl] verdict failed for ${url}; keeping page, no links: ${String(e)}`);
+        verdict = { relevant: true, keepLinks: [] };
+      }
+    } else {
+      verdict = { relevant: true, keepLinks: doc.links };
     }
 
     // Index (unless unchanged — incremental skip).
@@ -105,7 +114,7 @@ export const crawl = async (deps: CrawlDeps, bounds: CrawlBounds): Promise<Crawl
         const chunks = chunkText(doc.mainText);
         const embedded = [];
         for (let i = 0; i < chunks.length; i++) {
-          embedded.push({ ord: i, text: chunks[i], embedding: await deps.llm.embed(chunks[i]) });
+          embedded.push({ ord: i, text: chunks[i], embedding: await deps.embedder.embed(chunks[i]) });
         }
         deps.store.upsertPage({ url, title: doc.title, hash, crawledAt: deps.now(), indexed: true, chunks: embedded });
         result.pagesIndexed++;

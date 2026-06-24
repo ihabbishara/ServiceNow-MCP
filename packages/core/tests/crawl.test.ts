@@ -17,10 +17,8 @@ const makeDeps = (over: Partial<CrawlDeps> = {}): CrawlDeps => {
       mainText: `text of ${url}`,
       links: url === "https://h/seed" ? ["https://h/a", "https://other/x"] : url === "https://h/a" ? ["https://h/b", "https://h/a"] : []
     }),
-    llm: {
-      chat: vi.fn(async () => JSON.stringify({ relevant: true, keepLinks: ["https://h/a", "https://h/b", "https://other/x"] })),
-      embed: vi.fn(async () => [1, 0, 0])
-    },
+    embedder: { embed: vi.fn(async () => [1, 0, 0]) },
+    chat: { chat: vi.fn(async () => JSON.stringify({ relevant: true, keepLinks: ["https://h/a", "https://h/b", "https://other/x"] })) },
     store: {
       getPageHash: vi.fn(() => undefined),
       upsertPage: vi.fn((p: any) => { upserts.push(p.url); }),
@@ -96,6 +94,20 @@ describe("crawl", () => {
       concurrency: 1, rateMs: 0, maxLinksPerPage: 50
     });
     expect(typeof res.chunksAdded).toBe("number");
+    expect(res.chunksAdded).toBeGreaterThan(0);
+  });
+
+  it("heuristic crawl when no chat model: indexes every in-scope page, follows all in-scope links", async () => {
+    const deps = makeDeps();
+    delete (deps as any).chat; // seat mode → no verdict LLM
+    const res = await crawl(deps, {
+      seeds: ["https://h/seed"], allowDomains: ["h"], maxPages: 10, maxDepth: 3,
+      concurrency: 1, rateMs: 0, maxLinksPerPage: 50
+    });
+    const fetched = (deps.fetcher.get as any).mock.calls.map((c: any[]) => c[0]);
+    expect(fetched).toEqual(expect.arrayContaining(["https://h/seed", "https://h/a", "https://h/b"]));
+    expect(fetched).not.toContain("https://other/x"); // out of scope still excluded
+    expect(res.pagesIndexed).toBe(3); // all in-scope pages indexed
     expect(res.chunksAdded).toBeGreaterThan(0);
   });
 });

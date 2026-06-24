@@ -149,17 +149,17 @@ const checkCopilotAuth = async (config: AgentConfig): Promise<CheckResult> => {
   }
 };
 
-const checkKnowledge = (): CheckResult => {
+const checkKnowledge = async (): Promise<CheckResult> => {
   try {
     const rt = createMcpRuntime();
-    const s = rt.knowledge.stats();
-    rt.knowledge.close?.();
+    const s = await rt.knowledge.stats();
+    await rt.knowledge.close?.();
     return { name: "Knowledge index", ok: true, detail: `pages=${s.pages}, chunks=${s.chunks}, model=${s.model ?? "?"}` };
   } catch (e) {
     return {
       name: "Knowledge index",
       ok: false,
-      detail: "sqlite-vec / store unavailable",
+      detail: "embed model / sqlite-vec unavailable",
       fix: e instanceof Error ? e.message : String(e)
     };
   }
@@ -183,7 +183,7 @@ export const runChecks = async (): Promise<{ text: string; allOk: boolean }> => 
     if (config.llm.mode === "seat") {
       results.push(await checkCopilotAuth(config));
     }
-    results.push(checkKnowledge());
+    results.push(await checkKnowledge());
   }
   return summarizeDoctor(results);
 };

@@ -112,21 +112,25 @@ to pre-approve writes (not recommended interactively).
 
 ### Knowledge crawler
 
-Build a semantic index of internal docs the agent can search.
+Build a semantic index of internal docs the agent can search. Works regardless of
+your chat LLM mode (seat or BYOK) and needs **no Ollama**:
 
-1. Run a local Ollama with a chat model and an embedding model:
-   `ollama pull qwen2.5 && ollama pull nomic-embed-text`
-2. Set `CRAWL_SEEDS` (and optionally `CRAWL_ALLOW_DOMAINS`, `CRAWL_TOPIC`) in `.env`.
-3. Full ingest: `sre-agent crawl` (or `sre-agent crawl --seed https://wiki/x`).
-   Check the index: `sre-agent crawl --status`.
-4. In chat the agent uses `search_knowledge` to retrieve, and `index_url` for a
-   small on-demand top-up crawl.
+- **Embeddings** run locally in-process (transformers.js / ONNX, `EMBED_MODEL`,
+  default `Xenova/bge-small-en-v1.5`). For locked-down networks set
+  `EMBED_MODEL_PATH` to a vendored model directory (no Hugging Face download).
+- **Crawl verdict** (which pages/links matter) reuses your `LLM_*` config:
+  - **BYOK** → the provider's chat API (openai/azure/anthropic).
+  - **Seat (Copilot)** → heuristic crawl: index every in-scope page and follow
+    all in-scope links (no per-page Copilot calls).
 
-The crawler is LLM-guided (a local model decides which pages/links are relevant)
-and stores embeddings in a single SQLite + sqlite-vec file (`KNOWLEDGE_DB_PATH`).
-It fetches over the existing proxy and assumes network-trusted internal sites (no
-credentials). Changing `EMBED_MODEL` after a crawl requires deleting the index
-(embedding dim is pinned).
+Usage:
+1. Set `CRAWL_SEEDS` (and optionally `CRAWL_ALLOW_DOMAINS`, `CRAWL_TOPIC`).
+2. Full ingest: `sre-agent crawl` (or `--seed <url>`); status: `sre-agent crawl --status`.
+3. In chat: `search_knowledge` retrieves; `index_url` does a small on-demand top-up.
+
+Embeddings are stored in a single SQLite + sqlite-vec file (`KNOWLEDGE_DB_PATH`).
+Changing `EMBED_MODEL` after a crawl requires deleting the index (embedding dim is
+pinned per model).
 
 ## Manual end-to-end checklist
 

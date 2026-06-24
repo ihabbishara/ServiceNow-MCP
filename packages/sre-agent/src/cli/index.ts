@@ -208,7 +208,11 @@ const main = async () => {
   process.on("SIGINT", () => {
     if (interrupted) {
       stdout.write("\nQuitting.\n");
-      process.exit(0);
+      // Best-effort dispose of the local ONNX embedder before the hard exit, so
+      // a knowledge-tool session doesn't trigger the native teardown abort.
+      // The signal handler is sync, so chain the exit off close()'s settlement.
+      runtime.knowledge.close().finally(() => process.exit(0));
+      return;
     }
     interrupted = true;
     stdout.write("\n(aborting current turn — Ctrl-C again to quit)\n");
@@ -260,6 +264,11 @@ const main = async () => {
   }
 
   await engine.stop();
+  // Dispose the local ONNX embedder before exit. If a knowledge tool
+  // (search_knowledge/index_url) lazy-loaded onnxruntime-node, its native
+  // intra-op thread pool aborts ("mutex lock failed") when torn down by a hard
+  // process teardown; close() disposes the embedder + store so teardown is clean.
+  await runtime?.knowledge.close();
   rl.close();
 };
 
@@ -290,7 +299,10 @@ const run = async (): Promise<void> => {
       if (envPath) process.stderr.write(`[sre-agent] loaded config from ${envPath}\n`);
       const { text, allOk } = await runChecks();
       stdout.write(text + "\n");
-      process.exit(allOk ? 0 : 1);
+      // doctor's knowledge check loads onnxruntime-node and disposes it; like
+      // crawl, set exitCode and drain instead of a hard exit to avoid the
+      // native thread-pool teardown abort.
+      process.exitCode = allOk ? 0 : 1;
       return;
     }
     case "crawl": {
@@ -298,7 +310,12 @@ const run = async (): Promise<void> => {
       if (envPath) process.stderr.write(`[sre-agent] loaded config from ${envPath}\n`);
       const runtime = createMcpRuntime();
       const code = await runCrawl(runtime, process.argv.slice(3));
-      process.exit(code);
+      // The local embedder loads onnxruntime-node, whose native intra-op thread
+      // pool aborts ("mutex lock failed") if torn down by a hard process.exit().
+      // runCrawl disposes the ONNX session in its finally; we then set exitCode
+      // and let the loop drain so the native teardown completes cleanly.
+      process.exitCode = code;
+      return;
     }
     case "help":
     case "--help":

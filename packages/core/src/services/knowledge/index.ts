@@ -1,5 +1,7 @@
 import type { KnowledgeConfig } from "../../config.js";
-import { OllamaClient } from "../../clients/llm.js";
+import { LocalEmbedder } from "../../clients/embedder.js";
+import { makeChatModel } from "../../clients/chat/factory.js";
+import type { ChatModel } from "../../clients/chat/types.js";
 import { Fetcher } from "../../clients/crawler/fetcher.js";
 import { extractPage } from "../../clients/crawler/extract.js";
 import { RobotsClient } from "../../clients/crawler/robotsClient.js";
@@ -8,13 +10,6 @@ import { crawl, type CrawlBounds, type CrawlResult } from "./crawl.js";
 import { search, type SearchResponse } from "./search.js";
 import type { KnowledgeStats } from "./types.js";
 
-/** Embedding dimension by model. Extend as new embed models are supported. */
-const EMBED_DIMS: Record<string, number> = {
-  "nomic-embed-text": 768,
-  "mxbai-embed-large": 1024,
-  "all-minilm": 384
-};
-
 export interface CrawlOverrides {
   seeds?: string[];
   maxPages?: number;
@@ -22,30 +17,22 @@ export interface CrawlOverrides {
 }
 
 export class KnowledgeService {
-  private readonly llm: OllamaClient;
+  private readonly embedder: LocalEmbedder;
+  private readonly chat?: ChatModel;
   private readonly fetcher: Fetcher;
   private store?: KnowledgeStore;
 
   constructor(private readonly cfg: KnowledgeConfig) {
-    this.llm = new OllamaClient({
-      baseUrl: cfg.embedBaseUrl,
-      chatModel: cfg.crawlModel,
-      embedModel: cfg.embedModel,
-      proxyUrl: cfg.proxyUrl
-    });
+    this.embedder = new LocalEmbedder(cfg.embedModel, cfg.embedModelPath);
+    this.chat = makeChatModel(cfg.chat, cfg.proxyUrl);
     this.fetcher = new Fetcher({ maxBytes: cfg.maxBytes, proxyUrl: cfg.proxyUrl });
   }
 
-  private getStore(): KnowledgeStore {
+  /** Load the embed model (so dim is known) then open the store keyed on {model, dim}. */
+  private async ensureStore(): Promise<KnowledgeStore> {
     if (!this.store) {
-      const dim = EMBED_DIMS[this.cfg.embedModel];
-      if (!dim) {
-        throw new Error(
-          `unknown embedding dim for model "${this.cfg.embedModel}". ` +
-            `Add it to EMBED_DIMS in services/knowledge/index.ts.`
-        );
-      }
-      this.store = new KnowledgeStore(this.cfg.dbPath, { model: this.cfg.embedModel, dim });
+      await this.embedder.ready();
+      this.store = new KnowledgeStore(this.cfg.dbPath, { model: this.embedder.model, dim: this.embedder.dim });
     }
     return this.store;
   }
@@ -62,22 +49,36 @@ export class KnowledgeService {
       topic: this.cfg.topic
     };
     if (bounds.seeds.length === 0) throw new Error("no crawl seeds (set CRAWL_SEEDS or pass --seed)");
+    const store = await this.ensureStore();
     const robots = new RobotsClient(this.fetcher, this.cfg.respectRobots);
     return crawl(
-      { fetcher: this.fetcher, extract: extractPage, llm: this.llm, store: this.getStore(), robots, now: () => Date.now(), log },
+      {
+        fetcher: this.fetcher,
+        extract: extractPage,
+        embedder: this.embedder,
+        chat: this.chat,
+        store,
+        robots,
+        now: () => Date.now(),
+        log
+      },
       bounds
     );
   }
 
   async search(query: string, k?: number, domain?: string): Promise<SearchResponse> {
-    return search({ llm: this.llm, store: this.getStore() }, query, k, domain);
+    const store = await this.ensureStore();
+    return search({ embedder: this.embedder, store }, query, k, domain);
   }
 
-  stats(): KnowledgeStats {
-    return this.getStore().stats();
+  async stats(): Promise<KnowledgeStats> {
+    const store = await this.ensureStore();
+    return store.stats();
   }
 
-  close(): void {
+  async close(): Promise<void> {
     this.store?.close();
+    this.store = undefined;
+    await this.embedder.dispose();
   }
 }

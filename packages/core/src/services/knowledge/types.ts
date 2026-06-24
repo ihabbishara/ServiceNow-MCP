@@ -15,9 +15,13 @@ export interface FetchResult {
   body: string;
 }
 
-/** Minimal LLM surface the crawl/search code depends on. */
-export interface LlmClient {
-  chat(prompt: string): Promise<string>;
+/** Produces embedding vectors. The crawler's only vector source (local, in-process). */
+export interface Embedder {
+  readonly model: string;
+  /** Embedding dimension; valid only after `ready()` (or first `embed`). */
+  readonly dim: number;
+  /** Loads the model so `dim` is known; idempotent. */
+  ready(): Promise<void>;
   embed(text: string): Promise<number[]>;
 }
 

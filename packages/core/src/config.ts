@@ -48,10 +48,15 @@ const envSchema = z.object({
   CRAWL_PROXY: optionalUrl,
   CRAWL_RESPECT_ROBOTS: trueBoolString,
   CRAWL_TOPIC: optional(z.string().min(1)),
-  EMBED_MODEL: z.string().default("nomic-embed-text"),
-  EMBED_BASE_URL: optional(z.string().url()),
+  EMBED_MODEL: z.string().default("Xenova/bge-small-en-v1.5"),
+  EMBED_MODEL_PATH: optional(z.string().min(1)),
+  // Verdict chat reuses the agent's LLM_* env (byok → provider HTTP; seat → heuristic).
+  LLM_MODE: z.enum(["seat", "byok"]).default("seat"),
+  LLM_PROVIDER: optional(z.enum(["azure", "anthropic", "openai"])),
   LLM_BASE_URL: optional(z.string().url()),
-  CRAWL_LLM_MODEL: z.string().default("qwen2.5")
+  LLM_API_KEY: optional(z.string().min(1)),
+  LLM_MODEL: z.string().default("gpt-5"),
+  AZURE_API_VERSION: z.string().default("2024-10-21")
 });
 
 export interface ServiceNowConfig {
@@ -89,8 +94,14 @@ export interface KnowledgeConfig {
   respectRobots: boolean;
   topic?: string;
   embedModel: string;
-  embedBaseUrl: string;
-  crawlModel: string;
+  embedModelPath?: string;
+  chat?: {
+    type: "openai" | "azure" | "anthropic";
+    baseUrl: string;
+    model: string;
+    apiKey?: string;
+    apiVersion?: string;
+  };
 }
 
 export interface AppConfig {
@@ -143,8 +154,17 @@ export const loadConfig = (env: Record<string, string | undefined> = process.env
     respectRobots: e.CRAWL_RESPECT_ROBOTS,
     topic: e.CRAWL_TOPIC,
     embedModel: e.EMBED_MODEL,
-    embedBaseUrl: e.EMBED_BASE_URL || e.LLM_BASE_URL || "http://localhost:11434/v1",
-    crawlModel: e.CRAWL_LLM_MODEL
+    embedModelPath: e.EMBED_MODEL_PATH,
+    chat:
+      e.LLM_MODE === "byok" && e.LLM_PROVIDER && e.LLM_BASE_URL
+        ? {
+            type: e.LLM_PROVIDER,
+            baseUrl: e.LLM_BASE_URL,
+            apiKey: e.LLM_API_KEY,
+            model: e.LLM_MODEL,
+            apiVersion: e.AZURE_API_VERSION
+          }
+        : undefined
   };
   return {
     serviceNow: {
