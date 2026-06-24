@@ -7,10 +7,12 @@ import type { Embedder } from "../services/knowledge/types.js";
  * with zero Ollama dependency. When `modelPath` is set the model loads from a
  * local directory with remote downloads disabled (offline / locked-down nets).
  */
+type EmbedPipe = (text: string, opts: unknown) => Promise<{ data: Float32Array }>;
+
 export class LocalEmbedder implements Embedder {
   readonly model: string;
   dim = 0;
-  private pipe?: (text: string, opts: unknown) => Promise<{ data: Float32Array }>;
+  private pipe?: EmbedPipe;
 
   constructor(model: string, modelPath?: string) {
     this.model = model;
@@ -22,7 +24,7 @@ export class LocalEmbedder implements Embedder {
 
   async ready(): Promise<void> {
     if (this.pipe) return;
-    this.pipe = (await pipeline("feature-extraction", this.model)) as typeof this.pipe;
+    this.pipe = (await pipeline("feature-extraction", this.model)) as unknown as EmbedPipe;
     const probe = await this.pipe!("x", { pooling: "mean", normalize: true });
     this.dim = probe.data.length;
   }
