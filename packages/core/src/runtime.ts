@@ -7,6 +7,7 @@ import { StaleTicketService } from "./services/staleTickets.js";
 import { ChangeCorrelationService } from "./services/correlation.js";
 import { IncidentService } from "./services/incidents.js";
 import { ReportService } from "./services/report.js";
+import { KnowledgeService } from "./services/knowledge/index.js";
 
 export interface McpRuntime {
   config: AppConfig;
@@ -17,10 +18,11 @@ export interface McpRuntime {
   slaRiskService: SlaRiskService;
   staleTicketService: StaleTicketService;
   correlationService: ChangeCorrelationService;
+  knowledge: KnowledgeService;
 }
 
-export const createMcpRuntime = (): McpRuntime => {
-  const config = loadConfig();
+export const createMcpRuntime = (env: Record<string, string | undefined> = process.env): McpRuntime => {
+  const config = loadConfig(env);
 
   const serviceNowClient = new ServiceNowClient(config.serviceNow);
   const azureDevOpsClient = createAdoClient(config.azureDevOps);
@@ -38,6 +40,7 @@ export const createMcpRuntime = (): McpRuntime => {
     config.thresholds.relatedChangeWindow
   );
   const reportService = new ReportService(incidentService, serviceNowClient);
+  const knowledge = new KnowledgeService(config.knowledge);
 
   return {
     config,
@@ -47,6 +50,7 @@ export const createMcpRuntime = (): McpRuntime => {
     reportService,
     slaRiskService,
     staleTicketService,
-    correlationService
+    correlationService,
+    knowledge
   };
 };
