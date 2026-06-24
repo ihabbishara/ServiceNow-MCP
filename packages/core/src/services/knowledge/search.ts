@@ -1,4 +1,4 @@
-import type { LlmClient, SearchHit } from "./types.js";
+import type { Embedder, SearchHit } from "./types.js";
 import type { KnowledgeStore } from "./store.js";
 
 export interface SearchResponse {
@@ -8,12 +8,12 @@ export interface SearchResponse {
 }
 
 export const search = async (
-  deps: { llm: Pick<LlmClient, "embed">; store: Pick<KnowledgeStore, "knn"> },
+  deps: { embedder: Pick<Embedder, "embed">; store: Pick<KnowledgeStore, "knn"> },
   query: string,
   k = 6,
   domain?: string
 ): Promise<SearchResponse> => {
-  const vec = await deps.llm.embed(query);
+  const vec = await deps.embedder.embed(query);
   const results = deps.store.knn(vec, Math.min(Math.max(k, 1), 20), domain);
   return {
     count: results.length,
