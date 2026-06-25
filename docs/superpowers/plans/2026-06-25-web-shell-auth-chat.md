@@ -389,7 +389,7 @@ Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 A buildable empty package with both build systems (tsc for server, Vite for client) and the shared `ServerEvent` type. Deliverable: the server boots on an ephemeral port and serves a placeholder page.
 
 **Files:**
-- Create: `packages/web/package.json`, `packages/web/tsconfig.json`, `packages/web/tsconfig.node.json`, `packages/web/vite.config.ts`, `packages/web/tailwind.config.js`, `packages/web/postcss.config.js`, `packages/web/index.html`, `packages/web/shared/events.ts`, `packages/web/server/index.ts`, `packages/web/client/src/main.tsx`, `packages/web/client/src/App.tsx`, `packages/web/client/src/index.css`
+- Create: `packages/web/package.json`, `packages/web/tsconfig.json`, `packages/web/tsconfig.node.json`, `packages/web/vite.config.ts`, `packages/web/tailwind.config.js`, `packages/web/postcss.config.js`, `packages/web/index.html`, `packages/web/shared/events.ts`, `packages/web/server/static.ts`, `packages/web/server/index.ts`, `packages/web/client/src/main.tsx`, `packages/web/client/src/App.tsx`, `packages/web/client/src/index.css`
 - Test: `packages/web/tests/server-boot.test.ts`
 
 **Interfaces:**
@@ -603,39 +603,65 @@ export function App() {
 }
 ```
 
-- [ ] **Step 6: Create the placeholder server**
+- [ ] **Step 6a: Create the static-file helper**
+
+Serves a file from the client build with the correct `content-type` (browsers refuse to execute JS / apply CSS served as `application/octet-stream`) and an SPA fallback to `index.html`. Reused by the placeholder server here and by Task 9's `createApp`.
+
+```typescript
+// packages/web/server/static.ts
+import { readFile } from "node:fs/promises";
+import { join, normalize, extname } from "node:path";
+import type { ServerResponse } from "node:http";
+
+const MIME: Record<string, string> = {
+  ".html": "text/html; charset=utf-8",
+  ".js": "text/javascript",
+  ".css": "text/css",
+  ".json": "application/json",
+  ".svg": "image/svg+xml",
+  ".ico": "image/x-icon",
+  ".woff2": "font/woff2",
+  ".woff": "font/woff",
+};
+
+/** Serve `urlPath` from `clientDist` with content-type; fall back to index.html (SPA). */
+export const serveStatic = async (
+  res: ServerResponse,
+  clientDist: string,
+  urlPath: string
+): Promise<void> => {
+  const rel = normalize(urlPath === "/" ? "/index.html" : urlPath).replace(/^(\.\.[/\\])+/, "");
+  try {
+    const body = await readFile(join(clientDist, rel));
+    res.writeHead(200, { "content-type": MIME[extname(rel)] ?? "application/octet-stream" });
+    res.end(body);
+  } catch {
+    res.writeHead(200, { "content-type": MIME[".html"] });
+    res.end(await readFile(join(clientDist, "index.html")));
+  }
+};
+```
+
+- [ ] **Step 6b: Create the placeholder server**
 
 ```typescript
 // packages/web/server/index.ts
 import { createServer, type Server } from "node:http";
-import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
-import { dirname, join, normalize } from "node:path";
+import { dirname, join } from "node:path";
+import { serveStatic } from "./static.js";
 
 const clientDist = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "client", "dist");
 
 export const startServer = (opts: { port: number }): Promise<Server> => {
   const server = createServer(async (req, res) => {
-    if (req.url === "/api/health") {
+    const url = (req.url ?? "/").split("?")[0];
+    if (url === "/api/health") {
       res.writeHead(200, { "content-type": "application/json" });
       res.end(JSON.stringify({ ok: true }));
       return;
     }
-    // Serve the built client; fall back to index.html (SPA).
-    const rel = normalize(req.url === "/" || !req.url ? "/index.html" : req.url).replace(/^(\.\.[/\\])+/, "");
-    try {
-      const body = await readFile(join(clientDist, rel));
-      res.writeHead(200);
-      res.end(body);
-    } catch {
-      try {
-        res.writeHead(200, { "content-type": "text/html" });
-        res.end(await readFile(join(clientDist, "index.html")));
-      } catch {
-        res.writeHead(404);
-        res.end("not found");
-      }
-    }
+    await serveStatic(res, clientDist, url);
   });
   return new Promise((resolve) =>
     server.listen(opts.port, "127.0.0.1", () => resolve(server))
@@ -1522,21 +1548,16 @@ export const handlePutEnv = async (req: IncomingMessage, res: ServerResponse, ho
 ```typescript
 // packages/web/server/index.ts
 import { createServer, type Server, type IncomingMessage, type ServerResponse } from "node:http";
-import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
-import { dirname, join, normalize } from "node:path";
+import { dirname, join } from "node:path";
 import { createEngineHost, type EngineHost } from "./engine-host.js";
+import { serveStatic } from "./static.js";
 import { handleStream, handleChat, handleConfirm, handleAbort } from "./routes/chat.js";
 import { handleAuthStatus, handleLogin } from "./routes/auth.js";
 import { handleGetEnv, handlePutEnv } from "./routes/env.js";
 import { sendJson } from "./routes/util.js";
 
 const clientDist = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "client", "dist");
-
-type Handler = (req: IncomingMessage, res: ServerResponse, host: EngineHost) => unknown;
-const routes: Record<string, Partial<Record<string, Handler>>> = {
-  "GET /api/health": { GET: (_q, res) => sendJson(res, 200, { ok: true }) } as never,
-};
 
 export const createApp =
   (host: EngineHost) =>
@@ -1553,15 +1574,7 @@ export const createApp =
       if (m === "POST /api/auth/login") return void (await handleLogin(req, res, host));
       if (m === "GET /api/env") return void (await handleGetEnv(req, res, host));
       if (m === "PUT /api/env") return void (await handlePutEnv(req, res, host));
-      // static
-      const rel = normalize(url === "/" ? "/index.html" : url).replace(/^(\.\.[/\\])+/, "");
-      try {
-        res.writeHead(200);
-        res.end(await readFile(join(clientDist, rel)));
-      } catch {
-        res.writeHead(200, { "content-type": "text/html" });
-        res.end(await readFile(join(clientDist, "index.html")));
-      }
+      await serveStatic(res, clientDist, url); // content-type + SPA fallback (Task 4 helper)
     } catch (e) {
       sendJson(res, 500, { error: e instanceof Error ? e.message : String(e) });
     }
@@ -1592,7 +1605,7 @@ if (isMain) {
 }
 ```
 
-(Delete the now-obsolete `routes` const placeholder if the linter flags it.)
+(Static files are served via the `serveStatic` helper from Task 4, so `createApp` needs no inline file handling.)
 
 - [ ] **Step 5: Update the boot test import if needed**
 
