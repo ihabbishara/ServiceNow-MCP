@@ -14,6 +14,8 @@ const triagePrompt = (incidentNumber: string): string =>
 
 First, use the summarize_incident tool to get full context including related changes.
 
+If internal documentation is indexed, also call search_knowledge to find runbooks or known fixes for these symptoms, and cite the source URLs in your recommendations.
+
 Then guide me through:
 
 1. **Impact Assessment**
@@ -46,6 +48,7 @@ Use these tools to gather information:
 2. find_sla_risks - identify any SLA risks
 3. find_stale_tickets - find tickets needing updates
 4. search_changes - find changes in the time period
+5. search_knowledge - find runbooks relevant to the active incidents the next shift may need
 
 Structure the handover as:
 
@@ -72,6 +75,8 @@ const reviewPrompt = (changeNumber: string): string =>
   `Review change ${changeNumber} for potential risks and issues.
 
 First, use get_change to get the full change details.
+
+If internal documentation is indexed, call search_knowledge for relevant change or deployment standards and procedures for the affected service.
 
 Then analyze:
 
@@ -106,6 +111,8 @@ const postmortemPrompt = (incidentNumber: string): string =>
   `Help me structure a postmortem for incident ${incidentNumber}.
 
 First, use summarize_incident to get full context including timeline and related changes.
+
+Also call search_knowledge to check for an existing runbook or known issue for this failure, and flag any runbook gaps as action items.
 
 Then help me document:
 

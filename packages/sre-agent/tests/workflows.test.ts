@@ -40,4 +40,11 @@ describe("workflows", () => {
   it("returns null for an unknown slash command", () => {
     expect(buildWorkflowPrompt("/unknown thing")).toBeNull();
   });
+
+  it("every workflow prompt steers the model to search_knowledge", () => {
+    expect(buildWorkflowPrompt("/triage INC1")).toContain("search_knowledge");
+    expect(buildWorkflowPrompt("/review CHG1")).toContain("search_knowledge");
+    expect(buildWorkflowPrompt("/postmortem INC1")).toContain("search_knowledge");
+    expect(buildWorkflowPrompt("/handover Platform SRE")).toContain("search_knowledge");
+  });
 });
