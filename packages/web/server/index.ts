@@ -41,7 +41,8 @@ export const startServer = async (opts: { port: number; host?: EngineHost }): Pr
       const { createMcpRuntime } = await import("@sre/core");
       loadDotenv();
       const runtime = createMcpRuntime();
-      const h = createEngineHost({ config: loadAgentConfig(), tools: buildTools(runtime) as import("@github/copilot-sdk").Tool<unknown>[], runtimeFactory: () => runtime });
+      const tools = buildTools(runtime) as import("@github/copilot-sdk").Tool<unknown>[];
+      const h = createEngineHost({ config: loadAgentConfig(), tools, runtimeFactory: () => runtime });
       await h.start();
       return h;
     })());
@@ -53,5 +54,10 @@ export const startServer = async (opts: { port: number; host?: EngineHost }): Pr
 const isMain = process.argv[1] === fileURLToPath(import.meta.url);
 if (isMain) {
   const port = Number(process.env.WEB_PORT ?? 4317);
-  startServer({ port }).then(() => console.log(`SRE Agent UI on http://127.0.0.1:${port}`));
+  startServer({ port })
+    .then(() => console.log(`SRE Agent UI on http://127.0.0.1:${port}`))
+    .catch((e) => {
+      console.error("[web] failed to start:", e instanceof Error ? e.message : e);
+      process.exit(1);
+    });
 }

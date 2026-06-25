@@ -69,6 +69,6 @@ describe("routes", () => {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ vars: { LLM_MODE: "nonsense" } }),
     });
-    expect([400, 409]).toContain(res.status); // 400 invalid; never 500
+    expect(res.status).toBe(400);
   });
 });
