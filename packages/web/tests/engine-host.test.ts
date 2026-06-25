@@ -1,6 +1,5 @@
 // packages/web/tests/engine-host.test.ts
 import { describe, it, expect, vi } from "vitest";
-import { randomUUID } from "node:crypto";
 import { createEngineHost, BusyError } from "../server/engine-host.js";
 import type { ServerEvent } from "../shared/events.js";
 
@@ -19,11 +18,11 @@ class FakeEngine {
   });
 }
 
-const makeHost = (events: ServerEvent[]) =>
+const makeHost = (events: ServerEvent[], engineOverride?: Partial<InstanceType<typeof FakeEngine>>) =>
   createEngineHost({
     config: { llm: { mode: "seat", model: "gpt-5" } } as any,
     tools: [],
-    engineFactory: (deps) => new FakeEngine(deps) as any,
+    engineFactory: (deps) => Object.assign(new FakeEngine(deps), engineOverride) as any,
     emit: (e) => events.push(e),
     idFactory: () => "fixed-id",
   });
@@ -54,5 +53,35 @@ describe("engine-host confirm round-trip", () => {
     await expect(host.send("again")).rejects.toBeInstanceOf(BusyError);
     host.resolveConfirm("fixed-id", false);
     await first;
+  });
+
+  it("declines the write (resolves false) when the confirm times out", async () => {
+    vi.useFakeTimers();
+    try {
+      const events: ServerEvent[] = [];
+      const host = makeHost(events);
+      await host.start();
+      const turn = host.send("hello");
+      await vi.waitFor(() => expect(events.some((e) => e.type === "confirm-request")).toBe(true));
+      vi.advanceTimersByTime(5 * 60_000); // CONFIRM_TIMEOUT_MS
+      await turn;
+      // The fake engine streams "skipped" when the confirm resolves false.
+      expect(events).toContainEqual({ type: "delta", text: "skipped" });
+      expect(events).toContainEqual({ type: "turn-end" });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("emits turn-error with isAuthError when the engine turn throws", async () => {
+    const events: ServerEvent[] = [];
+    const host = makeHost(events, {
+      send: async () => { throw new Error("Authorization error, you may need to run /login"); },
+    });
+    await host.start();
+    await host.send("hello");
+    const err = events.find((e) => e.type === "turn-error");
+    expect(err).toBeTruthy();
+    expect((err as { isAuthError: boolean }).isAuthError).toBe(true);
   });
 });

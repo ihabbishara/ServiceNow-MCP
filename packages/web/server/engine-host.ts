@@ -1,5 +1,4 @@
 // packages/web/server/engine-host.ts
-import type { ServerResponse } from "node:http";
 import { randomUUID } from "node:crypto";
 import {
   ChatEngine,
