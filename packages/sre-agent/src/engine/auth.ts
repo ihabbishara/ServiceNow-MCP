@@ -4,6 +4,23 @@ import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+export interface DeviceCodeInfo {
+  verificationUri: string;
+  userCode: string;
+}
+
+/**
+ * Extract the device-flow verification URL + user code from accumulated
+ * `copilot login` stdout. The two can print on separate lines, so callers pass
+ * the running buffer, not a single chunk. Returns undefined until BOTH are seen.
+ */
+export const parseDeviceCode = (buffer: string): DeviceCodeInfo | undefined => {
+  const verificationUri = buffer.match(/https?:\/\/\S*github\.com\/login\/device\S*/i)?.[0];
+  const userCode = buffer.match(/\b[A-Z0-9]{4}-[A-Z0-9]{4}\b/)?.[0];
+  if (verificationUri && userCode) return { verificationUri, userCode };
+  return undefined;
+};
+
 /**
  * Minimal child-process surface the login helper needs: subscribe to the two
  * terminal events. Keeping the type this narrow lets tests inject a plain
