@@ -61,7 +61,11 @@ const logCopilotAuthStatus = (
  * post-login status instead of a blind "complete".
  */
 const reloginCopilot = async (engine: ChatEngine, config: AgentConfig): Promise<void> => {
-  await copilotLogin({ home: config.copilot.home });
+  await copilotLogin({
+    home: config.copilot.home,
+    onDeviceCode: ({ verificationUri, userCode }) =>
+      process.stdout.write(`\nTo log in, open ${verificationUri} and enter code: ${userCode}\n`),
+  });
   await engine.stop();
   await engine.start();
   try {

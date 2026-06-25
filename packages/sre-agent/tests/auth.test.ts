@@ -13,8 +13,9 @@ import {
  * A fake child process: an EventEmitter exposing just the `on` surface the
  * login helper subscribes to. `emit("close", code)` / `emit("error", err)`
  * drive the two terminal outcomes the helper resolves/rejects on.
+ * `.stdout` is a separate EventEmitter so tests can emit `data` chunks.
  */
-const makeFakeChild = () => new EventEmitter();
+const makeFakeChild = () => Object.assign(new EventEmitter(), { stdout: new EventEmitter() });
 
 // The login path mirrors the SDK runtime: the pure-JS index.js, run via node.
 const indexJs = "/bundled/@github/copilot/index.js";
@@ -25,7 +26,7 @@ const baseOpts = {
 };
 
 describe("copilotLogin", () => {
-  it("runs the bundled index.js runtime via node with the `login` subcommand over inherited stdio", async () => {
+  it("runs the bundled index.js runtime via node with the `login` subcommand, piping stdout", async () => {
     const child = makeFakeChild();
     const spawnFn = vi.fn(() => child) as unknown as SpawnFn;
 
@@ -37,7 +38,7 @@ describe("copilotLogin", () => {
     const [cmd, args, opts] = (spawnFn as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(cmd).toBe("/usr/bin/node");
     expect(args).toEqual([indexJs, "login"]);
-    expect(opts.stdio).toBe("inherit");
+    expect(opts.stdio).toEqual(["ignore", "pipe", "inherit"]);
   });
 
   it("runs a native (non-.js) runtime path directly, without prefixing node", async () => {
@@ -142,5 +143,41 @@ describe("isCopilotAuthError", () => {
   it("tolerates non-Error values", () => {
     expect(isCopilotAuthError("Authorization error")).toBe(true);
     expect(isCopilotAuthError(undefined)).toBe(false);
+  });
+});
+
+describe("copilotLogin device-code capture", () => {
+  it("fires onDeviceCode when the URL + code stream on stdout, resolves on exit 0", async () => {
+    const stdout = new EventEmitter();
+    const child = Object.assign(new EventEmitter(), { stdout });
+    const seen: unknown[] = [];
+
+    const promise = copilotLogin({
+      resolveBin: () => "/fake/index.js",
+      execPath: "/usr/bin/node",
+      spawnFn: () => child as never,
+      onDeviceCode: (info) => seen.push(info),
+    });
+
+    stdout.emit("data", Buffer.from("Open https://github.com/login/device "));
+    stdout.emit("data", Buffer.from("and enter WDJB-MJHT\n"));
+    child.emit("close", 0);
+
+    await expect(promise).resolves.toBeUndefined();
+    expect(seen).toEqual([
+      { verificationUri: "https://github.com/login/device", userCode: "WDJB-MJHT" },
+    ]);
+  });
+
+  it("rejects on non-zero exit", async () => {
+    const stdout = new EventEmitter();
+    const child = Object.assign(new EventEmitter(), { stdout });
+    const promise = copilotLogin({
+      resolveBin: () => "/fake/index.js",
+      execPath: "/usr/bin/node",
+      spawnFn: () => child as never,
+    });
+    child.emit("close", 7);
+    await expect(promise).rejects.toThrow(/exited with code 7/);
   });
 });
