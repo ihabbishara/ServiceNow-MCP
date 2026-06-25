@@ -1,0 +1,19 @@
+/* packages/web/client/src/index.css */
+@import "@fontsource-variable/hanken-grotesk"; /* self-hosted, no CDN — works offline */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-background text-on-surface font-sans antialiased;
+  }
+  /* DESIGN.md: visible orange focus ring on interactive elements */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-primary-container/40 ring-offset-1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
