@@ -1,0 +1,13 @@
+// packages/web/server/routes/util.ts
+import type { IncomingMessage, ServerResponse } from "node:http";
+
+export const readJson = async <T>(req: IncomingMessage): Promise<T> => {
+  const chunks: Buffer[] = [];
+  for await (const c of req) chunks.push(c as Buffer);
+  return JSON.parse(Buffer.concat(chunks).toString() || "{}") as T;
+};
+
+export const sendJson = (res: ServerResponse, status: number, body: unknown) => {
+  res.writeHead(status, { "content-type": "application/json" });
+  res.end(JSON.stringify(body));
+};
