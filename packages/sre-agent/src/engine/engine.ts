@@ -11,6 +11,20 @@ import type { AgentConfig } from "../config.js";
 import { makePermissionHandler } from "./permissions.js";
 
 /**
+ * Appended to the Copilot session's system message (append mode → keeps all SDK
+ * guardrails) when the crawler is configured. Steers the model to consult the
+ * internal-docs index via the `search_knowledge` tool for how-to/runbook
+ * questions, in both seat and BYOK modes.
+ */
+export const KNOWLEDGE_SYSTEM_INSTRUCTION =
+  "This agent has a `search_knowledge` tool backed by an index of the organization's internal " +
+  "documentation (runbooks, wikis, KB). When the user asks a how-to, procedure, troubleshooting, " +
+  "or known-fix question where internal documentation would help, call `search_knowledge` before " +
+  "answering and cite the returned source URLs. If it returns no results, say the index may be empty " +
+  "and suggest running `sre-agent crawl`. Do not call it for questions clearly answerable from " +
+  "ServiceNow/ADO data alone.";
+
+/**
  * Translate the agent's seat-auth config into `CopilotClientOptions`.
  *
  * Without any of these, the SDK auto-detects a credential: it tries the env
@@ -109,6 +123,9 @@ export class ChatEngine {
         streaming: true,
         tools: this.deps.tools,
         onPermissionRequest: permissionHandler,
+        ...(cfg.knowledgeEnabled
+          ? { systemMessage: { mode: "append" as const, content: KNOWLEDGE_SYSTEM_INSTRUCTION } }
+          : {}),
         ...(cfg.llm.mode === "byok" && cfg.llm.provider
           ? {
               provider: {
