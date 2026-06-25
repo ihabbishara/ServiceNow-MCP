@@ -67,6 +67,7 @@ export const createEngineHost = (opts: EngineHostOptions): EngineHost => {
   const engineFactory = opts.engineFactory ?? ((deps: EngineDeps) => new ChatEngine(deps));
   const pending = new Map<string, (approve: boolean) => void>();
   let turnRunning = false;
+  let turnGen = 0;
 
   // Lifecycle seams
   const loginFn = opts.loginFn ?? copilotLogin;
@@ -117,6 +118,9 @@ export const createEngineHost = (opts: EngineHostOptions): EngineHost => {
 
   const restart = async () => {
     emit({ type: "engine-state", state: "restarting" });
+    await engine.abort(); // abort any in-flight turn
+    turnRunning = false;
+    turnGen++;
     await engine.stop();
     await runtime?.knowledge.close().catch(() => {}); // ONNX: dispose before re-create
     engine = buildEngine(config);
@@ -142,6 +146,7 @@ export const createEngineHost = (opts: EngineHostOptions): EngineHost => {
     async send(prompt) {
       if (turnRunning) throw new BusyError();
       turnRunning = true;
+      const myGen = ++turnGen;
       try {
         await engine.send(buildWorkflowPrompt(prompt) ?? prompt);
         emit({ type: "turn-end" });
@@ -152,7 +157,7 @@ export const createEngineHost = (opts: EngineHostOptions): EngineHost => {
           isAuthError: isCopilotAuthError(e),
         });
       } finally {
-        turnRunning = false;
+        if (myGen === turnGen) turnRunning = false;
       }
     },
     resolveConfirm(id, approve) {
@@ -182,7 +187,7 @@ export const createEngineHost = (opts: EngineHostOptions): EngineHost => {
         return { ok: false as const, issues: e instanceof Error ? e.message : String(e) };
       }
       await writeEnvFile(envPath, vars);
-      if (loadDotenv) loadDotenv(); // refresh process.env from the file
+      loadDotenv(); // refresh process.env from the file
       config = nextConfig;
       await restart();
       return { ok: true as const };

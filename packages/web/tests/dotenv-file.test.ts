@@ -25,3 +25,18 @@ describe("round-trip", () => {
     expect(await readFile(path, "utf8")).toContain("FOO=bar");
   });
 });
+
+describe("round-trip with special characters", () => {
+  it("preserves spaces, #, =, quotes, and newlines through serialize->parse", () => {
+    const vars = {
+      SIMPLE: "value",
+      SPACED: "has spaces",
+      HASH: "value#withhash",
+      EQUALS: "p@ss=w0rd",
+      QUOTED: 'has"quote',
+      MULTILINE: "line1\nline2",
+      EMPTY: "",
+    };
+    expect(parseEnv(serializeEnv(vars))).toEqual(vars);
+  });
+});
