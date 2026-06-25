@@ -16,6 +16,7 @@
 - **Tests:** vitest, run from repo root (`npm test` → `vitest run`). Test files live in `packages/<pkg>/tests/**`. No new test frameworks; no DOM test deps.
 - **Binding:** the server listens on `127.0.0.1` only. No app-level password.
 - **Secrets:** the `.env` editor reads/writes **all** vars (acceptable on loopback). Resolve the file via `resolveDotenvPath` from `@sre/sre-agent`.
+- **Design system (BINDING):** all UI follows the ING "Orange Direct" system in `docs/DESIGN.md`. Use the Tailwind semantic tokens from Task 4 — **never raw hex / default Tailwind palette colors (`blue-600`, `gray-100`, …) in components.** Conventions, copied verbatim: primary button `bg-primary-container text-on-primary rounded` (solid `#ff6200`, white text), one per screen; secondary button transparent + 1px `primary-container` border/text; input 1px `outline` border, focus → `primary-container` border + 2px orange ring (`focus-visible`); card `bg-surface-container-lowest border border-surface-gray` (no shadow); informational tag `bg-deep-indigo text-white` pill; modal scrim `bg-black/50`, panel soft ambient shadow only. Font: Hanken Grotesk via `@fontsource`. Type weights 600–700 headings / 400 body. Radius default `0.25rem`. 8px spacing rhythm. SVG icons only (no emoji). Visible focus rings, 4.5:1 text contrast, input labels with error-below-field.
 - **Laziness markers:** deliberate ceilings get a `// ponytail:` comment naming the ceiling + upgrade path (e.g. single shared engine).
 - **Commit message trailer:** end each commit body with `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`.
 
@@ -437,6 +438,7 @@ export type ServerEvent =
     "@sre/core": "*"
   },
   "devDependencies": {
+    "@fontsource-variable/hanken-grotesk": "^5.0.0",
     "@vitejs/plugin-react": "^4.3.0",
     "autoprefixer": "^10.4.0",
     "postcss": "^8.4.0",
@@ -491,8 +493,55 @@ export default defineConfig({
 ```
 
 ```javascript
-// packages/web/tailwind.config.js
-export default { content: ["./index.html", "./client/src/**/*.{ts,tsx}"], theme: { extend: {} }, plugins: [] };
+// packages/web/tailwind.config.js — tokens copied verbatim from docs/DESIGN.md
+export default {
+  content: ["./index.html", "./client/src/**/*.{ts,tsx}"],
+  theme: {
+    extend: {
+      colors: {
+        background: "#fbf9f8",
+        surface: "#fbf9f8",
+        "surface-container-lowest": "#ffffff",
+        "surface-container": "#f0eded",
+        "surface-container-high": "#eae8e7",
+        "surface-gray": "#F0F0F0",
+        "on-surface": "#1b1c1c",
+        "on-surface-variant": "#5a4137",
+        outline: "#8f7065",
+        "outline-variant": "#e3bfb1",
+        primary: "#a53d00",
+        "on-primary": "#ffffff",
+        "primary-container": "#ff6200",
+        "on-primary-container": "#541b00",
+        secondary: "#57569f",
+        "deep-indigo": "#525199",
+        "on-secondary": "#ffffff",
+        "secondary-container": "#b0aefe",
+        error: "#ba1a1a",
+        "on-error": "#ffffff",
+        "error-container": "#ffdad6",
+        "on-error-container": "#93000a",
+      },
+      fontFamily: {
+        sans: ['"Hanken Grotesk Variable"', '"Hanken Grotesk"', "system-ui", "sans-serif"],
+        mono: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+      },
+      fontSize: {
+        "display-lg": ["48px", { lineHeight: "56px", letterSpacing: "-0.02em", fontWeight: "700" }],
+        "headline-lg": ["32px", { lineHeight: "40px", fontWeight: "700" }],
+        "headline-md": ["24px", { lineHeight: "32px", fontWeight: "600" }],
+        "body-lg": ["18px", { lineHeight: "28px" }],
+        "body-md": ["16px", { lineHeight: "24px" }],
+        "label-md": ["14px", { lineHeight: "20px", letterSpacing: "0.01em", fontWeight: "600" }],
+        "label-sm": ["12px", { lineHeight: "16px", fontWeight: "500" }],
+      },
+      borderRadius: { DEFAULT: "0.25rem", sm: "0.125rem", md: "0.375rem", lg: "0.5rem", xl: "0.75rem" },
+      maxWidth: { container: "1200px" },
+      boxShadow: { ambient: "0 8px 30px rgba(0,0,0,0.08)" }, // DESIGN.md: soft diffuse, floating only
+    },
+  },
+  plugins: [],
+};
 ```
 
 ```javascript
@@ -513,9 +562,24 @@ export default { plugins: { tailwindcss: {}, autoprefixer: {} } };
 
 ```css
 /* packages/web/client/src/index.css */
+@import "@fontsource-variable/hanken-grotesk"; /* self-hosted, no CDN — works offline */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-background text-on-surface font-sans antialiased;
+  }
+  /* DESIGN.md: visible orange focus ring on interactive elements */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-primary-container/40 ring-offset-1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
 ```
 
 ```tsx
@@ -1722,16 +1786,27 @@ export const putEnv = (vars: Record<string, string>) =>
 - [ ] **Step 6: Implement the views**
 
 ```tsx
-// packages/web/client/src/views/ConfirmDialog.tsx
+// packages/web/client/src/views/ConfirmDialog.tsx — ING modal: 50% scrim, soft ambient shadow
 import { answerConfirm } from "../api.js";
 export function ConfirmDialog({ confirm }: { confirm: { id: string; summary: string } }) {
   return (
-    <div className="fixed inset-0 bg-black/40 grid place-items-center">
-      <div className="bg-white rounded-lg p-6 max-w-md shadow-xl">
-        <p className="mb-4">{confirm.summary}</p>
-        <div className="flex gap-2 justify-end">
-          <button className="px-3 py-1 rounded border" onClick={() => answerConfirm(confirm.id, false)}>Deny</button>
-          <button className="px-3 py-1 rounded bg-blue-600 text-white" onClick={() => answerConfirm(confirm.id, true)}>Approve</button>
+    <div className="fixed inset-0 bg-black/50 grid place-items-center p-4" role="dialog" aria-modal="true">
+      <div className="bg-surface-container-lowest rounded-lg shadow-ambient p-6 max-w-md w-full">
+        <h2 className="text-headline-md mb-2">Confirm write</h2>
+        <p className="text-body-md text-on-surface-variant mb-6">{confirm.summary}</p>
+        <div className="flex gap-3 justify-end">
+          <button
+            className="px-4 py-2 rounded border border-primary-container text-primary-container text-label-md"
+            onClick={() => answerConfirm(confirm.id, false)}
+          >
+            Deny
+          </button>
+          <button
+            className="px-4 py-2 rounded bg-primary-container text-on-primary text-label-md"
+            onClick={() => answerConfirm(confirm.id, true)}
+          >
+            Approve
+          </button>
         </div>
       </div>
     </div>
@@ -1740,17 +1815,39 @@ export function ConfirmDialog({ confirm }: { confirm: { id: string; summary: str
 ```
 
 ```tsx
-// packages/web/client/src/views/Login.tsx
+// packages/web/client/src/views/Login.tsx — device code is the signature focal element
 import { startLogin } from "../api.js";
 export function Login({ deviceCode }: { deviceCode?: { verificationUri: string; userCode: string } }) {
   return (
-    <div className="p-6 max-w-md">
-      <h2 className="text-lg font-semibold mb-3">Sign in to GitHub Copilot</h2>
-      {deviceCode ? (
-        <p>Open <a className="text-blue-600 underline" href={deviceCode.verificationUri} target="_blank" rel="noreferrer">{deviceCode.verificationUri}</a> and enter code <code className="font-mono font-bold">{deviceCode.userCode}</code></p>
-      ) : (
-        <button className="px-4 py-2 rounded bg-blue-600 text-white" onClick={() => startLogin()}>Sign in with GitHub Copilot</button>
-      )}
+    <div className="h-full grid place-items-center p-6">
+      <div className="bg-surface-container-lowest border border-surface-gray rounded-lg p-10 max-w-md w-full text-center">
+        <h1 className="text-headline-lg mb-2">SRE Agent</h1>
+        <p className="text-body-md text-on-surface-variant mb-8">Sign in with your GitHub Copilot account to start.</p>
+        {deviceCode ? (
+          <div>
+            <p className="text-label-md text-on-surface-variant mb-3">Enter this code at the verification page:</p>
+            <div className="font-mono tabular-nums text-display-lg tracking-[0.15em] text-primary-container mb-6">
+              {deviceCode.userCode}
+            </div>
+            <a
+              className="inline-block px-5 py-2.5 rounded bg-primary-container text-on-primary text-label-md"
+              href={deviceCode.verificationUri}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Open verification page
+            </a>
+            <p className="text-label-sm text-on-surface-variant mt-4 break-all">{deviceCode.verificationUri}</p>
+          </div>
+        ) : (
+          <button
+            className="px-5 py-2.5 rounded bg-primary-container text-on-primary text-label-md"
+            onClick={() => startLogin()}
+          >
+            Sign in with GitHub Copilot
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -1764,18 +1861,63 @@ import type { ChatState } from "../state.js";
 export function Chat({ state }: { state: ChatState }) {
   const [input, setInput] = useState("");
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-auto p-4 space-y-3">
+    <div className="flex flex-col h-full max-w-container mx-auto w-full">
+      <div className="flex-1 overflow-auto p-6 space-y-4">
         {state.messages.map((m, i) => (
-          <div key={i} className={m.role === "user" ? "text-right" : ""}><span className="inline-block rounded px-3 py-2 bg-gray-100">{m.text}</span></div>
+          <div key={i} className={m.role === "user" ? "text-right" : ""}>
+            <span
+              className={
+                "inline-block rounded px-4 py-2 text-body-md " +
+                (m.role === "user"
+                  ? "bg-primary-container text-on-primary"
+                  : "bg-surface-container text-on-surface")
+              }
+            >
+              {m.text}
+            </span>
+          </div>
         ))}
-        {state.streaming && <div><span className="inline-block rounded px-3 py-2 bg-gray-50">{state.streaming}</span></div>}
-        {state.error && <div className="text-red-600 text-sm">{state.error.message}{state.error.isAuthError && " — try signing in again."}</div>}
+        {state.streaming && (
+          <div>
+            <span className="inline-block rounded px-4 py-2 text-body-md bg-surface-container text-on-surface">
+              {state.streaming}
+            </span>
+          </div>
+        )}
+        {state.error && (
+          <div role="alert" className="text-label-md text-error">
+            {state.error.message}
+            {state.error.isAuthError && " — try signing in again."}
+          </div>
+        )}
       </div>
-      <form className="p-3 border-t flex gap-2" onSubmit={(e) => { e.preventDefault(); if (input.trim()) { sendPrompt(input); setInput(""); } }}>
-        <input className="flex-1 border rounded px-3 py-2" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask about incidents, changes, ADO work items…" />
-        <button className="px-4 py-2 rounded bg-blue-600 text-white" type="submit">Send</button>
-        <button className="px-3 py-2 rounded border" type="button" onClick={() => abortTurn()}>Stop</button>
+      <form
+        className="p-4 border-t border-surface-gray flex gap-3"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (input.trim()) {
+            sendPrompt(input);
+            setInput("");
+          }
+        }}
+      >
+        <input
+          aria-label="Message"
+          className="flex-1 border border-outline rounded px-3 py-2 text-body-md focus-visible:border-primary-container"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="Ask about incidents, changes, ADO work items…"
+        />
+        <button className="px-5 py-2 rounded bg-primary-container text-on-primary text-label-md" type="submit">
+          Send
+        </button>
+        <button
+          className="px-4 py-2 rounded border border-primary-container text-primary-container text-label-md"
+          type="button"
+          onClick={() => abortTurn()}
+        >
+          Stop
+        </button>
       </form>
     </div>
   );
@@ -1795,16 +1937,27 @@ export function EnvSettings() {
     setIssues(res.ok ? undefined : (await res.json()).issues);
   };
   return (
-    <div className="p-4 space-y-2">
-      <h2 className="text-lg font-semibold">Environment (.env)</h2>
-      {Object.entries(vars).map(([k, v]) => (
-        <div key={k} className="flex gap-2 items-center">
-          <label className="w-56 font-mono text-sm">{k}</label>
-          <input className="flex-1 border rounded px-2 py-1" value={v} onChange={(e) => setVars({ ...vars, [k]: e.target.value })} />
-        </div>
-      ))}
-      {issues && <pre className="text-red-600 text-sm whitespace-pre-wrap">{issues}</pre>}
-      <button className="px-4 py-2 rounded bg-blue-600 text-white" onClick={save}>Save &amp; restart</button>
+    <div className="max-w-container mx-auto w-full p-6 space-y-4">
+      <h2 className="text-headline-md">Environment (.env)</h2>
+      <div className="bg-surface-container-lowest border border-surface-gray rounded-lg p-6 space-y-3">
+        {Object.entries(vars).map(([k, v]) => (
+          <div key={k} className="flex gap-3 items-center">
+            <label htmlFor={`env-${k}`} className="w-64 font-mono text-label-md text-on-surface-variant">{k}</label>
+            <input
+              id={`env-${k}`}
+              className="flex-1 border border-outline rounded px-3 py-2 text-body-md focus-visible:border-primary-container"
+              value={v}
+              onChange={(e) => setVars({ ...vars, [k]: e.target.value })}
+            />
+          </div>
+        ))}
+      </div>
+      {issues && (
+        <pre role="alert" className="text-label-md text-error whitespace-pre-wrap bg-error-container rounded p-3">{issues}</pre>
+      )}
+      <button className="px-5 py-2.5 rounded bg-primary-container text-on-primary text-label-md" onClick={save}>
+        Save &amp; restart
+      </button>
     </div>
   );
 }
@@ -1825,20 +1978,41 @@ export function App() {
   const state = useServerStream();
   const [tab, setTab] = useState<"chat" | "settings">("chat");
   return (
-    <div className="h-screen flex flex-col">
-      <header className="flex items-center gap-4 px-4 py-2 border-b">
-        <strong>SRE Agent</strong>
-        <nav className="flex gap-2 text-sm">
-          <button onClick={() => setTab("chat")} className={tab === "chat" ? "font-semibold" : ""}>Chat</button>
-          <button onClick={() => setTab("settings")} className={tab === "settings" ? "font-semibold" : ""}>Settings</button>
+    <div className="h-screen flex flex-col bg-background">
+      <header className="flex items-center gap-6 px-6 py-3 border-b border-surface-gray bg-surface-container-lowest">
+        <strong className="text-label-md text-primary-container">SRE Agent</strong>
+        <nav className="flex gap-4 text-label-md">
+          <button
+            onClick={() => setTab("chat")}
+            className={tab === "chat" ? "text-primary-container" : "text-on-surface-variant"}
+          >
+            Chat
+          </button>
+          <button
+            onClick={() => setTab("settings")}
+            className={tab === "settings" ? "text-primary-container" : "text-on-surface-variant"}
+          >
+            Settings
+          </button>
         </nav>
-        <span className="ml-auto text-xs text-gray-500">{state.engineState}{state.auth.login ? ` · ${state.auth.login}` : ""}</span>
+        <span className="ml-auto text-label-sm text-on-surface-variant">
+          {state.engineState}
+          {state.auth.login ? ` · ${state.auth.login}` : ""}
+        </span>
       </header>
       {state.auth.ambientEnvWarning && (
-        <div className="bg-amber-100 text-amber-900 text-sm px-4 py-2">Warning: an ambient env token resolved — if turns 403, unset GH_TOKEN/GITHUB_TOKEN or set COPILOT_GITHUB_TOKEN.</div>
+        <div role="alert" className="bg-error-container text-on-error-container text-label-md px-6 py-2">
+          Warning: an ambient env token resolved — if turns 403, unset GH_TOKEN/GITHUB_TOKEN or set COPILOT_GITHUB_TOKEN.
+        </div>
       )}
       <main className="flex-1 overflow-hidden">
-        {!state.auth.isAuthenticated ? <Login deviceCode={state.deviceCode} /> : tab === "chat" ? <Chat state={state} /> : <EnvSettings />}
+        {!state.auth.isAuthenticated ? (
+          <Login deviceCode={state.deviceCode} />
+        ) : tab === "chat" ? (
+          <Chat state={state} />
+        ) : (
+          <EnvSettings />
+        )}
       </main>
       {state.confirm && <ConfirmDialog confirm={state.confirm} />}
     </div>
@@ -1886,6 +2060,13 @@ Expected: exits 0 across all workspaces (core, sre-agent, mcp-server, web).
 
 Run: `npm test`
 Expected: PASS — the prior 239 tests plus the new web + auth tests, 0 failures.
+
+- [ ] **Step 2b: Design-system compliance check**
+
+Confirm no default Tailwind palette colors leaked into components (the design system is binding — only `docs/DESIGN.md` semantic tokens are allowed):
+
+Run: `grep -rnE '(bg|text|border|ring)-(blue|gray|red|green|amber|slate|zinc|indigo|purple)-[0-9]' packages/web/client/src && echo FOUND_DEFAULT_COLORS || echo CLEAN`
+Expected: `CLEAN` (no matches). If `FOUND_DEFAULT_COLORS`, replace each with the ING semantic token before continuing.
 
 - [ ] **Step 3: Manual smoke (documented, not automated)**
 
@@ -1935,3 +2116,4 @@ Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 - **Type consistency:** `ServerEvent` defined once (Task 4) and consumed by `sse.ts`, `engine-host.ts`, `state.ts`. `EngineHost.send` throws `BusyError` synchronously (relied on by Task 9's route). `applyEnv` returns the discriminated `{ok:true} | {ok:false;issues}` used by Task 9's 400 path and Task 10's `EnvSettings`.
 - **Known seams:** `engineFactory`, `runtimeFactory`, `loginFn`, `loadConfig`, `emit`, `idFactory`, `envPath`, and `host` injection keep every task testable without a live Copilot seat or `onnxruntime`.
 - **Port:** the server defaults to `4317` (referenced in README + Vite proxy); `startServer` takes an explicit `port` (tests use `0`).
+- **Design system:** ING "Orange Direct" tokens (`docs/DESIGN.md`) → Tailwind theme in Task 4 (colors/type/radius/spacing verbatim) + Hanken Grotesk via `@fontsource`; all Task 10 views use semantic tokens (no default palette); Task 11 Step 2b greps to enforce it. UX rules (focus rings, 4.5:1 contrast, labels+error-below, 50% modal scrim, reduced-motion, no-emoji) baked into the component code. Verified against `ui-ux-pro-max` + `frontend-design`.

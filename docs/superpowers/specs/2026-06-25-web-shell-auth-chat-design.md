@@ -20,6 +20,28 @@ The SRE agent (`@sre/sre-agent`) is a CLI REPL today. Managers want a browser UI
 - **Binding:** `127.0.0.1` only, no app-level password — the device-flow login is the only auth.
 - **Config/secrets:** `.env` file, with a UI editor over **all** vars.
 - **Packaging:** new `packages/web` workspace.
+- **Design system:** the UI **must** follow the ING "Orange Direct" system in `docs/DESIGN.md` (the source of truth). Verified against the `ui-ux-pro-max` UX rubric and the `frontend-design` taste skill.
+
+## 1a. Design system — ING "Orange Direct" (binding)
+
+`docs/DESIGN.md` is authoritative; its tokens are copied into the Tailwind theme verbatim (semantic names, never raw hex in components). Aesthetic direction: **refined corporate-modern / Swiss-minimal** — generous whitespace on an 8px rhythm, flat tonal layers with 1px borders (no heavy shadows), orange used sparingly and with intent.
+
+**Tokens (from DESIGN.md):**
+- **Color:** `primary #a53d00`, `primary-container #ff6200` (the brand CTA orange), `on-primary #ffffff`; `secondary #57569f` / `deep-indigo #525199` (informational tags); `error #ba1a1a`; surfaces `background/surface #fbf9f8`, `surface-container-lowest #ffffff`, `surface-gray #F0F0F0` (card borders); text `on-surface #1b1c1c`, `on-surface-variant #5a4137`; `outline #8f7065`, `outline-variant #e3bfb1`.
+- **Type:** Hanken Grotesk, self-hosted via `@fontsource`. Scale: `display-lg 48/700/-0.02em`, `headline-lg 32/700`, `headline-md 24/600`, `body-lg 18/400`, `body-md 16/400`, `label-md 14/600`, `label-sm 12/500`. Heavy weights (600–700) for headings; tight tracking on large display.
+- **Shape:** soft `0.25rem` default radius; cards may use `0.5rem`; pills reserved for status tags only.
+- **Elevation:** borders over shadows. Cards: white bg + 1px `surface-gray` border, no shadow. Floating (modal/dropdown): one soft diffuse ambient shadow at 5–8% alpha.
+- **Spacing:** 8px base unit; desktop max-width 1200px.
+
+**Component conventions:**
+- **Primary button:** `bg-primary-container text-on-primary rounded` (solid #ff6200, white text); hover darkens slightly. One primary CTA per screen.
+- **Secondary button:** transparent bg, 1px `primary-container` border + `primary-container` text.
+- **Input:** 1px neutral (`outline`) border, `rounded`; on focus → `primary-container` border + a 2px semi-transparent orange focus ring (`focus-visible` only).
+- **Card:** `surface-container-lowest` bg, 1px `surface-gray` border, no shadow; border darkens on hover when interactive.
+- **Tag/Chip:** informational = `deep-indigo` bg / white text; inactive filter = light gray. Pill shape.
+- **Signature moment:** the device-flow **user code** renders large, letter-spaced, tabular-figure mono as the login focal element.
+
+**UX rules enforced (from `ui-ux-pro-max`):** 4.5:1 text contrast, visible focus rings (2–4px), visible input labels with error shown below the field, modal scrim 40–60% black, skeleton/progress for waits > 300ms, `prefers-reduced-motion` respected, SVG icons only (no emoji), press states that don't shift layout.
 
 ## 2. Architecture & components
 
