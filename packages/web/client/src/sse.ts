@@ -8,6 +8,8 @@ export const useServerStream = (): ChatState => {
   useEffect(() => {
     const es = new EventSource("/api/stream");
     es.onmessage = (m) => dispatch(JSON.parse(m.data) as ServerEvent);
+    es.onerror = () =>
+      dispatch({ type: "turn-error", message: "Connection lost — reconnecting…", isAuthError: false });
     return () => es.close();
   }, []);
   return state;

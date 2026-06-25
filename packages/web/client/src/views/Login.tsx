@@ -17,6 +17,7 @@ export function Login({ deviceCode }: { deviceCode?: { verificationUri: string; 
               href={deviceCode.verificationUri}
               target="_blank"
               rel="noreferrer"
+              aria-label="Open verification page (opens in new tab)"
             >
               Open verification page
             </a>

@@ -4,7 +4,9 @@ import { getEnv, putEnv } from "../api.js";
 export function EnvSettings() {
   const [vars, setVars] = useState<Record<string, string>>({});
   const [issues, setIssues] = useState<string>();
-  useEffect(() => { getEnv().then((r) => setVars(r.vars)); }, []);
+  useEffect(() => {
+    getEnv().then((r) => setVars(r.vars)).catch(() => setIssues("Failed to load .env"));
+  }, []);
   const save = async () => {
     const res = await putEnv(vars);
     setIssues(res.ok ? undefined : (await res.json()).issues);

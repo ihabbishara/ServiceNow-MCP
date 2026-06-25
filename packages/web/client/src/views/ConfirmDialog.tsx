@@ -2,9 +2,9 @@
 import { answerConfirm } from "../api.js";
 export function ConfirmDialog({ confirm }: { confirm: { id: string; summary: string } }) {
   return (
-    <div className="fixed inset-0 bg-black/50 grid place-items-center p-4" role="dialog" aria-modal="true">
+    <div className="fixed inset-0 bg-black/50 grid place-items-center p-4" role="dialog" aria-modal="true" aria-labelledby="confirm-dialog-title">
       <div className="bg-surface-container-lowest rounded-lg shadow-ambient p-6 max-w-md w-full">
-        <h2 className="text-headline-md mb-2">Confirm write</h2>
+        <h2 id="confirm-dialog-title" className="text-headline-md mb-2">Confirm write</h2>
         <p className="text-body-md text-on-surface-variant mb-6">{confirm.summary}</p>
         <div className="flex gap-3 justify-end">
           <button
