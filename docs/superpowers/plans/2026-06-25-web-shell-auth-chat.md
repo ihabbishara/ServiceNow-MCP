@@ -1430,7 +1430,6 @@ Expected: FAIL — `startServer` does not accept `host` / routes missing.
 // packages/web/server/routes/chat.ts
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { EngineHost } from "../engine-host.js";
-import { BusyError } from "../engine-host.js";
 import { readJson, sendJson } from "./util.js";
 
 export const handleStream = (req: IncomingMessage, res: ServerResponse, host: EngineHost) => {
@@ -1446,13 +1445,11 @@ export const handleStream = (req: IncomingMessage, res: ServerResponse, host: En
 
 export const handleChat = async (req: IncomingMessage, res: ServerResponse, host: EngineHost) => {
   const { prompt } = await readJson<{ prompt: string }>(req);
-  try {
-    void host.send(prompt); // fire-and-stream; result arrives over SSE
-    sendJson(res, 202, { accepted: true });
-  } catch (e) {
-    if (e instanceof BusyError) return sendJson(res, 409, { error: "busy" });
-    throw e;
-  }
+  // `send` is async, so a thrown BusyError would become a rejected promise a
+  // sync try/catch can't see — gate on the sync flag instead, then fire-and-stream.
+  if (host.isTurnRunning()) return sendJson(res, 409, { error: "busy" });
+  void host.send(prompt).catch(() => {}); // turn errors surface via the SSE turn-error event
+  sendJson(res, 202, { accepted: true });
 };
 
 export const handleConfirm = async (req: IncomingMessage, res: ServerResponse, host: EngineHost) => {
@@ -1467,7 +1464,7 @@ export const handleAbort = async (_req: IncomingMessage, res: ServerResponse, ho
 };
 ```
 
-Note: `host.send` throws `BusyError` synchronously before the turn starts, so the `try/catch` around `void host.send(prompt)` catches it. (Implement `send` to throw synchronously when `turnRunning` — in Task 7 it does, before the `await`.)
+Note: `host.send` is async, so its internal `BusyError` would reject (not throw synchronously). The route therefore gates on the sync `host.isTurnRunning()` flag and returns `409` before firing the turn — it never relies on catching a thrown `BusyError`. The internal guard in `send` stays as defensive depth (and is what Task 7's unit test asserts via `.rejects`).
 
 ```typescript
 // packages/web/server/routes/util.ts
@@ -2113,7 +2110,7 @@ Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 ## Self-Review notes (addressed)
 
 - **Spec coverage:** auth methods → Tasks 3,7,8 (device flow) + config (BYOK already wired, exposed via `.env` editor Tasks 6,8,9,10); SSE+POST contract → Tasks 5,9,10; write-confirm round-trip → Task 7; device-code capture → Tasks 2,3; `.env` editor (all vars) → Tasks 6,8,9,10; exports prereq → Task 1; error handling (turn-error/isAuthError, ambient-env warning) → Tasks 7,10; testing → every task; out-of-scope B/C → untouched.
-- **Type consistency:** `ServerEvent` defined once (Task 4) and consumed by `sse.ts`, `engine-host.ts`, `state.ts`. `EngineHost.send` throws `BusyError` synchronously (relied on by Task 9's route). `applyEnv` returns the discriminated `{ok:true} | {ok:false;issues}` used by Task 9's 400 path and Task 10's `EnvSettings`.
+- **Type consistency:** `ServerEvent` defined once (Task 4) and consumed by `sse.ts`, `engine-host.ts`, `state.ts`. `EngineHost.send` is async and rejects with `BusyError` on re-entry; the chat route gates on the sync `isTurnRunning()` (not a caught throw). `applyEnv` returns the discriminated `{ok:true} | {ok:false;issues}` used by Task 9's 400 path and Task 10's `EnvSettings`.
 - **Known seams:** `engineFactory`, `runtimeFactory`, `loginFn`, `loadConfig`, `emit`, `idFactory`, `envPath`, and `host` injection keep every task testable without a live Copilot seat or `onnxruntime`.
 - **Port:** the server defaults to `4317` (referenced in README + Vite proxy); `startServer` takes an explicit `port` (tests use `0`).
 - **Design system:** ING "Orange Direct" tokens (`docs/DESIGN.md`) → Tailwind theme in Task 4 (colors/type/radius/spacing verbatim) + Hanken Grotesk via `@fontsource`; all Task 10 views use semantic tokens (no default palette); Task 11 Step 2b greps to enforce it. UX rules (focus rings, 4.5:1 contrast, labels+error-below, 50% modal scrim, reduced-motion, no-emoji) baked into the component code. Verified against `ui-ux-pro-max` + `frontend-design`.
