@@ -128,10 +128,16 @@ export interface Parsers {
 
 Run (from repo root):
 ```bash
-npm --workspace @sre/core install mammoth xlsx officeparser pdf-parse
+npm --workspace @sre/core install mammoth xlsx officeparser pdf-parse@1.1.1
 npm --workspace @sre/core install -D @types/pdf-parse
 ```
 Expected: `package.json` dependencies updated, `package-lock.json` changed, no build run yet.
+
+> **pdf-parse is pinned to `1.1.1` deliberately.** The unpinned `pdf-parse@2.x` is an
+> ESM rewrite with a different (class-based) API and no `./lib/pdf-parse.js` subpath.
+> v1.1.1 keeps the simple `pdf(buffer) => { text }` signature used in Task 9 and the
+> `pdf-parse/lib/pdf-parse.js` inner-path import (which sidesteps v1's debug top-level
+> file read). `@types/pdf-parse@1.1.x` matches it.
 
 - [ ] **Step 2: Verify they import under ESM**
 
