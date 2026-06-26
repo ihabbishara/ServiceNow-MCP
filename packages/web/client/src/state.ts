@@ -5,8 +5,11 @@ export interface ChatMessage { id: number; role: "user" | "assistant"; text: str
 export interface ChatState {
   messages: ChatMessage[];
   streaming: string;
+  busy: boolean;
+  activeTool?: string;
   engineState: EngineState;
   auth: { isAuthenticated: boolean; authType?: string; login?: string; ambientEnvWarning: boolean };
+  config?: { llmMode: "seat" | "byok"; model: string; provider?: string; servicenow: boolean; ado: boolean; rag: boolean };
   deviceCode?: { verificationUri: string; userCode: string };
   confirm?: { id: string; summary: string };
   error?: { message: string; isAuthError: boolean };
@@ -16,6 +19,7 @@ export interface ChatState {
 export const initialState: ChatState = {
   messages: [],
   streaming: "",
+  busy: false,
   engineState: "starting",
   auth: { isAuthenticated: false, ambientEnvWarning: false },
   nextMessageId: 0,
@@ -28,14 +32,17 @@ export const applyServerEvent = (s: ChatState, e: ServerEvent | ClientEvent): Ch
     case "user-message":
       return {
         ...s,
+        busy: true,
         messages: [...s.messages, { id: s.nextMessageId, role: "user", text: e.text }],
         nextMessageId: s.nextMessageId + 1,
       };
     case "delta":
-      return { ...s, streaming: s.streaming + e.text };
+      return { ...s, streaming: s.streaming + e.text, activeTool: undefined };
     case "turn-end":
       return {
         ...s,
+        busy: false,
+        activeTool: undefined,
         messages: s.streaming
           ? [...s.messages, { id: s.nextMessageId, role: "assistant", text: s.streaming }]
           : s.messages,
@@ -43,7 +50,7 @@ export const applyServerEvent = (s: ChatState, e: ServerEvent | ClientEvent): Ch
         nextMessageId: s.streaming ? s.nextMessageId + 1 : s.nextMessageId,
       };
     case "turn-error":
-      return { ...s, streaming: "", error: { message: e.message, isAuthError: e.isAuthError } };
+      return { ...s, busy: false, activeTool: undefined, streaming: "", error: { message: e.message, isAuthError: e.isAuthError } };
     case "confirm-request":
       return { ...s, confirm: { id: e.id, summary: e.summary } };
     case "device-code":
@@ -61,8 +68,20 @@ export const applyServerEvent = (s: ChatState, e: ServerEvent | ClientEvent): Ch
       };
     case "engine-state":
       return { ...s, engineState: e.state };
+    case "config-status":
+      return {
+        ...s,
+        config: {
+          llmMode: e.llmMode,
+          model: e.model,
+          provider: e.provider,
+          servicenow: e.servicenow,
+          ado: e.ado,
+          rag: e.rag,
+        },
+      };
     case "tool-start":
-      return s; // surfaced transiently elsewhere; no state change
+      return { ...s, activeTool: e.name };
     default:
       return s;
   }

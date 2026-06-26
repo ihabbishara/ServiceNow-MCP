@@ -42,4 +42,38 @@ describe("applyServerEvent", () => {
     expect(s.messages.at(-1)).toMatchObject({ role: "user", text: "hi there" });
     expect(typeof s.messages.at(-1)!.id).toBe("number");
   });
+
+  it("sets busy on user-message and clears it on turn-end", () => {
+    let s = applyServerEvent(initialState, { type: "user-message", text: "hi" });
+    expect(s.busy).toBe(true);
+    s = applyServerEvent(s, { type: "turn-end" });
+    expect(s.busy).toBe(false);
+  });
+
+  it("tracks the active tool and clears it on first delta", () => {
+    let s = applyServerEvent(initialState, { type: "tool-start", name: "web_fetch" });
+    expect(s.activeTool).toBe("web_fetch");
+    s = applyServerEvent(s, { type: "delta", text: "x" });
+    expect(s.activeTool).toBeUndefined();
+  });
+
+  it("clears busy and activeTool on turn-error", () => {
+    let s = applyServerEvent(initialState, { type: "user-message", text: "hi" });
+    s = applyServerEvent(s, { type: "tool-start", name: "t" });
+    s = applyServerEvent(s, { type: "turn-error", message: "boom", isAuthError: false });
+    expect(s.busy).toBe(false);
+    expect(s.activeTool).toBeUndefined();
+  });
+
+  it("stores config from config-status", () => {
+    const s = applyServerEvent(initialState, {
+      type: "config-status",
+      llmMode: "seat",
+      model: "gpt-5",
+      servicenow: true,
+      ado: false,
+      rag: true,
+    });
+    expect(s.config).toMatchObject({ llmMode: "seat", model: "gpt-5", servicenow: true, ado: false, rag: true });
+  });
 });
