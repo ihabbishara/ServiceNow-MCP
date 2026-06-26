@@ -46,7 +46,7 @@ You never pass `--env-file` and never run `node …/dist/…` by hand.
 
 Inside the chat, type `/help` for workflow commands (`/triage`, `/review`,
 `/postmortem`, `/handover`) and `/login` to re-authenticate to Copilot. The model
-has 14 tools (ServiceNow, Azure DevOps, knowledge) — full roster in
+has 15 tools (ServiceNow, Azure DevOps, knowledge, SharePoint) — full roster in
 [`packages/sre-agent/README.md`](packages/sre-agent/README.md#tools).
 
 ### Windows (PowerShell) notes
@@ -101,6 +101,18 @@ source URLs. `index_url <url>` does a small on-demand top-up mid-chat.
 
 Full reference: [`packages/sre-agent/README.md`](packages/sre-agent/README.md#knowledge-crawler)
 and every variable in [`.env.example`](packages/sre-agent/.env.example).
+
+## SharePoint incident docs
+
+The `get_incident_documents` tool fetches extracted text from an incident's
+SharePoint `Docs` subfolder (docx/xlsx/pptx/pdf) and returns it inline so the
+model can cite it when triaging. Set `SHAREPOINT_ENABLED=true` and
+`SHAREPOINT_SITE_URL` to enable it — **no PAT required**; auth reuses your `az
+login` session (delegated Microsoft Graph token). `npm start -- doctor` includes
+a SharePoint preflight.
+
+Full details and all variables:
+[`packages/sre-agent/README.md`](packages/sre-agent/README.md#sharepoint-incident-docs).
 
 ## Troubleshooting
 

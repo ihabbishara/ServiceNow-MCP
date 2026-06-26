@@ -165,6 +165,30 @@ const checkKnowledge = async (): Promise<CheckResult> => {
   }
 };
 
+const checkSharePoint = async (): Promise<CheckResult> => {
+  try {
+    const rt = createMcpRuntime();
+    if (!rt.sharePoint) {
+      return { name: "SharePoint", ok: true, detail: "disabled (SHAREPOINT_ENABLED not set)" };
+    }
+    // A non-existent incident still proves auth + site + base-folder listing work:
+    // "No SharePoint folder found" means the pipeline reached the folder listing.
+    await rt.sharePoint.getIncidentDocuments("__doctor_probe__");
+    return { name: "SharePoint", ok: true, detail: "reachable" };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg.includes("No SharePoint folder found")) {
+      return { name: "SharePoint", ok: true, detail: "auth + site reachable (probe folder absent, as expected)" };
+    }
+    return {
+      name: "SharePoint",
+      ok: false,
+      detail: msg.slice(0, 200),
+      fix: "Check SHAREPOINT_SITE_URL and that `az login` has SharePoint/Graph access."
+    };
+  }
+};
+
 /**
  * Run every prerequisite check and return a printable summary. Config is loaded
  * first; az checks run only in azcli mode; the Copilot check is skipped in BYOK
@@ -184,6 +208,9 @@ export const runChecks = async (): Promise<{ text: string; allOk: boolean }> => 
       results.push(await checkCopilotAuth(config));
     }
     results.push(await checkKnowledge());
+    if (config.raw.SHAREPOINT_ENABLED) {
+      results.push(await checkSharePoint());
+    }
   }
   return summarizeDoctor(results);
 };
