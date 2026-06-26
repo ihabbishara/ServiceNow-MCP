@@ -105,3 +105,41 @@ describe("loadConfig", () => {
     expect(cfg.thresholds.relatedChangeWindow.beforeHours).toBe(48);
   });
 });
+
+const base = {
+  SERVICENOW_BASE_URL: "https://sn.example.com",
+  SERVICENOW_USERNAME: "u",
+  SERVICENOW_PASSWORD: "p"
+};
+
+describe("sharePoint config", () => {
+  it("defaults to disabled with no env", () => {
+    const cfg = loadConfig(base);
+    expect(cfg.sharePoint.enabled).toBe(false);
+  });
+
+  it("requires SHAREPOINT_SITE_URL when enabled", () => {
+    expect(() => loadConfig({ ...base, SHAREPOINT_ENABLED: "true" })).toThrow(
+      /SHAREPOINT_ENABLED=true requires SHAREPOINT_SITE_URL/
+    );
+  });
+
+  it("parses enabled config with defaults", () => {
+    const cfg = loadConfig({
+      ...base,
+      SHAREPOINT_ENABLED: "true",
+      SHAREPOINT_SITE_URL: "https://acme.sharepoint.com/sites/SRE"
+    });
+    expect(cfg.sharePoint).toMatchObject({
+      enabled: true,
+      siteUrl: "https://acme.sharepoint.com/sites/SRE",
+      incidentRoot: "",
+      docsSubfolder: "Docs",
+      authMode: "azcli",
+      maxDocTokens: 50000,
+      maxFiles: 50,
+      maxFileBytes: 10485760,
+      timeoutMs: 30000
+    });
+  });
+});
