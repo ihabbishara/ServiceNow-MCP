@@ -8,6 +8,7 @@ import { ChangeCorrelationService } from "./services/correlation.js";
 import { IncidentService } from "./services/incidents.js";
 import { ReportService } from "./services/report.js";
 import { KnowledgeService } from "./services/knowledge/index.js";
+import { SharePointService, createSharePointService } from "./services/sharepoint/index.js";
 
 export interface McpRuntime {
   config: AppConfig;
@@ -19,6 +20,7 @@ export interface McpRuntime {
   staleTicketService: StaleTicketService;
   correlationService: ChangeCorrelationService;
   knowledge: KnowledgeService;
+  sharePoint?: SharePointService;
 }
 
 export const createMcpRuntime = (env: Record<string, string | undefined> = process.env): McpRuntime => {
@@ -41,6 +43,7 @@ export const createMcpRuntime = (env: Record<string, string | undefined> = proce
   );
   const reportService = new ReportService(incidentService, serviceNowClient);
   const knowledge = new KnowledgeService(config.knowledge);
+  const sharePoint = config.sharePoint.enabled ? createSharePointService(config.sharePoint) : undefined;
 
   return {
     config,
@@ -51,6 +54,7 @@ export const createMcpRuntime = (env: Record<string, string | undefined> = proce
     slaRiskService,
     staleTicketService,
     correlationService,
-    knowledge
+    knowledge,
+    sharePoint
   };
 };
