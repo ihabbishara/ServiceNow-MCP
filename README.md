@@ -45,7 +45,9 @@ You never pass `--env-file` and never run `node …/dist/…` by hand.
 | `npm test` | Run the test suite |
 
 Inside the chat, type `/help` for workflow commands (`/triage`, `/review`,
-`/postmortem`, `/handover`) and `/login` to re-authenticate to Copilot.
+`/postmortem`, `/handover`) and `/login` to re-authenticate to Copilot. The model
+has 14 tools (ServiceNow, Azure DevOps, knowledge) — full roster in
+[`packages/sre-agent/README.md`](packages/sre-agent/README.md#tools).
 
 ### Windows (PowerShell) notes
 

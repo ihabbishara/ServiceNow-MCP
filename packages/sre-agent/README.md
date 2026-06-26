@@ -20,6 +20,28 @@ terminal.
 - **Workflows** — `/triage`, `/review`, `/postmortem`, `/handover` expand into
   seed prompts; anything else is sent to the model verbatim.
 
+## Tools
+
+14 tools the model can call. All are read-only except `create_bug_from_incident`
+(the one write — prompts y/N).
+
+| Tool | Area | Perm | What it does |
+|---|---|---|---|
+| `search_incidents` | ServiceNow | read | Search incidents by state, priority, assignment group, or description |
+| `get_incident` | ServiceNow | read | Full details of one incident by number (e.g. `INC0012345`) |
+| `summarize_incident` | ServiceNow | read | Incident enriched with related changes + linked ADO work items (triage/handover) |
+| `find_sla_risks` | ServiceNow | read | Open incidents at risk of SLA breach (Critical <10% time, High <25%, Medium <50%) |
+| `find_stale_tickets` | ServiceNow | read | Tickets not updated within thresholds (P1 30m / P2 2h / P3 24h / P4 72h) |
+| `generate_ops_summary` | ServiceNow | read | Daily ops summary: key metrics, risks, recommended actions |
+| `search_changes` | ServiceNow | read | Search change records with filters |
+| `get_change` | ServiceNow | read | Full details of one change by number (e.g. `CHG0005432`) |
+| `correlate_changes` | ServiceNow | read | Changes possibly related to an incident (CI / service / group / time window) |
+| `search_work_items` | Azure DevOps | read | Search work items by text, type, state, area path, or assignee |
+| `get_work_item` | Azure DevOps | read | Get a single work item by numeric ID |
+| `create_bug_from_incident` | Azure DevOps | **write (y/N)** | Create an ADO bug linked to an incident (priority mapping + acceptance criteria) |
+| `search_knowledge` | Knowledge (RAG) | read | Semantic search of the internal-docs index; returns ranked snippets + source URLs |
+| `index_url` | Knowledge (RAG) | read | Bounded on-demand crawl from a URL into the index (mid-chat top-up; ≤2 depth, ≤25 pages) |
+
 ## Setup
 
 1. `npm install` at the repo root (workspaces install `@github/copilot-sdk` and
