@@ -26,6 +26,10 @@ export default {
         "on-error": "#ffffff",
         "error-container": "#ffdad6",
         "on-error-container": "#93000a",
+        success: "#386a20",
+        "on-success": "#ffffff",
+        "success-container": "#b7f397",
+        "on-success-container": "#042100",
       },
       fontFamily: {
         sans: ['"Hanken Grotesk Variable"', '"Hanken Grotesk"', "system-ui", "sans-serif"],

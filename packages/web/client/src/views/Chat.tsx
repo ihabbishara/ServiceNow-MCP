@@ -1,11 +1,19 @@
 // packages/web/client/src/views/Chat.tsx
-import { useState } from "react";
 import { abortTurn } from "../api.js";
 import type { ChatState } from "../state.js";
 import { Markdown } from "./Markdown.js";
 
-export function Chat({ state, onSend }: { state: ChatState; onSend: (text: string) => void }) {
-  const [input, setInput] = useState("");
+export function Chat({
+  state,
+  onSend,
+  input,
+  setInput,
+}: {
+  state: ChatState;
+  onSend: (text: string) => void;
+  input: string;
+  setInput: (v: string) => void;
+}) {
   return (
     <div className="flex flex-col h-full max-w-container mx-auto w-full">
       <div className="flex-1 overflow-auto p-6 space-y-4">
