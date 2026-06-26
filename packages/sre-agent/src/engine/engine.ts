@@ -24,6 +24,13 @@ export const KNOWLEDGE_SYSTEM_INSTRUCTION =
   "and suggest running `sre-agent crawl`. Do not call it for questions clearly answerable from " +
   "ServiceNow/ADO data alone.";
 
+/** Appended when SharePoint is configured: steer toward get_incident_documents for incident docs. */
+export const SHAREPOINT_SYSTEM_INSTRUCTION =
+  "This agent has a `get_incident_documents` tool that retrieves an incident's supporting documents " +
+  "(docx/xlsx/pptx/pdf) from SharePoint by incident number. When the user references an incident number " +
+  "and asks about its documentation, runbook, postmortem, or details that may live in SharePoint, call " +
+  "`get_incident_documents` (alongside the ServiceNow tools) and cite the document names you used.";
+
 /**
  * Translate the agent's seat-auth config into `CopilotClientOptions`.
  *
@@ -118,13 +125,17 @@ export class ChatEngine {
       const permissionHandler =
         this.deps.onPermissionRequest ??
         makePermissionHandler({ confirmWrites: cfg.confirmWrites }, this.deps.confirm);
+      const systemInstructions = [
+        cfg.knowledgeEnabled ? KNOWLEDGE_SYSTEM_INSTRUCTION : null,
+        cfg.sharePointEnabled ? SHAREPOINT_SYSTEM_INSTRUCTION : null
+      ].filter(Boolean);
       const sessionConfig: SessionConfig = {
         model: cfg.llm.model,
         streaming: true,
         tools: this.deps.tools,
         onPermissionRequest: permissionHandler,
-        ...(cfg.knowledgeEnabled
-          ? { systemMessage: { mode: "append" as const, content: KNOWLEDGE_SYSTEM_INSTRUCTION } }
+        ...(systemInstructions.length
+          ? { systemMessage: { mode: "append" as const, content: systemInstructions.join("\n\n") } }
           : {}),
         ...(cfg.llm.mode === "byok" && cfg.llm.provider
           ? {

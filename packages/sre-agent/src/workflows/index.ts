@@ -16,6 +16,8 @@ First, use the summarize_incident tool to get full context including related cha
 
 If internal documentation is indexed, also call search_knowledge to find runbooks or known fixes for these symptoms, and cite the source URLs in your recommendations.
 
+If SharePoint is configured, call get_incident_documents for ${incidentNumber} to pull the incident's supporting documents and incorporate/cite them.
+
 Then guide me through:
 
 1. **Impact Assessment**
@@ -113,6 +115,8 @@ const postmortemPrompt = (incidentNumber: string): string =>
 First, use summarize_incident to get full context including timeline and related changes.
 
 Also call search_knowledge to check for an existing runbook or known issue for this failure, and flag any runbook gaps as action items.
+
+If SharePoint is configured, call get_incident_documents for ${incidentNumber} to pull the incident's documents (timeline notes, comms, analysis) and incorporate them.
 
 Then help me document:
 
