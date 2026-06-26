@@ -10,6 +10,19 @@
 
 **Reference spec:** `docs/superpowers/specs/2026-06-26-sharepoint-incident-docs-design.md`
 
+> **Post-execution review hardening (applied after the whole-branch review):**
+> - **Dropped the `xlsx` (SheetJS) dependency** — the npm build is frozen at 0.18.5 with
+>   unpatched CVE-2023-30533 (prototype pollution) + a ReDoS advisory, and we parse
+>   untrusted document bytes. xlsx text is now extracted via `officeparser` (already used
+>   for pptx). Trade-off: flat text instead of per-sheet CSV — acceptable, and removes the
+>   vulnerable parser. So the parser set is mammoth (docx) / officeparser (xlsx+pptx) / pdf-parse (pdf).
+> - **`maxFileBytes` is now enforced against the real download**, not just the Graph
+>   `size` facet: `GraphClient.download(driveId, itemId, maxBytes?)` rejects on
+>   `Content-Length` over the cap and on the buffered length; `SharePointService` passes
+>   `cfg.maxFileBytes` and records a per-file skip (rather than failing the whole call) on any
+>   download error.
+> - Declared `vitest` as a devDependency in each workspace (was only root-hoisted).
+
 ---
 
 ## File Structure
