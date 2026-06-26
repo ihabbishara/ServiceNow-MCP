@@ -6,6 +6,7 @@
   "files": ["dist/"],
   "scripts": {
     "build": "tsc -b",
+    "test": "vitest run",
     "start": "node dist/cli/index.js",
     "dev": "tsx src/cli/index.ts"
   },
