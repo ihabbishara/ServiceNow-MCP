@@ -12,9 +12,9 @@ export const defaultParsers: Parsers = {
     return value;
   },
   xlsx: async (b) => {
-    const XLSX = await import("xlsx");
-    const wb = XLSX.read(b, { type: "buffer" });
-    return wb.SheetNames.map((n) => `# ${n}\n${XLSX.utils.sheet_to_csv(wb.Sheets[n])}`).join("\n\n");
+    const op = await import("officeparser");
+    const ast = await op.parseOffice(b);
+    return ast.toText();
   },
   pptx: async (b) => {
     const op = await import("officeparser");
