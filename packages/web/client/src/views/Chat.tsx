@@ -2,30 +2,39 @@
 import { useState } from "react";
 import { abortTurn } from "../api.js";
 import type { ChatState } from "../state.js";
+import { Markdown } from "./Markdown.js";
+
 export function Chat({ state, onSend }: { state: ChatState; onSend: (text: string) => void }) {
   const [input, setInput] = useState("");
   return (
     <div className="flex flex-col h-full max-w-container mx-auto w-full">
       <div className="flex-1 overflow-auto p-6 space-y-4">
-        {state.messages.map((m) => (
-          <div key={m.id} className={m.role === "user" ? "text-right" : ""}>
-            <span
-              className={
-                "inline-block rounded px-4 py-2 text-body-md " +
-                (m.role === "user"
-                  ? "bg-primary-container text-on-primary"
-                  : "bg-surface-container text-on-surface")
-              }
-            >
-              {m.text}
-            </span>
-          </div>
-        ))}
+        {state.messages.map((m) =>
+          m.role === "user" ? (
+            <div key={m.id} className="text-right">
+              <span className="inline-block rounded px-4 py-2 text-body-md bg-primary-container text-on-primary whitespace-pre-wrap">
+                {m.text}
+              </span>
+            </div>
+          ) : (
+            <div key={m.id} className="rounded px-4 py-2 bg-surface-container">
+              <Markdown>{m.text}</Markdown>
+            </div>
+          ),
+        )}
         {state.streaming && (
-          <div>
-            <span className="inline-block rounded px-4 py-2 text-body-md bg-surface-container text-on-surface">
-              {state.streaming}
+          <div className="rounded px-4 py-2 bg-surface-container">
+            <Markdown>{state.streaming}</Markdown>
+          </div>
+        )}
+        {state.busy && !state.streaming && (
+          <div role="status" aria-live="polite" className="flex items-center gap-2 px-4 py-2 text-on-surface-variant text-label-md">
+            <span className="flex gap-1" aria-hidden="true">
+              <span className="h-1.5 w-1.5 rounded-full bg-on-surface-variant motion-safe:animate-bounce [animation-delay:-0.3s]" />
+              <span className="h-1.5 w-1.5 rounded-full bg-on-surface-variant motion-safe:animate-bounce [animation-delay:-0.15s]" />
+              <span className="h-1.5 w-1.5 rounded-full bg-on-surface-variant motion-safe:animate-bounce" />
             </span>
+            {state.activeTool ? `Running ${state.activeTool}…` : "Thinking…"}
           </div>
         )}
         {state.error && (
