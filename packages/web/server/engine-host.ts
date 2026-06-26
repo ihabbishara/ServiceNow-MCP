@@ -66,9 +66,11 @@ export const createEngineHost = (opts: EngineHostOptions): EngineHost => {
   const baseEmit = opts.emit ?? ((e: ServerEvent) => hub.broadcast(e));
   let lastEngineState: ServerEvent | undefined;
   let lastAuthStatus: ServerEvent | undefined;
+  let lastConfigStatus: ServerEvent | undefined;
   const emit = (e: ServerEvent) => {
     if (e.type === "engine-state") lastEngineState = e;
     else if (e.type === "auth-status") lastAuthStatus = e;
+    else if (e.type === "config-status") lastConfigStatus = e;
     baseEmit(e);
   };
   const newId = opts.idFactory ?? randomUUID;
@@ -125,6 +127,22 @@ export const createEngineHost = (opts: EngineHostOptions): EngineHost => {
     }
   };
 
+  const emitConfigStatus = () => {
+    const raw = config.raw as unknown as Record<string, string | undefined> | undefined;
+    emit({
+      type: "config-status",
+      llmMode: config.llm.mode,
+      model: config.llm.model,
+      provider: config.llm.provider?.type,
+      servicenow: !!raw?.SERVICENOW_BASE_URL,
+      ado:
+        config.adoAuthMode === "pat"
+          ? !!raw?.ADO_PAT
+          : !!(raw?.ADO_ORG_URL && raw?.ADO_PROJECT),
+      rag: !!runtime,
+    });
+  };
+
   const restart = async () => {
     emit({ type: "engine-state", state: "restarting" });
     await engine.abort(); // abort any in-flight turn
@@ -136,6 +154,7 @@ export const createEngineHost = (opts: EngineHostOptions): EngineHost => {
     runtime = runtimeFactory?.();
     await engine.start();
     emit({ type: "engine-state", state: "ready" });
+    emitConfigStatus();
     await authStatus();
   };
 
@@ -147,6 +166,7 @@ export const createEngineHost = (opts: EngineHostOptions): EngineHost => {
       emit({ type: "engine-state", state: "starting" });
       await engine.start();
       emit({ type: "engine-state", state: "ready" });
+      emitConfigStatus();
       await authStatus();
     },
     async stop() {
@@ -202,7 +222,7 @@ export const createEngineHost = (opts: EngineHostOptions): EngineHost => {
       return { ok: true as const };
     },
     snapshot(): ServerEvent[] {
-      return [lastEngineState, lastAuthStatus].filter(Boolean) as ServerEvent[];
+      return [lastEngineState, lastAuthStatus, lastConfigStatus].filter(Boolean) as ServerEvent[];
     },
   };
 };

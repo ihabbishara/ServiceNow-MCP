@@ -96,3 +96,47 @@ describe("engine-host snapshot", () => {
     expect(snap.some((e) => e.type === "auth-status")).toBe(true);
   });
 });
+
+import { createEngineHost } from "../server/engine-host.js";
+
+describe("engine-host config-status", () => {
+  const fullConfig = {
+    llm: { mode: "seat", model: "gpt-5" },
+    adoAuthMode: "pat",
+    confirmWrites: true,
+    copilot: { ignoreEnvToken: true },
+    raw: { SERVICENOW_BASE_URL: "https://x.service-now.com", ADO_PAT: "p" },
+  } as any;
+
+  const makeFullHost = (events: ServerEvent[]) =>
+    createEngineHost({
+      config: fullConfig,
+      tools: [],
+      engineFactory: (deps) => new FakeEngine(deps) as any,
+      emit: (e) => events.push(e),
+      idFactory: () => "fixed-id",
+      runtimeFactory: () => ({ knowledge: { close: async () => {} } }),
+    });
+
+  it("emits config-status with config-derived flags on start()", async () => {
+    const events: ServerEvent[] = [];
+    const host = makeFullHost(events);
+    await host.start();
+    const cs = events.find((e) => e.type === "config-status");
+    expect(cs).toMatchObject({
+      type: "config-status",
+      llmMode: "seat",
+      model: "gpt-5",
+      servicenow: true,
+      ado: true, // pat mode + ADO_PAT present
+      rag: true, // runtimeFactory provided
+    });
+  });
+
+  it("includes config-status in snapshot()", async () => {
+    const events: ServerEvent[] = [];
+    const host = makeFullHost(events);
+    await host.start();
+    expect(host.snapshot().some((e) => e.type === "config-status")).toBe(true);
+  });
+});

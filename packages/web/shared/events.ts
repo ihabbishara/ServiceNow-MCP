@@ -15,4 +15,13 @@ export type ServerEvent =
       login?: string;
       ambientEnvWarning: boolean;
     }
+  | {
+      type: "config-status";
+      llmMode: "seat" | "byok";
+      model: string;
+      provider?: string;
+      servicenow: boolean;
+      ado: boolean;
+      rag: boolean;
+    }
   | { type: "engine-state"; state: EngineState; message?: string };
