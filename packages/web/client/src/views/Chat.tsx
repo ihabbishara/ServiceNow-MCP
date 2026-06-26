@@ -7,8 +7,8 @@ export function Chat({ state }: { state: ChatState }) {
   return (
     <div className="flex flex-col h-full max-w-container mx-auto w-full">
       <div className="flex-1 overflow-auto p-6 space-y-4">
-        {state.messages.map((m, i) => (
-          <div key={i} className={m.role === "user" ? "text-right" : ""}>
+        {state.messages.map((m) => (
+          <div key={m.id} className={m.role === "user" ? "text-right" : ""}>
             <span
               className={
                 "inline-block rounded px-4 py-2 text-body-md " +

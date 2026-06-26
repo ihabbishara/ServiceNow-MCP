@@ -85,3 +85,14 @@ describe("engine-host confirm round-trip", () => {
     expect((err as { isAuthError: boolean }).isAuthError).toBe(true);
   });
 });
+
+describe("engine-host snapshot", () => {
+  it("snapshot() contains engine-state and auth-status after start()", async () => {
+    const events: ServerEvent[] = [];
+    const host = makeHost(events);
+    await host.start();
+    const snap = host.snapshot();
+    expect(snap.some((e) => e.type === "engine-state")).toBe(true);
+    expect(snap.some((e) => e.type === "auth-status")).toBe(true);
+  });
+});

@@ -1,17 +1,9 @@
-import { describe, it, expect, afterAll, vi } from "vitest";
+import { describe, it, expect, afterAll } from "vitest";
 import type { Server } from "node:http";
 import { AddressInfo } from "node:net";
 import { startServer } from "../server/index.js";
 import { createEngineHost } from "../server/engine-host.js";
-
-class FakeEngine {
-  constructor(public deps: any) {}
-  start = vi.fn(async () => {});
-  stop = vi.fn(async () => {});
-  abort = vi.fn(async () => {});
-  getAuthStatus = vi.fn(async () => ({ isAuthenticated: true, authType: "user", login: "me" }));
-  send = vi.fn(async () => {});
-}
+import { FakeEngine } from "./fake-engine.js";
 
 let server: Server;
 afterAll(() => server?.close());

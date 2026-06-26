@@ -121,8 +121,9 @@ export const copilotLogin = (opts: CopilotLoginOptions = {}): Promise<void> => {
     let buffer = "";
     let fired = false;
     child.stdout.on("data", (chunk) => {
+      if (fired) return;
       buffer += chunk.toString();
-      if (!fired && opts.onDeviceCode) {
+      if (opts.onDeviceCode) {
         const info = parseDeviceCode(buffer);
         if (info) {
           fired = true;

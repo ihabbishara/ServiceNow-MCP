@@ -1,7 +1,7 @@
 // packages/web/client/src/state.ts
 import type { ServerEvent, EngineState } from "../../shared/events.js";
 
-export interface ChatMessage { role: "user" | "assistant"; text: string }
+export interface ChatMessage { id: number; role: "user" | "assistant"; text: string }
 export interface ChatState {
   messages: ChatMessage[];
   streaming: string;
@@ -10,6 +10,7 @@ export interface ChatState {
   deviceCode?: { verificationUri: string; userCode: string };
   confirm?: { id: string; summary: string };
   error?: { message: string; isAuthError: boolean };
+  nextMessageId: number;
 }
 
 export const initialState: ChatState = {
@@ -17,6 +18,7 @@ export const initialState: ChatState = {
   streaming: "",
   engineState: "starting",
   auth: { isAuthenticated: false, ambientEnvWarning: false },
+  nextMessageId: 0,
 };
 
 export const applyServerEvent = (s: ChatState, e: ServerEvent): ChatState => {
@@ -26,8 +28,11 @@ export const applyServerEvent = (s: ChatState, e: ServerEvent): ChatState => {
     case "turn-end":
       return {
         ...s,
-        messages: s.streaming ? [...s.messages, { role: "assistant", text: s.streaming }] : s.messages,
+        messages: s.streaming
+          ? [...s.messages, { id: s.nextMessageId, role: "assistant", text: s.streaming }]
+          : s.messages,
         streaming: "",
+        nextMessageId: s.streaming ? s.nextMessageId + 1 : s.nextMessageId,
       };
     case "turn-error":
       return { ...s, streaming: "", error: { message: e.message, isAuthError: e.isAuthError } };

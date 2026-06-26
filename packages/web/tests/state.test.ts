@@ -10,7 +10,7 @@ describe("applyServerEvent", () => {
     expect(s.streaming).toBe("Hello");
     s = applyServerEvent(s, { type: "turn-end" });
     expect(s.streaming).toBe("");
-    expect(s.messages.at(-1)).toEqual({ role: "assistant", text: "Hello" });
+    expect(s.messages.at(-1)).toMatchObject({ role: "assistant", text: "Hello" });
   });
 
   it("records a confirm request and clears it elsewhere", () => {

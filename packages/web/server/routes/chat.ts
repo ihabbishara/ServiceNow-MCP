@@ -1,6 +1,7 @@
 // packages/web/server/routes/chat.ts
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { EngineHost } from "../engine-host.js";
+import { formatSse } from "../sse.js";
 import { readJson, sendJson } from "./util.js";
 
 export const handleStream = (req: IncomingMessage, res: ServerResponse, host: EngineHost) => {
@@ -11,6 +12,7 @@ export const handleStream = (req: IncomingMessage, res: ServerResponse, host: En
   });
   res.write(": connected\n\n");
   const detach = host.hub.add(res);
+  for (const ev of host.snapshot()) res.write(formatSse(ev));
   req.on("close", detach);
 };
 

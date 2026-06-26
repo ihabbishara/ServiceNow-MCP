@@ -58,11 +58,19 @@ export interface EngineHost {
   login(): Promise<void>;
   readEnv(): Promise<Record<string, string>>;
   applyEnv(vars: Record<string, string>): Promise<{ ok: true } | { ok: false; issues: string }>;
+  snapshot(): ServerEvent[];
 }
 
 export const createEngineHost = (opts: EngineHostOptions): EngineHost => {
   const hub = opts.hub ?? new SseHub();
-  const emit = opts.emit ?? ((e: ServerEvent) => hub.broadcast(e));
+  const baseEmit = opts.emit ?? ((e: ServerEvent) => hub.broadcast(e));
+  let lastEngineState: ServerEvent | undefined;
+  let lastAuthStatus: ServerEvent | undefined;
+  const emit = (e: ServerEvent) => {
+    if (e.type === "engine-state") lastEngineState = e;
+    else if (e.type === "auth-status") lastAuthStatus = e;
+    baseEmit(e);
+  };
   const newId = opts.idFactory ?? randomUUID;
   const engineFactory = opts.engineFactory ?? ((deps: EngineDeps) => new ChatEngine(deps));
   const pending = new Map<string, (approve: boolean) => void>();
@@ -72,6 +80,7 @@ export const createEngineHost = (opts: EngineHostOptions): EngineHost => {
   // Lifecycle seams
   const loginFn = opts.loginFn ?? copilotLogin;
   const loadConfig = opts.loadConfig ?? loadAgentConfig;
+  const runtimeFactory = opts.runtimeFactory;
   const envPath = opts.envPath ?? resolveDotenvPath();
   let config = opts.config;
 
@@ -99,7 +108,7 @@ export const createEngineHost = (opts: EngineHostOptions): EngineHost => {
     });
 
   let engine = buildEngine(config);
-  let runtime = opts.runtimeFactory?.();
+  let runtime = runtimeFactory?.();
 
   const authStatus = async () => {
     try {
@@ -124,7 +133,7 @@ export const createEngineHost = (opts: EngineHostOptions): EngineHost => {
     await engine.stop();
     await runtime?.knowledge.close().catch(() => {}); // ONNX: dispose before re-create
     engine = buildEngine(config);
-    runtime = opts.runtimeFactory?.();
+    runtime = runtimeFactory?.();
     await engine.start();
     emit({ type: "engine-state", state: "ready" });
     await authStatus();
@@ -191,6 +200,9 @@ export const createEngineHost = (opts: EngineHostOptions): EngineHost => {
       config = nextConfig;
       await restart();
       return { ok: true as const };
+    },
+    snapshot(): ServerEvent[] {
+      return [lastEngineState, lastAuthStatus].filter(Boolean) as ServerEvent[];
     },
   };
 };
