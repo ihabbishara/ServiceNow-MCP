@@ -21,8 +21,16 @@ export const initialState: ChatState = {
   nextMessageId: 0,
 };
 
-export const applyServerEvent = (s: ChatState, e: ServerEvent): ChatState => {
+export type ClientEvent = { type: "user-message"; text: string };
+
+export const applyServerEvent = (s: ChatState, e: ServerEvent | ClientEvent): ChatState => {
   switch (e.type) {
+    case "user-message":
+      return {
+        ...s,
+        messages: [...s.messages, { id: s.nextMessageId, role: "user", text: e.text }],
+        nextMessageId: s.nextMessageId + 1,
+      };
     case "delta":
       return { ...s, streaming: s.streaming + e.text };
     case "turn-end":

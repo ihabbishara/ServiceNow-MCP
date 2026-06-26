@@ -1,9 +1,10 @@
 // packages/web/client/src/sse.ts
 import { useEffect, useReducer, useState } from "react";
 import { applyServerEvent, initialState, type ChatState } from "./state.js";
+import { sendPrompt } from "./api.js";
 import type { ServerEvent } from "../../shared/events.js";
 
-export const useServerStream = (): { state: ChatState; connected: boolean } => {
+export const useServerStream = (): { state: ChatState; connected: boolean; send: (text: string) => void } => {
   const [state, dispatch] = useReducer(applyServerEvent, initialState);
   const [connected, setConnected] = useState(false);
   useEffect(() => {
@@ -13,5 +14,9 @@ export const useServerStream = (): { state: ChatState; connected: boolean } => {
     es.onerror = () => setConnected(false);
     return () => es.close();
   }, []);
-  return { state, connected };
+  const send = (text: string) => {
+    dispatch({ type: "user-message", text });
+    void sendPrompt(text);
+  };
+  return { state, connected, send };
 };

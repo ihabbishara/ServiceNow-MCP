@@ -1,8 +1,8 @@
 // packages/web/client/src/views/Chat.tsx
 import { useState } from "react";
-import { sendPrompt, abortTurn } from "../api.js";
+import { abortTurn } from "../api.js";
 import type { ChatState } from "../state.js";
-export function Chat({ state }: { state: ChatState }) {
+export function Chat({ state, onSend }: { state: ChatState; onSend: (text: string) => void }) {
   const [input, setInput] = useState("");
   return (
     <div className="flex flex-col h-full max-w-container mx-auto w-full">
@@ -40,7 +40,7 @@ export function Chat({ state }: { state: ChatState }) {
         onSubmit={(e) => {
           e.preventDefault();
           if (input.trim()) {
-            sendPrompt(input);
+            onSend(input);
             setInput("");
           }
         }}

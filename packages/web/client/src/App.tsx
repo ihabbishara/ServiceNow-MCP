@@ -7,7 +7,7 @@ import { ConfirmDialog } from "./views/ConfirmDialog.js";
 import { EnvSettings } from "./views/EnvSettings.js";
 
 export function App() {
-  const { state, connected } = useServerStream();
+  const { state, connected, send } = useServerStream();
   const [tab, setTab] = useState<"chat" | "settings">("chat");
   return (
     <div className="h-screen flex flex-col bg-background">
@@ -46,7 +46,7 @@ export function App() {
         {!state.auth.isAuthenticated ? (
           <Login deviceCode={state.deviceCode} />
         ) : tab === "chat" ? (
-          <Chat state={state} />
+          <Chat state={state} onSend={send} />
         ) : (
           <EnvSettings />
         )}

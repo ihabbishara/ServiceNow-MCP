@@ -36,4 +36,10 @@ describe("applyServerEvent", () => {
     });
     expect(s.auth.ambientEnvWarning).toBe(true);
   });
+
+  it("appends the user's own message on user-message", () => {
+    const s = applyServerEvent(initialState, { type: "user-message", text: "hi there" });
+    expect(s.messages.at(-1)).toMatchObject({ role: "user", text: "hi there" });
+    expect(typeof s.messages.at(-1)!.id).toBe("number");
+  });
 });
