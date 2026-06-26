@@ -988,7 +988,8 @@ export const defaultParsers: Parsers = {
   },
   pptx: async (b) => {
     const op = await import("officeparser");
-    return await op.parseOfficeAsync(b);
+    const ast = await op.parseOffice(b);   // officeparser v7 API: parseOffice → AST
+    return ast.toText();
   },
   pdf: async (b) => {
     const mod = await import("pdf-parse/lib/pdf-parse.js");
@@ -998,6 +999,20 @@ export const defaultParsers: Parsers = {
   }
 };
 ```
+
+> **Implementation notes (verified during execution):**
+> - officeparser v7.2 exposes `parseOffice(input)` returning an AST with `.toText()` (the
+>   v4-era `parseOfficeAsync` no longer exists). `parseOffice` accepts a Buffer.
+> - The inner-path import `pdf-parse/lib/pdf-parse.js` has no bundled types, so add an
+>   ambient shim at `packages/core/src/vendor.d.ts`:
+>   ```ts
+>   declare module "pdf-parse/lib/pdf-parse.js" {
+>     function pdfParse(dataBuffer: Buffer, options?: { max?: number }): Promise<{ text: string; numpages: number }>;
+>     export = pdfParse;
+>   }
+>   ```
+> - `@sre/core`'s `package.json` had only a `build` script; add `"test": "vitest run"` so
+>   `npm --workspace @sre/core run test` works (it's relied on by every task's test step).
 
 - [ ] **Step 5: Run to verify dispatch tests pass**
 
