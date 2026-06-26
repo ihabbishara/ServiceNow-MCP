@@ -128,6 +128,15 @@ Usage:
 2. Full ingest: `sre-agent crawl` (or `--seed <url>`); status: `sre-agent crawl --status`.
 3. In chat: `search_knowledge` retrieves; `index_url` does a small on-demand top-up.
 
+**Chat RAG steering.** Setting `CRAWL_SEEDS` also enables `knowledgeEnabled`, which
+appends a system-prompt nudge to every chat session (append mode — keeps all SDK
+guardrails; works in seat and BYOK) telling the model to call `search_knowledge`
+for how-to/runbook/known-fix questions and cite sources. The `/triage`, `/review`,
+`/postmortem`, and `/handover` workflows also include an explicit `search_knowledge`
+step. This is *agentic* RAG — the model decides when to retrieve — not forced
+pre-retrieval. With `CRAWL_SEEDS` unset, the nudge is omitted (no steering toward an
+empty index). Crawl scope is bounded to `CRAWL_ALLOW_DOMAINS` (seed hosts by default).
+
 Embeddings are stored in a single SQLite + sqlite-vec file (`KNOWLEDGE_DB_PATH`).
 Changing `EMBED_MODEL` after a crawl requires deleting the index (embedding dim is
 pinned per model).
