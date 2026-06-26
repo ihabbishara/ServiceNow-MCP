@@ -60,7 +60,7 @@ export interface IncidentDocsResult {
 export interface GraphPort {
   get<T>(path: string): Promise<T>;
   getAllPages<T>(path: string): Promise<T[]>;
-  download(driveId: string, itemId: string): Promise<Buffer>;
+  download(driveId: string, itemId: string, maxBytes?: number): Promise<Buffer>;
 }
 
 export interface Parsers {

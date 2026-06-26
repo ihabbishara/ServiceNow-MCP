@@ -4,7 +4,7 @@ import { GraphClient } from "../../clients/sharepoint/graph.js";
 import { resolveSite } from "../../clients/sharepoint/site.js";
 import { findIncidentFolder } from "../../clients/sharepoint/locate.js";
 import { walkDocs } from "../../clients/sharepoint/walk.js";
-import { extractText, formatOf } from "../../clients/sharepoint/extract.js";
+import { extractText, formatOf, extOf } from "../../clients/sharepoint/extract.js";
 import { defaultParsers } from "../../clients/sharepoint/parsers.js";
 import type {
   SharePointConfig, GraphPort, Parsers, IncidentDocsResult, IncidentDocument
@@ -39,14 +39,20 @@ export class SharePointService {
     for await (const f of walkDocs(this.graph, driveId, folder.id, this.cfg.docsSubfolder, { maxFiles: this.cfg.maxFiles })) {
       const format = formatOf(f.name);
       if (!format) {
-        skipped.push({ name: f.name, reason: `unsupported format: .${f.name.split(".").pop()}` });
+        skipped.push({ name: f.name, reason: `unsupported format: .${extOf(f.name)}` });
         continue;
       }
       if (f.size > this.cfg.maxFileBytes) {
         skipped.push({ name: f.name, reason: `exceeds max file bytes (${f.size} > ${this.cfg.maxFileBytes})` });
         continue;
       }
-      const bytes = await this.graph.download(driveId, f.id);
+      let bytes: Buffer;
+      try {
+        bytes = await this.graph.download(driveId, f.id, this.cfg.maxFileBytes);
+      } catch (err) {
+        skipped.push({ name: f.name, reason: String(err) });
+        continue;
+      }
       const result = await extractText(f.name, bytes, this.parsers);
       if ("skipped" in result) {
         skipped.push({ name: f.name, reason: result.skipped });

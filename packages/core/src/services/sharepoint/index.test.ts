@@ -94,4 +94,58 @@ describe("SharePointService.getIncidentDocuments", () => {
       { name: "notes.txt", reason: "unsupported format: .txt" }
     ]);
   });
+
+  it("records a download-throw as a skip and continues processing", async () => {
+    // "failing.docx" will throw on download; "ok.docx" should still be processed
+    const baseGraph = makeGraph(
+      {
+        "/drives/drive1/root/children": [folder("INC1 a", "incF")],
+        "/drives/drive1/items/incF/children": [folder("Docs", "docs")],
+        "/drives/drive1/items/docs/children": [file("failing.docx", "fail"), file("ok.docx", "ok")]
+      },
+      { ok: Buffer.from("good content") }
+    );
+    // Override download to throw for the "fail" itemId
+    const graph = {
+      ...baseGraph,
+      download: vi.fn(async (_d: string, itemId: string, _max?: number) => {
+        if (itemId === "fail") throw new Error("download exceeds max bytes (999999 > 1000000)");
+        return Buffer.from("good content");
+      })
+    };
+    const svc = new SharePointService(cfg, graph as any, parsers);
+    const out = await svc.getIncidentDocuments("INC1");
+    expect(out.count).toBe(1);
+    expect(out.documents[0].name).toBe("ok.docx");
+    expect(out.skipped).toHaveLength(1);
+    expect(out.skipped[0].name).toBe("failing.docx");
+    expect(out.skipped[0].reason).toMatch(/exceeds max bytes/);
+  });
+
+  it("second doc gets empty text and truncated=true when first fills budget", async () => {
+    // Budget: 1000 tokens = 4000 chars
+    // first.docx returns 8000 chars → truncated to 4000, exhausts budget
+    // second.docx returns non-empty text → remainingChars = 0, text = "", truncated = true
+    const firstText = "x".repeat(8000);
+    const secondText = "y".repeat(100);
+    const graph = makeGraph(
+      {
+        "/drives/drive1/root/children": [folder("INC1 a", "incF")],
+        "/drives/drive1/items/incF/children": [folder("Docs", "docs")],
+        "/drives/drive1/items/docs/children": [file("first.docx", "first"), file("second.docx", "second")]
+      },
+      {
+        first: Buffer.from(firstText),
+        second: Buffer.from(secondText)
+      }
+    );
+    const svc = new SharePointService(cfg, graph as any, parsers);
+    const out = await svc.getIncidentDocuments("INC1");
+    expect(out.count).toBe(2);
+    expect(out.documents[0].truncated).toBe(true);
+    expect(out.documents[0].text.length).toBe(4000);
+    expect(out.documents[1].text).toBe("");
+    expect(out.documents[1].truncated).toBe(true);
+    expect(out.truncatedCount).toBe(2);
+  });
 });

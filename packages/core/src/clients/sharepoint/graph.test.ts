@@ -66,4 +66,21 @@ describe("GraphClient", () => {
     expect(Buffer.from(out).toString()).toBe("hello");
     expect(fetchImpl.mock.calls[0][0]).toBe("https://graph.microsoft.com/v1.0/drives/drive1/items/item1/content");
   });
+
+  it("download rejects when content-length header exceeds maxBytes", async () => {
+    const bytes = Buffer.from("hello world");
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue({ ...res(200, "", { "content-length": "11" }), arrayBuffer: async () => bytes });
+    await expect(client(fetchImpl).download("d", "i", 5)).rejects.toThrow(/exceeds max bytes/);
+  });
+
+  it("download resolves when no maxBytes is provided even if body is large", async () => {
+    const bytes = Buffer.from("hello world");
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue({ ...res(200, "", { "content-length": "11" }), arrayBuffer: async () => bytes });
+    const out = await client(fetchImpl).download("d", "i");
+    expect(Buffer.from(out).toString()).toBe("hello world");
+  });
 });

@@ -79,8 +79,17 @@ export class GraphClient implements GraphPort {
     return out;
   }
 
-  async download(driveId: string, itemId: string): Promise<Buffer> {
+  async download(driveId: string, itemId: string, maxBytes?: number): Promise<Buffer> {
     const res = await this.request(`/drives/${driveId}/items/${itemId}/content`, "application/octet-stream");
-    return Buffer.from(await res.arrayBuffer());
+    const cl = res.headers.get("content-length");
+    if (maxBytes !== undefined && cl !== null && Number(cl) > maxBytes) {
+      throw new Error(`download exceeds max bytes (${cl} > ${maxBytes})`);
+    }
+    const ab = await res.arrayBuffer();
+    const buf = Buffer.from(ab);
+    if (maxBytes !== undefined && buf.length > maxBytes) {
+      throw new Error(`download exceeds max bytes (${buf.length} > ${maxBytes})`);
+    }
+    return buf;
   }
 }
