@@ -16,8 +16,14 @@ const components: Components = {
     <a href={href} target="_blank" rel="noreferrer" className="text-primary-container underline">{children}</a>
   ),
   // Destructure node to avoid passing it to the DOM element (react-markdown v9 ExtraProps).
-  code: ({ children, node: _node, ...props }) => (
-    <code {...props} className="rounded-sm bg-surface-container-high px-1 py-0.5 font-mono text-label-sm">{children}</code>
+  // Keep any language-* class react-markdown sets on fenced blocks (for a future highlighter).
+  code: ({ children, node: _node, className, ...props }) => (
+    <code
+      {...props}
+      className={`rounded-sm bg-surface-container-high px-1 py-0.5 font-mono text-label-sm${className ? ` ${className}` : ""}`}
+    >
+      {children}
+    </code>
   ),
   pre: ({ children }) => (
     <pre className="rounded bg-surface-container-high p-3 my-2 overflow-x-auto">{children}</pre>

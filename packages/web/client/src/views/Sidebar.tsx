@@ -7,9 +7,11 @@ function Dot({ on }: { on: boolean }) {
   return <span className={"h-2 w-2 rounded-full shrink-0 " + (on ? "bg-success" : "bg-outline-variant")} aria-hidden="true" />;
 }
 
+// Dots are config-derived: green = configured (credentials/runtime present), not a
+// live reachability check. The tooltip says so to avoid reading green as "online".
 function Row({ label, on }: { label: string; on: boolean }) {
   return (
-    <div className="flex items-center gap-2 text-label-md text-on-surface">
+    <div className="flex items-center gap-2 text-label-md text-on-surface" title={on ? "Configured" : "Not configured"}>
       <Dot on={on} />
       <span className="truncate">{label}</span>
     </div>

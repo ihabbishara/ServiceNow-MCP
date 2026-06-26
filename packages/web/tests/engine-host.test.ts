@@ -97,8 +97,6 @@ describe("engine-host snapshot", () => {
   });
 });
 
-import { createEngineHost } from "../server/engine-host.js";
-
 describe("engine-host config-status", () => {
   const fullConfig = {
     llm: { mode: "seat", model: "gpt-5" },
