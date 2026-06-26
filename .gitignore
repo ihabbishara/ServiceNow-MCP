@@ -4,3 +4,6 @@ dist/
 .env
 **/.env
 !**/.env.example
+
+# git worktrees (local dev isolation)
+.worktrees/

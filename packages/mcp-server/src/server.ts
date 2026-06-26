@@ -6,6 +6,7 @@ import { registerChangeTools } from "./tools/changes.js";
 import { registerAnalysisTools } from "./tools/analysis.js";
 import { registerAdoTools } from "./tools/ado.js";
 import { registerKnowledgeTools } from "./tools/knowledge.js";
+import { registerSharePointTools } from "./tools/sharepoint.js";
 import { registerIncidentResources, registerTeamResources } from "./resources/incidents.js";
 import { registerChangeResources } from "./resources/changes.js";
 import { registerDashboardResources } from "./resources/dashboards.js";
@@ -26,6 +27,7 @@ export const createMcpServer = (runtime: McpRuntime): McpServer => {
   registerAnalysisTools(server, runtime);
   registerAdoTools(server, runtime);
   registerKnowledgeTools(server, runtime);
+  registerSharePointTools(server, runtime);
 
   // Register all resources
   registerIncidentResources(server, runtime);

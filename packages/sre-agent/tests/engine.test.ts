@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import type { SessionConfig } from "@github/copilot-sdk";
-import { ChatEngine, buildClientOptions } from "../src/engine/engine.js";
+import { ChatEngine, buildClientOptions, KNOWLEDGE_SYSTEM_INSTRUCTION } from "../src/engine/engine.js";
 import { loadAgentConfig } from "../src/config.js";
 
 const base = {
@@ -106,6 +106,28 @@ describe("ChatEngine clientFactory seam", () => {
     const config = loadAgentConfig({ ...base });
     const engine = new ChatEngine({ config, tools: [], ...noopDeps });
     expect(engine).toBeInstanceOf(ChatEngine);
+  });
+
+  it("appends the knowledge system message when CRAWL_SEEDS is set (seat or byok)", async () => {
+    const { client, createSession } = makeFakeClient();
+    const config = loadAgentConfig({ ...base, CRAWL_SEEDS: "https://wiki.acme.io/a" });
+    const engine = new ChatEngine({ config, tools: [], ...noopDeps, clientFactory: () => client as never });
+    await engine.start();
+    const sessionConfig = createSession.mock.calls[0][0];
+    expect(sessionConfig.systemMessage).toEqual({
+      mode: "append",
+      content: KNOWLEDGE_SYSTEM_INSTRUCTION
+    });
+    expect(KNOWLEDGE_SYSTEM_INSTRUCTION).toContain("search_knowledge");
+  });
+
+  it("omits systemMessage when the crawler is not configured", async () => {
+    const { client, createSession } = makeFakeClient();
+    const config = loadAgentConfig({ ...base }); // no CRAWL_SEEDS
+    const engine = new ChatEngine({ config, tools: [], ...noopDeps, clientFactory: () => client as never });
+    await engine.start();
+    const sessionConfig = createSession.mock.calls[0][0];
+    expect("systemMessage" in sessionConfig).toBe(false);
   });
 });
 

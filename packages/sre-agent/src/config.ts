@@ -55,7 +55,9 @@ const schema = z.object({
   STALE_P3_MIN: z.coerce.number().int().positive().default(1440),
   STALE_P4_MIN: z.coerce.number().int().positive().default(4320),
   CORRELATION_HOURS_BEFORE: z.coerce.number().positive().default(24),
-  CORRELATION_HOURS_AFTER: z.coerce.number().positive().default(4)
+  CORRELATION_HOURS_AFTER: z.coerce.number().positive().default(4),
+  // SharePoint
+  SHAREPOINT_ENABLED: bool(false)
 });
 
 export interface AgentConfig {
@@ -71,6 +73,10 @@ export interface AgentConfig {
   };
   adoAuthMode: "azcli" | "pat";
   confirmWrites: boolean;
+  /** True when the crawler is configured (CRAWL_SEEDS set) → steer chat toward search_knowledge. */
+  knowledgeEnabled: boolean;
+  /** True when SharePoint is configured → steer chat toward get_incident_documents. */
+  sharePointEnabled: boolean;
   /** Copilot seat auth knobs; only consulted in seat mode. */
   copilot: {
     /** Explicit token → SDK `gitHubToken` (priority auth, no env-token poisoning). */
@@ -115,6 +121,8 @@ export const loadAgentConfig = (
     },
     adoAuthMode: e.ADO_AUTH_MODE,
     confirmWrites: e.CONFIRM_WRITES,
+    knowledgeEnabled: !!(env.CRAWL_SEEDS && String(env.CRAWL_SEEDS).trim()),
+    sharePointEnabled: e.SHAREPOINT_ENABLED,
     copilot: {
       githubToken: e.COPILOT_GITHUB_TOKEN,
       home: e.COPILOT_HOME,

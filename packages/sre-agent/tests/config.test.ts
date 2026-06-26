@@ -108,4 +108,13 @@ describe("loadAgentConfig", () => {
     const c = loadAgentConfig({ ...base, COPILOT_IGNORE_ENV_TOKEN: "false" });
     expect(c.copilot.ignoreEnvToken).toBe(false);
   });
+
+  it("knowledgeEnabled is false when CRAWL_SEEDS is unset/empty", () => {
+    expect(loadAgentConfig({ ...base }).knowledgeEnabled).toBe(false);
+    expect(loadAgentConfig({ ...base, CRAWL_SEEDS: "   " }).knowledgeEnabled).toBe(false);
+  });
+
+  it("knowledgeEnabled is true when CRAWL_SEEDS is set", () => {
+    expect(loadAgentConfig({ ...base, CRAWL_SEEDS: "https://wiki.acme.io/a" }).knowledgeEnabled).toBe(true);
+  });
 });

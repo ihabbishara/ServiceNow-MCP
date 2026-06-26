@@ -45,7 +45,9 @@ You never pass `--env-file` and never run `node …/dist/…` by hand.
 | `npm test` | Run the test suite |
 
 Inside the chat, type `/help` for workflow commands (`/triage`, `/review`,
-`/postmortem`, `/handover`) and `/login` to re-authenticate to Copilot.
+`/postmortem`, `/handover`) and `/login` to re-authenticate to Copilot. The model
+has 15 tools (ServiceNow, Azure DevOps, knowledge, SharePoint) — full roster in
+[`packages/sre-agent/README.md`](packages/sre-agent/README.md#tools).
 
 ### Windows (PowerShell) notes
 
@@ -71,6 +73,46 @@ variable is documented there. The agent loads the first `.env` it finds, in orde
   identity (those env tokens are the usual cause of `Authorization error … /login`).
 - **byok** — bring your own key (Azure OpenAI / Anthropic / OpenAI); set
   `LLM_MODE=byok` plus `LLM_PROVIDER` and `LLM_BASE_URL`.
+
+## Knowledge crawler (RAG over internal docs)
+
+The agent can crawl your internal documentation (runbooks, wikis, KB) into a local
+semantic index and use it to answer questions. It works in **both** LLM modes and
+needs **no Ollama** — embeddings run locally in-process (transformers.js/ONNX).
+
+```bash
+# 1. point it at seed URLs (in .env)
+CRAWL_SEEDS=https://wiki.acme.io/sre, https://kb.acme.io/runbooks
+
+# 2. build / refresh the index (runs outside any Copilot session)
+npm start -- crawl                 # full ingest from CRAWL_SEEDS
+npm start -- crawl --status        # show index stats (pages, chunks, model, dim)
+```
+
+Once `CRAWL_SEEDS` is set, the chat is **automatically steered** to consult the
+index: free-form how-to/runbook questions and the `/triage`, `/review`,
+`/postmortem`, `/handover` workflows call the `search_knowledge` tool and cite
+source URLs. `index_url <url>` does a small on-demand top-up mid-chat.
+
+- **Offline / locked-down networks:** set `EMBED_MODEL_PATH` to a vendored model
+  directory so the embed model never downloads from Hugging Face.
+- **Crawl scope** is bounded to `CRAWL_ALLOW_DOMAINS` (defaults to the seed hosts).
+- Changing `EMBED_MODEL` after a crawl requires deleting the index and re-crawling.
+
+Full reference: [`packages/sre-agent/README.md`](packages/sre-agent/README.md#knowledge-crawler)
+and every variable in [`.env.example`](packages/sre-agent/.env.example).
+
+## SharePoint incident docs
+
+The `get_incident_documents` tool fetches extracted text from an incident's
+SharePoint `Docs` subfolder (docx/xlsx/pptx/pdf) and returns it inline so the
+model can cite it when triaging. Set `SHAREPOINT_ENABLED=true` and
+`SHAREPOINT_SITE_URL` to enable it — **no PAT required**; auth reuses your `az
+login` session (delegated Microsoft Graph token). `npm start -- doctor` includes
+a SharePoint preflight.
+
+Full details and all variables:
+[`packages/sre-agent/README.md`](packages/sre-agent/README.md#sharepoint-incident-docs).
 
 ## Troubleshooting
 

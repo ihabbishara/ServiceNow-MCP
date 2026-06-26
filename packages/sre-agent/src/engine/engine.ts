@@ -11,6 +11,27 @@ import type { AgentConfig } from "../config.js";
 import { makePermissionHandler } from "./permissions.js";
 
 /**
+ * Appended to the Copilot session's system message (append mode → keeps all SDK
+ * guardrails) when the crawler is configured. Steers the model to consult the
+ * internal-docs index via the `search_knowledge` tool for how-to/runbook
+ * questions, in both seat and BYOK modes.
+ */
+export const KNOWLEDGE_SYSTEM_INSTRUCTION =
+  "This agent has a `search_knowledge` tool backed by an index of the organization's internal " +
+  "documentation (runbooks, wikis, KB). When the user asks a how-to, procedure, troubleshooting, " +
+  "or known-fix question where internal documentation would help, call `search_knowledge` before " +
+  "answering and cite the returned source URLs. If it returns no results, say the index may be empty " +
+  "and suggest running `sre-agent crawl`. Do not call it for questions clearly answerable from " +
+  "ServiceNow/ADO data alone.";
+
+/** Appended when SharePoint is configured: steer toward get_incident_documents for incident docs. */
+export const SHAREPOINT_SYSTEM_INSTRUCTION =
+  "This agent has a `get_incident_documents` tool that retrieves an incident's supporting documents " +
+  "(docx/xlsx/pptx/pdf) from SharePoint by incident number. When the user references an incident number " +
+  "and asks about its documentation, runbook, postmortem, or details that may live in SharePoint, call " +
+  "`get_incident_documents` (alongside the ServiceNow tools) and cite the document names you used.";
+
+/**
  * Translate the agent's seat-auth config into `CopilotClientOptions`.
  *
  * Without any of these, the SDK auto-detects a credential: it tries the env
@@ -104,11 +125,18 @@ export class ChatEngine {
       const permissionHandler =
         this.deps.onPermissionRequest ??
         makePermissionHandler({ confirmWrites: cfg.confirmWrites }, this.deps.confirm);
+      const systemInstructions = [
+        cfg.knowledgeEnabled ? KNOWLEDGE_SYSTEM_INSTRUCTION : null,
+        cfg.sharePointEnabled ? SHAREPOINT_SYSTEM_INSTRUCTION : null
+      ].filter(Boolean);
       const sessionConfig: SessionConfig = {
         model: cfg.llm.model,
         streaming: true,
         tools: this.deps.tools,
         onPermissionRequest: permissionHandler,
+        ...(systemInstructions.length
+          ? { systemMessage: { mode: "append" as const, content: systemInstructions.join("\n\n") } }
+          : {}),
         ...(cfg.llm.mode === "byok" && cfg.llm.provider
           ? {
               provider: {

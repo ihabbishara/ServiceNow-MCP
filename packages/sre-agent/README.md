@@ -5,7 +5,7 @@ the official [GitHub Copilot SDK](https://www.npmjs.com/package/@github/copilot-
 with custom tools (`defineTool`) over [`@sre/core`](../core).
 
 It is a thin REPL front-end: it connects to Copilot (a seat by default, or a
-BYOK provider), registers 12 custom tools (11 read tools + one gated write),
+BYOK provider), registers 15 custom tools (14 read tools + one gated write),
 exposes four workflow slash-commands, and streams the model's answer to your
 terminal.
 
@@ -19,6 +19,29 @@ terminal.
   incident and is the only tool that prompts for confirmation (y/N).
 - **Workflows** — `/triage`, `/review`, `/postmortem`, `/handover` expand into
   seed prompts; anything else is sent to the model verbatim.
+
+## Tools
+
+15 tools the model can call. All are read-only except `create_bug_from_incident`
+(the one write — prompts y/N).
+
+| Tool | Area | Perm | What it does |
+|---|---|---|---|
+| `search_incidents` | ServiceNow | read | Search incidents by state, priority, assignment group, or description |
+| `get_incident` | ServiceNow | read | Full details of one incident by number (e.g. `INC0012345`) |
+| `summarize_incident` | ServiceNow | read | Incident enriched with related changes + linked ADO work items (triage/handover) |
+| `find_sla_risks` | ServiceNow | read | Open incidents at risk of SLA breach (Critical <10% time, High <25%, Medium <50%) |
+| `find_stale_tickets` | ServiceNow | read | Tickets not updated within thresholds (P1 30m / P2 2h / P3 24h / P4 72h) |
+| `generate_ops_summary` | ServiceNow | read | Daily ops summary: key metrics, risks, recommended actions |
+| `search_changes` | ServiceNow | read | Search change records with filters |
+| `get_change` | ServiceNow | read | Full details of one change by number (e.g. `CHG0005432`) |
+| `correlate_changes` | ServiceNow | read | Changes possibly related to an incident (CI / service / group / time window) |
+| `search_work_items` | Azure DevOps | read | Search work items by text, type, state, area path, or assignee |
+| `get_work_item` | Azure DevOps | read | Get a single work item by numeric ID |
+| `create_bug_from_incident` | Azure DevOps | **write (y/N)** | Create an ADO bug linked to an incident (priority mapping + acceptance criteria) |
+| `search_knowledge` | Knowledge (RAG) | read | Semantic search of the internal-docs index; returns ranked snippets + source URLs |
+| `index_url` | Knowledge (RAG) | read | Bounded on-demand crawl from a URL into the index (mid-chat top-up; ≤2 depth, ≤25 pages) |
+| `get_incident_documents` | SharePoint | read | Fetch extracted text from the incident's SharePoint Docs subfolder (docx/xlsx/pptx/pdf), capped to a token budget |
 
 ## Setup
 
@@ -128,9 +151,52 @@ Usage:
 2. Full ingest: `sre-agent crawl` (or `--seed <url>`); status: `sre-agent crawl --status`.
 3. In chat: `search_knowledge` retrieves; `index_url` does a small on-demand top-up.
 
+**Chat RAG steering.** Setting `CRAWL_SEEDS` also enables `knowledgeEnabled`, which
+appends a system-prompt nudge to every chat session (append mode — keeps all SDK
+guardrails; works in seat and BYOK) telling the model to call `search_knowledge`
+for how-to/runbook/known-fix questions and cite sources. The `/triage`, `/review`,
+`/postmortem`, and `/handover` workflows also include an explicit `search_knowledge`
+step. This is *agentic* RAG — the model decides when to retrieve — not forced
+pre-retrieval. With `CRAWL_SEEDS` unset, the nudge is omitted (no steering toward an
+empty index). Crawl scope is bounded to `CRAWL_ALLOW_DOMAINS` (seed hosts by default).
+
 Embeddings are stored in a single SQLite + sqlite-vec file (`KNOWLEDGE_DB_PATH`).
 Changing `EMBED_MODEL` after a crawl requires deleting the index (embedding dim is
 pinned per model).
+
+### SharePoint incident docs
+
+Fetch the documents stored in an incident's SharePoint folder without leaving
+the chat session. Gated on `SHAREPOINT_ENABLED=true`.
+
+**How it works:**
+
+1. Given an incident number (e.g. `INC123456`), the tool locates the matching
+   folder in the SharePoint drive whose name starts with that INC number.
+2. It descends into the `Docs` subfolder only (`SHAREPOINT_DOCS_SUBFOLDER`,
+   default `Docs`). The `IncidentNoteBook`/OneNote tree is excluded.
+3. Text is extracted from **docx, xlsx, pptx, and pdf** files and returned
+   inline, each block labelled with its source filename so the model can cite it.
+4. Total inline text is capped to `SHAREPOINT_MAX_DOC_TOKENS` (default 50 000
+   tokens). Overflow is truncated and noted; individual files larger than
+   `SHAREPOINT_MAX_FILE_BYTES` are skipped. Walking stops at `SHAREPOINT_MAX_FILES`
+   files.
+
+**Auth — no PAT required.** The tool obtains a delegated Microsoft Graph token
+from the Azure CLI (`az login`). It reuses the same CLI session the ADO
+integration already needs and respects the user's SharePoint permissions — it
+can read only what the logged-in user can read.
+
+**Setup:**
+
+1. Set `SHAREPOINT_ENABLED=true` and `SHAREPOINT_SITE_URL` in `.env`.
+2. Run `npm start -- doctor` — it includes a SharePoint preflight that verifies
+   Graph connectivity and the site URL.
+3. In chat, ask e.g. `fetch the docs for INC123456` or the model will call
+   `get_incident_documents` automatically when it needs incident context.
+
+All variables (root folder, subfolder, proxy, budgets) are in
+[`.env.example`](./.env.example) under the `SharePoint incident docs` block.
 
 ## Manual end-to-end checklist
 

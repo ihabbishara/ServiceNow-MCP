@@ -56,7 +56,16 @@ const envSchema = z.object({
   LLM_BASE_URL: optional(z.string().url()),
   LLM_API_KEY: optional(z.string().min(1)),
   LLM_MODEL: z.string().default("gpt-5"),
-  AZURE_API_VERSION: z.string().default("2024-10-21")
+  AZURE_API_VERSION: z.string().default("2024-10-21"),
+  SHAREPOINT_ENABLED: boolString,
+  SHAREPOINT_SITE_URL: optional(z.string().url()),
+  SHAREPOINT_INCIDENT_ROOT: z.string().optional().transform((v) => (v ?? "").replace(/^\/+|\/+$/g, "")),
+  SHAREPOINT_DOCS_SUBFOLDER: z.string().default("Docs"),
+  SHAREPOINT_PROXY: optionalUrl,
+  SHAREPOINT_MAX_DOC_TOKENS: z.coerce.number().int().positive().default(50000),
+  SHAREPOINT_MAX_FILES: z.coerce.number().int().positive().default(50),
+  SHAREPOINT_MAX_FILE_BYTES: z.coerce.number().int().positive().default(10485760),
+  SHAREPOINT_TIMEOUT_MS: z.coerce.number().int().positive().default(30000)
 });
 
 export interface ServiceNowConfig {
@@ -104,10 +113,25 @@ export interface KnowledgeConfig {
   };
 }
 
+export interface SharePointConfig {
+  enabled: boolean;
+  siteUrl: string;
+  incidentRoot: string;
+  docsSubfolder: string;
+  authMode: "azcli";
+  azPath: string;
+  proxyUrl?: string;
+  maxDocTokens: number;
+  maxFiles: number;
+  maxFileBytes: number;
+  timeoutMs: number;
+}
+
 export interface AppConfig {
   serviceNow: ServiceNowConfig;
   azureDevOps: AdoConfig;
   knowledge: KnowledgeConfig;
+  sharePoint: SharePointConfig;
   features: { createAdoBug: boolean };
   thresholds: {
     staleByPriorityMinutes: Record<string, number>;
@@ -135,6 +159,9 @@ export const loadConfig = (env: Record<string, string | undefined> = process.env
   const e = parsed.data;
   if (e.ADO_ENABLED && (!e.ADO_ORG_URL || !e.ADO_PROJECT || !e.ADO_PAT)) {
     throw new Error("ADO_ENABLED=true requires ADO_ORG_URL, ADO_PROJECT, and ADO_PAT");
+  }
+  if (e.SHAREPOINT_ENABLED && !e.SHAREPOINT_SITE_URL) {
+    throw new Error("SHAREPOINT_ENABLED=true requires SHAREPOINT_SITE_URL");
   }
   const seeds = csv(e.CRAWL_SEEDS);
   const allowDomains =
@@ -187,6 +214,19 @@ export const loadConfig = (env: Record<string, string | undefined> = process.env
       defaultIterationPath: e.ADO_ITERATION_PATH ?? e.ADO_PROJECT,
       defaultAssignedTeam: e.ADO_ASSIGNED_TEAM,
       proxyUrl: e.ADO_PROXY
+    },
+    sharePoint: {
+      enabled: e.SHAREPOINT_ENABLED,
+      siteUrl: e.SHAREPOINT_SITE_URL?.replace(/\/+$/, "") ?? "",
+      incidentRoot: e.SHAREPOINT_INCIDENT_ROOT,
+      docsSubfolder: e.SHAREPOINT_DOCS_SUBFOLDER,
+      authMode: "azcli",
+      azPath: e.AZ_PATH,
+      proxyUrl: e.SHAREPOINT_PROXY,
+      maxDocTokens: e.SHAREPOINT_MAX_DOC_TOKENS,
+      maxFiles: e.SHAREPOINT_MAX_FILES,
+      maxFileBytes: e.SHAREPOINT_MAX_FILE_BYTES,
+      timeoutMs: e.SHAREPOINT_TIMEOUT_MS
     },
     features: { createAdoBug: e.ADO_CREATE_BUG_ENABLED },
     thresholds: {

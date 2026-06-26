@@ -536,6 +536,28 @@ export const buildTools = (runtime: McpRuntime) => [
     }
   }),
 
+  defineTool("get_incident_documents", {
+    description:
+      "Fetch an incident's supporting documents from SharePoint by incident number (e.g. INC123456). " +
+      "Recursively reads the incident folder's Docs subtree (docx/xlsx/pptx/pdf) and returns extracted " +
+      "text to read and cite. Use when the user references an incident and asks about its docs, runbook, " +
+      "postmortem, or details that live in SharePoint rather than ServiceNow.",
+    skipPermission: true,
+    parameters: z.object({
+      incident: z.string().describe("Incident number, e.g. INC123456")
+    }),
+    handler: async (a) => {
+      try {
+        if (!runtime.sharePoint) {
+          return { error: "SharePoint integration is disabled (set SHAREPOINT_ENABLED=true)." };
+        }
+        return await runtime.sharePoint.getIncidentDocuments(a.incident);
+      } catch (err) {
+        return { error: String(err) };
+      }
+    }
+  }),
+
   defineTool("index_url", {
     description:
       "Crawl and index a small set of internal pages starting from a URL into the knowledge index, then they become searchable via search_knowledge. Bounded (shallow, few pages) for use mid-conversation; use the `sre-agent crawl` CLI for full site ingest.",
