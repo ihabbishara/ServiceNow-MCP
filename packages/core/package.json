@@ -11,7 +11,8 @@
     }
   },
   "scripts": {
-    "build": "tsc -b"
+    "build": "tsc -b",
+    "test": "vitest run"
   },
   "dependencies": {
     "@huggingface/transformers": "^3.3.0",
