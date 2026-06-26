@@ -1,6 +1,9 @@
 node_modules/
 dist/
 *.tsbuildinfo
+.env
+**/.env
+!**/.env.example
 
 # git worktrees (local dev isolation)
 .worktrees/

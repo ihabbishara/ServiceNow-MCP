@@ -4,12 +4,31 @@ import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+export interface DeviceCodeInfo {
+  verificationUri: string;
+  userCode: string;
+}
+
+/**
+ * Extract the device-flow verification URL + user code from accumulated
+ * `copilot login` stdout. The two can print on separate lines, so callers pass
+ * the running buffer, not a single chunk. Returns undefined until BOTH are seen.
+ */
+export const parseDeviceCode = (buffer: string): DeviceCodeInfo | undefined => {
+  const verificationUri = buffer.match(/https?:\/\/\S*github\.com\/login\/device\S*/i)?.[0];
+  const userCode = buffer.match(/\b[A-Z0-9]{4}-[A-Z0-9]{4}\b/)?.[0];
+  if (verificationUri && userCode) return { verificationUri, userCode };
+  return undefined;
+};
+
 /**
  * Minimal child-process surface the login helper needs: subscribe to the two
- * terminal events. Keeping the type this narrow lets tests inject a plain
- * EventEmitter without standing up a real process.
+ * terminal events and read stdout. Keeping the type this narrow lets tests inject
+ * a plain EventEmitter (with a `.stdout` EventEmitter) without standing up a
+ * real process.
  */
 export interface LoginChild {
+  stdout: { on(event: "data", listener: (chunk: Buffer | string) => void): unknown };
   on(event: "close", listener: (code: number | null) => void): unknown;
   on(event: "error", listener: (err: Error) => void): unknown;
 }
@@ -17,7 +36,7 @@ export interface LoginChild {
 export type SpawnFn = (
   command: string,
   args: string[],
-  options: { stdio: "inherit"; env: NodeJS.ProcessEnv }
+  options: { stdio: ["ignore", "pipe", "inherit"]; env: NodeJS.ProcessEnv }
 ) => LoginChild;
 
 export interface CopilotLoginOptions {
@@ -35,6 +54,8 @@ export interface CopilotLoginOptions {
   execPath?: string;
   /** Base env for the child. Defaults to process.env. */
   env?: NodeJS.ProcessEnv;
+  /** Invoked once when the device-flow URL + user code are parsed from stdout. */
+  onDeviceCode?: (info: DeviceCodeInfo) => void;
 }
 
 /**
@@ -96,7 +117,20 @@ export const copilotLogin = (opts: CopilotLoginOptions = {}): Promise<void> => {
   const args = isJs ? [bin, "login"] : ["login"];
 
   return new Promise<void>((resolve, reject) => {
-    const child = spawnFn(command, args, { stdio: "inherit", env });
+    const child = spawnFn(command, args, { stdio: ["ignore", "pipe", "inherit"], env });
+    let buffer = "";
+    let fired = false;
+    child.stdout.on("data", (chunk) => {
+      if (fired) return;
+      buffer += chunk.toString();
+      if (opts.onDeviceCode) {
+        const info = parseDeviceCode(buffer);
+        if (info) {
+          fired = true;
+          opts.onDeviceCode(info);
+        }
+      }
+    });
     child.on("error", reject);
     child.on("close", (code) => {
       if (code === 0) resolve();
