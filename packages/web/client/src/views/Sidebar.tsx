@@ -1,5 +1,7 @@
 // packages/web/client/src/views/Sidebar.tsx
 import type { ChatState } from "../state.js";
+import { CollapsibleSection } from "./ui/CollapsibleSection.js";
+import ingLogo from "../assets/ing-logo.svg";
 
 const WORKFLOWS = ["/triage", "/review", "/postmortem", "/handover"];
 
@@ -32,44 +34,50 @@ export function Sidebar({
   const c = state.config;
   const llmLabel = c ? `${c.llmMode === "seat" ? "Copilot" : c.provider ?? "BYOK"} · ${c.model}` : "LLM";
   return (
-    <aside className="w-64 shrink-0 h-full flex flex-col gap-6 border-r border-surface-gray bg-surface-container-lowest px-4 py-4 overflow-y-auto">
-      <strong className="text-label-md text-primary-container">SRE Agent</strong>
+    <aside className="w-64 shrink-0 h-full flex flex-col gap-6 border-r border-surface-gray bg-surface-container-lowest px-4 py-5 overflow-y-auto">
+      <header className="flex flex-col gap-3 pb-1">
+        <img src={ingLogo} alt="ING" width={96} height={28} className="h-7 w-auto self-start" />
+        <h1 className="font-display font-bold text-headline-md tracking-tight text-on-surface">
+          SRE <span className="text-primary-container">Agent</span>
+        </h1>
+        <hr className="border-surface-gray" />
+      </header>
 
       <nav className="flex flex-col gap-1 text-label-md">
         <button
           onClick={() => onTab("chat")}
-          className={"text-left px-2 py-1 rounded " + (tab === "chat" ? "bg-surface-container text-primary-container" : "text-on-surface-variant")}
+          aria-current={tab === "chat" ? "page" : undefined}
+          className={"text-left px-2 py-1.5 rounded transition-colors " + (tab === "chat" ? "bg-surface-container text-primary-container" : "text-on-surface-variant hover:bg-surface-container")}
         >
           Chat
         </button>
         <button
           onClick={() => onTab("settings")}
-          className={"text-left px-2 py-1 rounded " + (tab === "settings" ? "bg-surface-container text-primary-container" : "text-on-surface-variant")}
+          aria-current={tab === "settings" ? "page" : undefined}
+          className={"text-left px-2 py-1.5 rounded transition-colors " + (tab === "settings" ? "bg-surface-container text-primary-container" : "text-on-surface-variant hover:bg-surface-container")}
         >
           Settings
         </button>
       </nav>
 
-      <section className="flex flex-col gap-2">
-        <h2 className="text-label-sm text-on-surface-variant uppercase tracking-wide">Integrations</h2>
+      <CollapsibleSection title="Integrations">
         <Row label="ServiceNow" on={!!c?.servicenow} />
         <Row label="Azure Boards" on={!!c?.ado} />
         <Row label={llmLabel} on={!!c} />
         <Row label="RAG" on={!!c?.rag} />
-      </section>
+      </CollapsibleSection>
 
-      <section className="flex flex-col gap-2">
-        <h2 className="text-label-sm text-on-surface-variant uppercase tracking-wide">Workflows</h2>
+      <CollapsibleSection title="Workflows">
         {WORKFLOWS.map((w) => (
           <button
             key={w}
             onClick={() => onInsert(w + " ")}
-            className="text-left px-2 py-1 rounded font-mono text-label-sm text-on-surface hover:bg-surface-container"
+            className="text-left px-2 py-1 rounded font-mono text-label-sm text-on-surface hover:bg-surface-container transition-colors"
           >
             {w}
           </button>
         ))}
-      </section>
+      </CollapsibleSection>
 
       <div className="mt-auto text-label-sm text-on-surface-variant">
         {state.engineState}

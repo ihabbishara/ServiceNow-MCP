@@ -33,6 +33,7 @@ export default {
       },
       fontFamily: {
         sans: ['"Hanken Grotesk Variable"', '"Hanken Grotesk"', "system-ui", "sans-serif"],
+        display: ['"Bricolage Grotesque Variable"', '"Bricolage Grotesque"', "system-ui", "sans-serif"],
         mono: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
       },
       fontSize: {

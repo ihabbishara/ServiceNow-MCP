@@ -1,9 +1,11 @@
 // packages/web/client/src/views/Login.tsx — device code is the signature focal element
 import { startLogin } from "../api.js";
+import { Button } from "./ui/Button.js";
+import { Card } from "./ui/Card.js";
 export function Login({ deviceCode }: { deviceCode?: { verificationUri: string; userCode: string } }) {
   return (
     <div className="h-full grid place-items-center p-6">
-      <div className="bg-surface-container-lowest border border-surface-gray rounded-lg p-10 max-w-md w-full text-center">
+      <Card className="p-10 max-w-md w-full text-center">
         <h1 className="text-headline-lg mb-2">SRE Agent</h1>
         <p className="text-body-md text-on-surface-variant mb-8">Sign in with your GitHub Copilot account to start.</p>
         {deviceCode ? (
@@ -24,14 +26,9 @@ export function Login({ deviceCode }: { deviceCode?: { verificationUri: string; 
             <p className="text-label-sm text-on-surface-variant mt-4 break-all">{deviceCode.verificationUri}</p>
           </div>
         ) : (
-          <button
-            className="px-5 py-2.5 rounded bg-primary-container text-on-primary text-label-md"
-            onClick={() => startLogin()}
-          >
-            Sign in with GitHub Copilot
-          </button>
+          <Button onClick={() => startLogin()}>Sign in with GitHub Copilot</Button>
         )}
-      </div>
+      </Card>
     </div>
   );
 }
