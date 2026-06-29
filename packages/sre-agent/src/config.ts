@@ -49,6 +49,11 @@ const schema = z.object({
   COPILOT_IGNORE_ENV_TOKEN: bool(true),
   // behavior
   CONFIRM_WRITES: bool(true),
+  // Max ms to wait for a turn to complete (session.idle) before the SDK's
+  // sendAndWait rejects. The SDK default is 60000, too short for reasoning
+  // models + slow ServiceNow round-trips, which surfaced as
+  // "Timeout after 60000ms waiting for session.idle" mid-turn. 5 min default.
+  TURN_TIMEOUT_MS: z.coerce.number().int().positive().default(300000),
   // thresholds (passed through to core)
   STALE_P1_MIN: z.coerce.number().int().positive().default(30),
   STALE_P2_MIN: z.coerce.number().int().positive().default(120),
@@ -73,6 +78,8 @@ export interface AgentConfig {
   };
   adoAuthMode: "azcli" | "pat";
   confirmWrites: boolean;
+  /** Max ms to wait for a turn (session.idle) before sendAndWait rejects. */
+  turnTimeoutMs: number;
   /** True when the crawler is configured (CRAWL_SEEDS set) → steer chat toward search_knowledge. */
   knowledgeEnabled: boolean;
   /** True when SharePoint is configured → steer chat toward get_incident_documents. */
@@ -121,6 +128,7 @@ export const loadAgentConfig = (
     },
     adoAuthMode: e.ADO_AUTH_MODE,
     confirmWrites: e.CONFIRM_WRITES,
+    turnTimeoutMs: e.TURN_TIMEOUT_MS,
     knowledgeEnabled: !!(env.CRAWL_SEEDS && String(env.CRAWL_SEEDS).trim()),
     sharePointEnabled: e.SHAREPOINT_ENABLED,
     copilot: {

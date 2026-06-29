@@ -187,11 +187,14 @@ export class ChatEngine {
   /**
    * Send a prompt and resolve when the session goes idle (turn complete).
    * `sendAndWait` is the shipped turn-completion mechanism; streaming deltas
-   * are still delivered to the `onDelta` handler while it waits.
+   * are still delivered to the `onDelta` handler while it waits. The wait
+   * deadline comes from `config.turnTimeoutMs` (TURN_TIMEOUT_MS) — the SDK
+   * default is 60s, too short for reasoning models + slow ServiceNow turns,
+   * which rejected mid-turn with "Timeout after 60000ms waiting for session.idle".
    */
   async send(prompt: string): Promise<void> {
     if (!this.session) throw new Error("engine not started");
-    await this.session.sendAndWait(prompt);
+    await this.session.sendAndWait(prompt, this.deps.config.turnTimeoutMs);
   }
 
   async abort(): Promise<void> {

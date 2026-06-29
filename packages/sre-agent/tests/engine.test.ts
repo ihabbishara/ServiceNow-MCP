@@ -129,6 +129,18 @@ describe("ChatEngine clientFactory seam", () => {
     const sessionConfig = createSession.mock.calls[0][0];
     expect("systemMessage" in sessionConfig).toBe(false);
   });
+
+  it("send() passes the configured TURN_TIMEOUT_MS to sendAndWait (not the SDK 60s default)", async () => {
+    const { client, session } = makeFakeClient();
+    const config = loadAgentConfig({ ...base, TURN_TIMEOUT_MS: "300000" });
+    const engine = new ChatEngine({ config, tools: [], ...noopDeps, clientFactory: () => client as never });
+    await engine.start();
+    await engine.send("Provide me the latest 5 incidents");
+    expect(session.sendAndWait).toHaveBeenCalledWith(
+      "Provide me the latest 5 incidents",
+      300000
+    );
+  });
 });
 
 describe("ChatEngine Copilot client auth options", () => {
