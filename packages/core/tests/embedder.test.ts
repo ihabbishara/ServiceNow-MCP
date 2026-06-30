@@ -64,4 +64,55 @@ describe("LocalEmbedder", () => {
     expect(pipeline).toHaveBeenCalledTimes(2);
     expect(e.dim).toBe(3);
   });
+
+  it("ready() is memoized — concurrent first calls share one pipeline build", async () => {
+    const e = new LocalEmbedder("m");
+    await Promise.all([e.ready(), e.ready(), e.ready()]);
+    expect(pipeline).toHaveBeenCalledTimes(1);
+  });
+
+  it("ready() clears its memo on failure so a later call can retry", async () => {
+    pipeline.mockRejectedValueOnce(new Error("model load failed"));
+    const e = new LocalEmbedder("m");
+    await expect(e.ready()).rejects.toThrow("model load failed");
+    // second attempt must rebuild, not replay the cached rejection
+    await e.ready();
+    expect(pipeline).toHaveBeenCalledTimes(2);
+    expect(e.dim).toBe(3);
+  });
+});
+
+describe("LocalEmbedder serialization", () => {
+  const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  // Inject a fake pipe onto the instance so embed() runs without ready(); lets us
+  // observe how many embed calls overlap.
+  const withFakePipe = (impl: (text: string) => Promise<{ data: Float32Array }>) => {
+    const e = new LocalEmbedder("fake");
+    (e as unknown as { pipe: unknown }).pipe = (text: string) => impl(text);
+    return e;
+  };
+
+  it("never runs two embed() calls concurrently", async () => {
+    let active = 0;
+    let maxActive = 0;
+    const e = withFakePipe(async (text) => {
+      active++;
+      maxActive = Math.max(maxActive, active);
+      await delay(5);
+      active--;
+      return { data: new Float32Array([text.length, 0, 0]) };
+    });
+    const results = await Promise.all([e.embed("a"), e.embed("bb"), e.embed("ccc")]);
+    expect(maxActive).toBe(1); // serialized, not overlapped
+    expect(results).toEqual([[1, 0, 0], [2, 0, 0], [3, 0, 0]]);
+  });
+
+  it("keeps the queue alive after one embed rejects", async () => {
+    const e = withFakePipe(async (text) => {
+      if (text === "boom") throw new Error("nope");
+      return { data: new Float32Array([text.length, 0, 0]) };
+    });
+    await expect(e.embed("boom")).rejects.toThrow("nope");
+    await expect(e.embed("ok")).resolves.toEqual([2, 0, 0]);
+  });
 });

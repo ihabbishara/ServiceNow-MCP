@@ -130,7 +130,12 @@ export class KnowledgeStore {
   stats(): KnowledgeStats {
     const pages = (this.db.prepare("SELECT COUNT(*) n FROM pages").get() as { n: number }).n;
     const chunks = (this.db.prepare("SELECT COUNT(*) n FROM chunks").get() as { n: number }).n;
-    const last = this.db.prepare("SELECT MAX(crawled_at) m FROM pages").get() as { m: number | null };
+    // lastCrawl reflects the last *web crawl*, not document uploads — otherwise an
+    // upload would bump it and make the boot-crawl freshness gate skip the seed
+    // re-crawl for a whole TTL window. Uploads are keyed `upload://…`.
+    const last = this.db
+      .prepare("SELECT MAX(crawled_at) m FROM pages WHERE url NOT LIKE 'upload://%'")
+      .get() as { m: number | null };
     return { pages, chunks, lastCrawl: last.m ?? undefined, model: this.model, dim: this.dim };
   }
 
