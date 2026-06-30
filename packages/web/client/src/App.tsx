@@ -6,10 +6,11 @@ import { Login } from "./views/Login.js";
 import { ConfirmDialog } from "./views/ConfirmDialog.js";
 import { EnvSettings } from "./views/EnvSettings.js";
 import { Sidebar } from "./views/Sidebar.js";
+import { Sources } from "./views/Sources.js";
 
 export function App() {
   const { state, connected, send } = useServerStream();
-  const [tab, setTab] = useState<"chat" | "settings">("chat");
+  const [tab, setTab] = useState<"chat" | "settings" | "sources">("chat");
   const [input, setInput] = useState("");
 
   if (!state.auth.isAuthenticated) {
@@ -38,6 +39,8 @@ export function App() {
         <main className="flex-1 overflow-hidden">
           {tab === "chat" ? (
             <Chat state={state} onSend={send} input={input} setInput={setInput} />
+          ) : tab === "sources" ? (
+            <Sources state={state} />
           ) : (
             <EnvSettings />
           )}
