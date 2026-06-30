@@ -1,4 +1,5 @@
 // packages/web/client/src/views/Chat.tsx
+import { useEffect, useRef } from "react";
 import { abortTurn } from "../api.js";
 import type { ChatState } from "../state.js";
 import { Markdown } from "./Markdown.js";
@@ -100,9 +101,16 @@ export function Chat({
 }) {
   const empty =
     state.messages.length === 0 && !state.streaming && !state.busy && !state.error;
+  const scrollRef = useRef<HTMLDivElement>(null);
+  // ponytail: always pin to bottom on new content. If users complain about
+  // being yanked down while reading scrollback, gate on "already near bottom".
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [state.messages.length, state.streaming, state.busy]);
   return (
     <div className="flex flex-col h-full max-w-container mx-auto w-full">
-      <div className="flex-1 overflow-auto p-6 space-y-4">
+      <div ref={scrollRef} className="flex-1 overflow-auto p-6 space-y-4">
         {empty ? (
           <Welcome onPick={setInput} />
         ) : (
