@@ -15,7 +15,7 @@ import { extractText, formatOf, defaultParsers } from "@sre/core";
 import type { SourceRow, IngestDoc, IngestPhase, IngestResult } from "@sre/core";
 import type { Tool } from "@github/copilot-sdk";
 import { SseHub } from "./sse.js";
-import { readEnvFile, writeEnvFile } from "./dotenv-file.js";
+import { readEnvFields, writeEnvFile } from "./dotenv-file.js";
 import type { ServerEvent } from "../shared/events.js";
 
 export class BusyError extends Error {
@@ -66,7 +66,7 @@ export interface EngineHost {
   authStatus(): Promise<void>;
   emit(event: ServerEvent): void;
   login(): Promise<void>;
-  readEnv(): Promise<Record<string, string>>;
+  readEnv(): Promise<{ vars: Record<string, string>; comments: Record<string, string> }>;
   applyEnv(vars: Record<string, string>): Promise<{ ok: true } | { ok: false; issues: string }>;
   snapshot(): ServerEvent[];
   ingestFile(name: string, bytes: Buffer): Promise<void>;
@@ -282,7 +282,7 @@ export const createEngineHost = (opts: EngineHostOptions): EngineHost => {
       await restart();
     },
     async readEnv() {
-      return envPath ? readEnvFile(envPath) : {};
+      return envPath ? readEnvFields(envPath) : { vars: {}, comments: {} };
     },
     async applyEnv(vars) {
       if (!envPath) return { ok: false as const, issues: "no .env path resolved" };

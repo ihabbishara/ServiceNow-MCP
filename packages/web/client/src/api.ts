@@ -6,7 +6,10 @@ export const sendPrompt = (prompt: string) => post("/api/chat", { prompt });
 export const answerConfirm = (id: string, approve: boolean) => post("/api/confirm", { id, approve });
 export const abortTurn = () => post("/api/abort");
 export const startLogin = () => post("/api/auth/login");
-export const getEnv = () => fetch("/api/env").then((r) => r.json() as Promise<{ vars: Record<string, string> }>);
+export const getEnv = () =>
+  fetch("/api/env").then(
+    (r) => r.json() as Promise<{ vars: Record<string, string>; comments: Record<string, string> }>
+  );
 export const putEnv = (vars: Record<string, string>) =>
   fetch("/api/env", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ vars }) });
 
