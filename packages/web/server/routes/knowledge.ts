@@ -29,13 +29,18 @@ export const handleUpload = async (
 };
 
 export const handleAddUrl = async (req: IncomingMessage, res: ServerResponse, host: EngineHost) => {
-  const { url } = await readJson<{ url: string }>(req);
+  let body: { url?: string };
   try {
-    new URL(url);
+    body = await readJson<{ url: string }>(req);
+  } catch {
+    return sendJson(res, 400, { error: "invalid JSON body" });
+  }
+  try {
+    new URL(body.url ?? "");
   } catch {
     return sendJson(res, 400, { error: "invalid url" });
   }
-  void host.ingestUrl(url).catch(() => {});
+  void host.ingestUrl(body.url as string).catch(() => {});
   sendJson(res, 202, { accepted: true });
 };
 
@@ -44,8 +49,13 @@ export const handleListSources = async (_req: IncomingMessage, res: ServerRespon
 };
 
 export const handleDeleteSource = async (req: IncomingMessage, res: ServerResponse, host: EngineHost) => {
-  const { url } = await readJson<{ url: string }>(req);
-  if (!url || typeof url !== "string") return sendJson(res, 400, { error: "missing url" });
-  await host.deleteSource(url);
+  let body: { url?: string };
+  try {
+    body = await readJson<{ url: string }>(req);
+  } catch {
+    return sendJson(res, 400, { error: "invalid JSON body" });
+  }
+  if (!body.url || typeof body.url !== "string") return sendJson(res, 400, { error: "missing url" });
+  await host.deleteSource(body.url);
   sendJson(res, 200, { ok: true });
 };

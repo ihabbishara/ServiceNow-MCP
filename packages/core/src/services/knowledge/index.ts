@@ -23,6 +23,10 @@ export class KnowledgeService {
   private readonly chat?: ChatModel;
   private readonly fetcher: Fetcher;
   private store?: KnowledgeStore;
+  // Memoize the in-flight open so concurrent first calls (now possible via the
+  // fire-and-forget web ingest routes) share one store instead of each building
+  // a KnowledgeStore and leaking all but one connection.
+  private storePromise?: Promise<KnowledgeStore>;
 
   constructor(private readonly cfg: KnowledgeConfig) {
     this.embedder = new LocalEmbedder(cfg.embedModel, cfg.embedModelPath);
@@ -31,12 +35,12 @@ export class KnowledgeService {
   }
 
   /** Load the embed model (so dim is known) then open the store keyed on {model, dim}. */
-  private async ensureStore(): Promise<KnowledgeStore> {
-    if (!this.store) {
+  private ensureStore(): Promise<KnowledgeStore> {
+    return (this.storePromise ??= (async () => {
       await this.embedder.ready();
       this.store = new KnowledgeStore(this.cfg.dbPath, { model: this.embedder.model, dim: this.embedder.dim });
-    }
-    return this.store;
+      return this.store;
+    })());
   }
 
   async crawl(overrides: CrawlOverrides = {}, log: (m: string) => void = () => {}): Promise<CrawlResult> {
@@ -108,6 +112,7 @@ export class KnowledgeService {
   async close(): Promise<void> {
     this.store?.close();
     this.store = undefined;
+    this.storePromise = undefined;
     await this.embedder.dispose();
   }
 }

@@ -14,6 +14,13 @@ export class LocalEmbedder implements Embedder {
   readonly model: string;
   dim = 0;
   private pipe?: EmbedPipe;
+  // Memoize the in-flight init so concurrent first calls share one pipeline()
+  // build (avoids a double ONNX init + a leaked session under parallel ingest).
+  private readyPromise?: Promise<void>;
+  // Serialize embed() calls: the single ONNX session has one intra-op thread
+  // pool, so overlapping pipe() calls from concurrent ingest/search/crawl must
+  // not run at once. Each embed chains off the previous (tail-promise queue).
+  private tail: Promise<unknown> = Promise.resolve();
 
   constructor(model: string, modelPath?: string) {
     this.model = model;
@@ -23,17 +30,23 @@ export class LocalEmbedder implements Embedder {
     }
   }
 
-  async ready(): Promise<void> {
-    if (this.pipe) return;
-    this.pipe = (await pipeline("feature-extraction", this.model)) as unknown as EmbedPipe;
-    const probe = await this.pipe!("x", { pooling: "mean", normalize: true });
-    this.dim = probe.data.length;
+  ready(): Promise<void> {
+    return (this.readyPromise ??= (async () => {
+      this.pipe = (await pipeline("feature-extraction", this.model)) as unknown as EmbedPipe;
+      const probe = await this.pipe("x", { pooling: "mean", normalize: true });
+      this.dim = probe.data.length;
+    })());
   }
 
   async embed(text: string): Promise<number[]> {
-    if (!this.pipe) await this.ready();
-    const out = await this.pipe!(text, { pooling: "mean", normalize: true });
-    return Array.from(out.data);
+    const run = this.tail.then(async () => {
+      if (!this.pipe) await this.ready();
+      const out = await this.pipe!(text, { pooling: "mean", normalize: true });
+      return Array.from(out.data);
+    });
+    // Keep the queue alive even if one embed rejects, so later calls still run.
+    this.tail = run.catch(() => {});
+    return run;
   }
 
   /**
@@ -46,6 +59,7 @@ export class LocalEmbedder implements Embedder {
       await (this.pipe as DisposablePipe).dispose?.();
       this.pipe = undefined;
       this.dim = 0;
+      this.readyPromise = undefined; // allow a fresh init after dispose
     }
   }
 }

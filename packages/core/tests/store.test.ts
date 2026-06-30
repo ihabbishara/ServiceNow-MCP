@@ -70,12 +70,30 @@ describe("KnowledgeStore listPages/deletePage", () => {
     s.close();
   });
 
-  it("deletePage removes the page and its chunks", () => {
+  it("deletePage removes the page, its chunks, AND its vec rows", () => {
     const s = new KnowledgeStore(":memory:", { model: "e", dim: 3 });
     seed(s, "upload://a.pdf", 2, 100);
     s.deletePage("upload://a.pdf");
     expect(s.listPages()).toEqual([]);
     expect(s.getPageHash("upload://a.pdf")).toBeUndefined();
+    expect(s.stats().chunks).toBe(0);
+    // vec rows gone too — a knn over the deleted embedding returns nothing.
+    expect(s.knn([0.1, 0.2, 0.3], 5)).toEqual([]);
+    s.close();
+  });
+
+  it("lastCrawl ignores uploads so document uploads don't poison the boot-crawl gate", () => {
+    const s = new KnowledgeStore(":memory:", { model: "e", dim: 3 });
+    seed(s, "https://h/p", 1, 100); // a web crawl at t=100
+    seed(s, "upload://later.pdf", 1, 999); // an upload at t=999
+    expect(s.stats().lastCrawl).toBe(100); // not 999
+    s.close();
+  });
+
+  it("lastCrawl is undefined when only uploads exist", () => {
+    const s = new KnowledgeStore(":memory:", { model: "e", dim: 3 });
+    seed(s, "upload://only.pdf", 1, 500);
+    expect(s.stats().lastCrawl).toBeUndefined();
     s.close();
   });
 });

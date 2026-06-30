@@ -164,4 +164,20 @@ describe("knowledge routes", () => {
     expect(res.statusCode).toBe(400);
     expect(host.ingestFile).not.toHaveBeenCalled();
   });
+
+  it("add-url with a malformed JSON body returns 400, not 500", async () => {
+    const host = hostOf();
+    const res = resOf();
+    await handleAddUrl(reqOf({}, Buffer.from("{not json")), res, host);
+    expect(res.statusCode).toBe(400);
+    expect(host.ingestUrl).not.toHaveBeenCalled();
+  });
+
+  it("delete with a malformed JSON body returns 400, not 500", async () => {
+    const host = hostOf();
+    const res = resOf();
+    await handleDeleteSource(reqOf({}, Buffer.from("{not json")), res, host);
+    expect(res.statusCode).toBe(400);
+    expect(host.deleteSource).not.toHaveBeenCalled();
+  });
 });
