@@ -6,12 +6,14 @@ import { Fetcher } from "../../clients/crawler/fetcher.js";
 import { extractPage } from "../../clients/crawler/extract.js";
 import { RobotsClient } from "../../clients/crawler/robotsClient.js";
 import { KnowledgeStore } from "./store.js";
-import { crawl, type CrawlBounds, type CrawlResult } from "./crawl.js";
+import { crawl, canonical, inScope, type CrawlBounds, type CrawlResult } from "./crawl.js";
 import { search, type SearchResponse } from "./search.js";
-import type { KnowledgeStats } from "./types.js";
+import type { KnowledgeStats, SourceRow } from "./types.js";
+import { indexDocument as runIndexDocument, type IngestDoc, type IngestPhase, type IngestResult } from "./ingest.js";
 
 export interface CrawlOverrides {
   seeds?: string[];
+  allowDomains?: string[];
   maxPages?: number;
   maxDepth?: number;
 }
@@ -40,7 +42,7 @@ export class KnowledgeService {
   async crawl(overrides: CrawlOverrides = {}, log: (m: string) => void = () => {}): Promise<CrawlResult> {
     const bounds: CrawlBounds = {
       seeds: overrides.seeds ?? this.cfg.seeds,
-      allowDomains: this.cfg.allowDomains,
+      allowDomains: overrides.allowDomains ?? this.cfg.allowDomains,
       maxPages: overrides.maxPages ?? this.cfg.maxPages,
       maxDepth: overrides.maxDepth ?? this.cfg.maxDepth,
       concurrency: this.cfg.concurrency,
@@ -66,6 +68,18 @@ export class KnowledgeService {
     );
   }
 
+  /**
+   * Configured seeds (in-scope) that have no page row yet — i.e. never crawled.
+   * Lets the boot gate index a freshly-added seed even when the index as a whole
+   * is still "fresh" by TTL (lastCrawl is a global MAX, blind to per-seed gaps).
+   */
+  async unindexedSeeds(): Promise<string[]> {
+    const store = await this.ensureStore();
+    return this.cfg.seeds
+      .map(canonical)
+      .filter((c) => inScope(c, this.cfg.allowDomains) && store.getPageHash(c) === undefined);
+  }
+
   async search(query: string, k?: number, domain?: string): Promise<SearchResponse> {
     const store = await this.ensureStore();
     return search({ embedder: this.embedder, store }, query, k, domain);
@@ -76,9 +90,26 @@ export class KnowledgeService {
     return store.stats();
   }
 
+  async indexDocument(doc: IngestDoc, onPhase?: (p: IngestPhase) => void): Promise<IngestResult> {
+    const store = await this.ensureStore();
+    return runIndexDocument({ embedder: this.embedder, store, now: () => Date.now() }, doc, onPhase);
+  }
+
+  async listSources(): Promise<SourceRow[]> {
+    const store = await this.ensureStore();
+    return store.listPages();
+  }
+
+  async deleteSource(key: string): Promise<void> {
+    const store = await this.ensureStore();
+    store.deletePage(key);
+  }
+
   async close(): Promise<void> {
     this.store?.close();
     this.store = undefined;
     await this.embedder.dispose();
   }
 }
+
+export type { IngestDoc, IngestPhase, IngestResult } from "./ingest.js";

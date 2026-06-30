@@ -47,3 +47,12 @@ export interface KnowledgeStats {
   model?: string;
   dim?: number;
 }
+
+/** A row for the Sources panel: one indexed page/document. */
+export interface SourceRow {
+  url: string;
+  title?: string;
+  crawledAt: number;
+  indexed: boolean;
+  chunkCount: number;
+}

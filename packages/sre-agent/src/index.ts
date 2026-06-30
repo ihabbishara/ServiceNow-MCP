@@ -7,3 +7,4 @@ export type { AgentConfig } from "./config.js";
 export { loadDotenv, resolveDotenvPath, packageEnvPath } from "./config/env.js";
 export { buildTools } from "./tools/index.js";
 export { buildWorkflowPrompt } from "./workflows/index.js";
+export { bootCrawl } from "./cli/crawl.js";

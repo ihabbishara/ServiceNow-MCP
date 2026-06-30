@@ -27,8 +27,8 @@ export function Sidebar({
   onInsert,
 }: {
   state: ChatState;
-  tab: "chat" | "settings";
-  onTab: (t: "chat" | "settings") => void;
+  tab: "chat" | "settings" | "sources";
+  onTab: (t: "chat" | "settings" | "sources") => void;
   onInsert: (text: string) => void;
 }) {
   const c = state.config;
@@ -50,6 +50,13 @@ export function Sidebar({
           className={"text-left px-2 py-1.5 rounded transition-colors " + (tab === "chat" ? "bg-surface-container text-primary-container" : "text-on-surface-variant hover:bg-surface-container")}
         >
           Chat
+        </button>
+        <button
+          onClick={() => onTab("sources")}
+          aria-current={tab === "sources" ? "page" : undefined}
+          className={"text-left px-2 py-1.5 rounded transition-colors " + (tab === "sources" ? "bg-surface-container text-primary-container" : "text-on-surface-variant hover:bg-surface-container")}
+        >
+          Sources
         </button>
         <button
           onClick={() => onTab("settings")}

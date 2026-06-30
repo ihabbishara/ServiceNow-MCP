@@ -11,3 +11,15 @@ export const sendJson = (res: ServerResponse, status: number, body: unknown) => 
   res.writeHead(status, { "content-type": "application/json" });
   res.end(JSON.stringify(body));
 };
+
+/** Read a request body as raw bytes, rejecting once it exceeds maxBytes. */
+export const readBytes = async (req: IncomingMessage, maxBytes: number): Promise<Buffer> => {
+  const chunks: Buffer[] = [];
+  let total = 0;
+  for await (const c of req) {
+    total += (c as Buffer).length;
+    if (total > maxBytes) throw new Error("payload too large");
+    chunks.push(c as Buffer);
+  }
+  return Buffer.concat(chunks);
+};

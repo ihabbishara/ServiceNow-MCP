@@ -73,7 +73,23 @@ describe("applyServerEvent", () => {
       servicenow: true,
       ado: false,
       rag: true,
+      uploadMaxBytes: 1024,
     });
     expect(s.config).toMatchObject({ llmMode: "seat", model: "gpt-5", servicenow: true, ado: false, rag: true });
+  });
+
+  it("tracks ingest-status per source", () => {
+    let s = applyServerEvent(initialState, { type: "ingest-status", source: "upload://a.pdf", phase: "parsing" });
+    s = applyServerEvent(s, { type: "ingest-status", source: "upload://a.pdf", phase: "embedding", detail: "2/5" });
+    s = applyServerEvent(s, { type: "ingest-status", source: "https://h/p", phase: "crawling" });
+    expect(s.ingest["upload://a.pdf"]).toEqual({ phase: "embedding", detail: "2/5", chunks: undefined, reason: undefined });
+    expect(s.ingest["https://h/p"].phase).toBe("crawling");
+  });
+
+  it("stores uploadMaxBytes from config-status", () => {
+    const s = applyServerEvent(initialState, {
+      type: "config-status", llmMode: "seat", model: "m", servicenow: true, ado: false, rag: true, uploadMaxBytes: 2048
+    });
+    expect(s.config?.uploadMaxBytes).toBe(2048);
   });
 });

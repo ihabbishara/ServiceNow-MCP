@@ -6,7 +6,9 @@ const parsers: Parsers = {
   docx: vi.fn(async () => "docx-text"),
   xlsx: vi.fn(async () => "xlsx-text"),
   pptx: vi.fn(async () => "pptx-text"),
-  pdf: vi.fn(async () => "pdf-text")
+  pdf: vi.fn(async () => "pdf-text"),
+  csv: vi.fn(async (b) => b.toString("utf8")),
+  txt: vi.fn(async (b) => b.toString("utf8"))
 };
 
 describe("formatOf", () => {
@@ -14,7 +16,7 @@ describe("formatOf", () => {
     expect(formatOf("a.DOCX")).toBe("docx");
     expect(formatOf("a.pdf")).toBe("pdf");
     expect(formatOf("a.doc")).toBeNull();   // legacy binary not supported
-    expect(formatOf("a.txt")).toBeNull();
+    expect(formatOf("a.txt")).toBe("txt");
   });
 });
 

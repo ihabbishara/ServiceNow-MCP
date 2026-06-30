@@ -117,4 +117,13 @@ describe("loadAgentConfig", () => {
   it("knowledgeEnabled is true when CRAWL_SEEDS is set", () => {
     expect(loadAgentConfig({ ...base, CRAWL_SEEDS: "https://wiki.acme.io/a" }).knowledgeEnabled).toBe(true);
   });
+
+  describe("uploadMaxBytes", () => {
+    it("defaults to 10 MB", () => {
+      expect(loadAgentConfig(base).uploadMaxBytes).toBe(10485760);
+    });
+    it("reads UPLOAD_MAX_BYTES", () => {
+      expect(loadAgentConfig({ ...base, UPLOAD_MAX_BYTES: "2048" }).uploadMaxBytes).toBe(2048);
+    });
+  });
 });
