@@ -7,6 +7,7 @@ import { serveStatic } from "./static.js";
 import { handleStream, handleChat, handleConfirm, handleAbort } from "./routes/chat.js";
 import { handleAuthStatus, handleLogin } from "./routes/auth.js";
 import { handleGetEnv, handlePutEnv } from "./routes/env.js";
+import { handleUpload, handleAddUrl, handleListSources, handleDeleteSource } from "./routes/knowledge.js";
 import { sendJson } from "./routes/util.js";
 
 const clientDist = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "client", "dist");
@@ -22,6 +23,10 @@ export const createApp =
       if (m === "POST /api/chat") return void (await handleChat(req, res, host));
       if (m === "POST /api/confirm") return void (await handleConfirm(req, res, host));
       if (m === "POST /api/abort") return void (await handleAbort(req, res, host));
+      if (m === "POST /api/knowledge/upload") return void (await handleUpload(req, res, host, host.uploadMaxBytes));
+      if (m === "POST /api/knowledge/url") return void (await handleAddUrl(req, res, host));
+      if (m === "GET /api/knowledge/sources") return void (await handleListSources(req, res, host));
+      if (m === "DELETE /api/knowledge/sources") return void (await handleDeleteSource(req, res, host));
       if (m === "GET /api/auth/status") return void (await handleAuthStatus(req, res, host));
       if (m === "POST /api/auth/login") return void (await handleLogin(req, res, host));
       if (m === "GET /api/env") return void (await handleGetEnv(req, res, host));
