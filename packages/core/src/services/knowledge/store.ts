@@ -2,7 +2,7 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import Database from "better-sqlite3";
 import * as sqliteVec from "sqlite-vec";
-import type { SearchHit, KnowledgeStats } from "./types.js";
+import type { SearchHit, KnowledgeStats, SourceRow } from "./types.js";
 
 export interface StoreMeta {
   model: string;
@@ -132,6 +132,34 @@ export class KnowledgeStore {
     const chunks = (this.db.prepare("SELECT COUNT(*) n FROM chunks").get() as { n: number }).n;
     const last = this.db.prepare("SELECT MAX(crawled_at) m FROM pages").get() as { m: number | null };
     return { pages, chunks, lastCrawl: last.m ?? undefined, model: this.model, dim: this.dim };
+  }
+
+  listPages(): SourceRow[] {
+    const rows = this.db
+      .prepare(
+        `SELECT p.url AS url, p.title AS title, p.crawled_at AS crawledAt, p.indexed AS indexed,
+           (SELECT COUNT(*) FROM chunks c WHERE c.url = p.url) AS chunkCount
+         FROM pages p ORDER BY p.crawled_at DESC`
+      )
+      .all() as { url: string; title: string | null; crawledAt: number; indexed: number; chunkCount: number }[];
+    return rows.map((r) => ({
+      url: r.url,
+      title: r.title ?? undefined,
+      crawledAt: r.crawledAt,
+      indexed: !!r.indexed,
+      chunkCount: r.chunkCount
+    }));
+  }
+
+  deletePage(url: string): void {
+    const tx = this.db.transaction((u: string) => {
+      const ids = this.db.prepare("SELECT id FROM chunks WHERE url = ?").all(u) as { id: number }[];
+      const delVec = this.db.prepare("DELETE FROM vec_chunks WHERE rowid = ?");
+      for (const { id } of ids) delVec.run(id);
+      this.db.prepare("DELETE FROM chunks WHERE url = ?").run(u);
+      this.db.prepare("DELETE FROM pages WHERE url = ?").run(u);
+    });
+    tx(url);
   }
 
   close(): void {

@@ -51,3 +51,31 @@ describe("KnowledgeStore", () => {
     s.close();
   });
 });
+
+describe("KnowledgeStore listPages/deletePage", () => {
+  const seed = (s: KnowledgeStore, url: string, n: number, at: number) =>
+    s.upsertPage({
+      url, title: url, hash: "h" + url, crawledAt: at, indexed: true,
+      chunks: Array.from({ length: n }, (_, i) => ({ ord: i, text: "t" + i, embedding: [0.1, 0.2, 0.3] }))
+    });
+
+  it("lists pages newest-first with chunk counts", () => {
+    const s = new KnowledgeStore(":memory:", { model: "e", dim: 3 });
+    seed(s, "upload://a.pdf", 2, 100);
+    seed(s, "https://h/p", 3, 200);
+    const rows = s.listPages();
+    expect(rows.map((r) => r.url)).toEqual(["https://h/p", "upload://a.pdf"]);
+    expect(rows[0]).toMatchObject({ chunkCount: 3, indexed: true });
+    expect(rows[1].chunkCount).toBe(2);
+    s.close();
+  });
+
+  it("deletePage removes the page and its chunks", () => {
+    const s = new KnowledgeStore(":memory:", { model: "e", dim: 3 });
+    seed(s, "upload://a.pdf", 2, 100);
+    s.deletePage("upload://a.pdf");
+    expect(s.listPages()).toEqual([]);
+    expect(s.getPageHash("upload://a.pdf")).toBeUndefined();
+    s.close();
+  });
+});
