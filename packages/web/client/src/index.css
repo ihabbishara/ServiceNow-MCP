@@ -1,6 +1,6 @@
 /* packages/web/client/src/index.css */
 @import "@fontsource-variable/hanken-grotesk"; /* body — self-hosted, no CDN, works offline */
-@import "@fontsource-variable/bricolage-grotesque"; /* display — product name + hero headline */
+@import "./assets/fonts/bricolage-grotesque.css"; /* display — vendored woff2; no registry dep (some locked-down registries don't mirror it) */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
