@@ -23,5 +23,14 @@ export type ServerEvent =
       servicenow: boolean;
       ado: boolean;
       rag: boolean;
+      uploadMaxBytes: number;
+    }
+  | {
+      type: "ingest-status";
+      source: string;
+      phase: "parsing" | "embedding" | "indexed" | "skipped" | "crawling";
+      chunks?: number;
+      reason?: string;
+      detail?: string;
     }
   | { type: "engine-state"; state: EngineState; message?: string };

@@ -9,7 +9,8 @@ export interface ChatState {
   activeTool?: string;
   engineState: EngineState;
   auth: { isAuthenticated: boolean; authType?: string; login?: string; ambientEnvWarning: boolean };
-  config?: { llmMode: "seat" | "byok"; model: string; provider?: string; servicenow: boolean; ado: boolean; rag: boolean };
+  config?: { llmMode: "seat" | "byok"; model: string; provider?: string; servicenow: boolean; ado: boolean; rag: boolean; uploadMaxBytes?: number };
+  ingest: Record<string, { phase: string; detail?: string; chunks?: number; reason?: string }>;
   deviceCode?: { verificationUri: string; userCode: string };
   confirm?: { id: string; summary: string };
   error?: { message: string; isAuthError: boolean };
@@ -23,6 +24,7 @@ export const initialState: ChatState = {
   engineState: "starting",
   auth: { isAuthenticated: false, ambientEnvWarning: false },
   nextMessageId: 0,
+  ingest: {},
 };
 
 export type ClientEvent = { type: "user-message"; text: string };
@@ -78,7 +80,16 @@ export const applyServerEvent = (s: ChatState, e: ServerEvent | ClientEvent): Ch
           servicenow: e.servicenow,
           ado: e.ado,
           rag: e.rag,
+          uploadMaxBytes: e.uploadMaxBytes,
         },
+      };
+    case "ingest-status":
+      return {
+        ...s,
+        ingest: {
+          ...s.ingest,
+          [e.source]: { phase: e.phase, detail: e.detail, chunks: e.chunks, reason: e.reason }
+        }
       };
     case "tool-start":
       return { ...s, activeTool: e.name };

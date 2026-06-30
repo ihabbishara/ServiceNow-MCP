@@ -140,6 +140,7 @@ export const createEngineHost = (opts: EngineHostOptions): EngineHost => {
           ? !!raw?.ADO_PAT
           : !!(raw?.ADO_ORG_URL && raw?.ADO_PROJECT),
       rag: !!runtime,
+      uploadMaxBytes: config.uploadMaxBytes,
     });
   };
 
