@@ -4,7 +4,7 @@ import type { EngineHost } from "../engine-host.js";
 import { readJson, sendJson } from "./util.js";
 
 export const handleGetEnv = async (_req: IncomingMessage, res: ServerResponse, host: EngineHost) => {
-  sendJson(res, 200, { vars: await host.readEnv() });
+  sendJson(res, 200, await host.readEnv()); // { vars, comments }
 };
 
 export const handlePutEnv = async (req: IncomingMessage, res: ServerResponse, host: EngineHost) => {
