@@ -65,7 +65,9 @@ const schema = z.object({
   SHAREPOINT_ENABLED: bool(false),
   // Auto-crawl-on-boot freshness gate: skip the boot crawl if the index was last
   // crawled within this many hours. 0 = always crawl on boot. Default 24h.
-  CRAWL_TTL_HOURS: z.coerce.number().nonnegative().default(24)
+  CRAWL_TTL_HOURS: z.coerce.number().nonnegative().default(24),
+  // Max bytes accepted for a single UI document upload. Default 10 MB.
+  UPLOAD_MAX_BYTES: z.coerce.number().int().positive().default(10485760)
 });
 
 export interface AgentConfig {
@@ -87,6 +89,8 @@ export interface AgentConfig {
   knowledgeEnabled: boolean;
   /** Skip the auto-crawl-on-boot if the index was crawled within this many hours (0 = always). */
   crawlTtlHours: number;
+  /** Max bytes accepted for a single UI document upload. */
+  uploadMaxBytes: number;
   /** True when SharePoint is configured → steer chat toward get_incident_documents. */
   sharePointEnabled: boolean;
   /** Copilot seat auth knobs; only consulted in seat mode. */
@@ -136,6 +140,7 @@ export const loadAgentConfig = (
     turnTimeoutMs: e.TURN_TIMEOUT_MS,
     knowledgeEnabled: !!(env.CRAWL_SEEDS && String(env.CRAWL_SEEDS).trim()),
     crawlTtlHours: e.CRAWL_TTL_HOURS,
+    uploadMaxBytes: e.UPLOAD_MAX_BYTES,
     sharePointEnabled: e.SHAREPOINT_ENABLED,
     copilot: {
       githubToken: e.COPILOT_GITHUB_TOKEN,
