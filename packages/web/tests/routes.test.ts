@@ -140,4 +140,20 @@ describe("knowledge routes", () => {
     expect(res.statusCode).toBe(200);
     expect(host.deleteSource).toHaveBeenCalledWith("upload://a");
   });
+
+  it("upload rejects missing X-Filename with 400", async () => {
+    const host = hostOf();
+    const res = resOf();
+    await handleUpload(reqOf({}), res, host, host.uploadMaxBytes);
+    expect(res.statusCode).toBe(400);
+    expect(host.ingestFile).not.toHaveBeenCalled();
+  });
+
+  it("upload rejects a malformed X-Filename with 400", async () => {
+    const host = hostOf();
+    const res = resOf();
+    await handleUpload(reqOf({ "x-filename": "file%GG.txt" }, Buffer.from("x")), res, host, host.uploadMaxBytes);
+    expect(res.statusCode).toBe(400);
+    expect(host.ingestFile).not.toHaveBeenCalled();
+  });
 });

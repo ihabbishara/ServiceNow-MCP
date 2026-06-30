@@ -11,7 +11,12 @@ export const handleUpload = async (
 ) => {
   const raw = req.headers["x-filename"];
   if (typeof raw !== "string" || !raw) return sendJson(res, 400, { error: "missing X-Filename header" });
-  const name = decodeURIComponent(raw);
+  let name: string;
+  try {
+    name = decodeURIComponent(raw);
+  } catch {
+    return sendJson(res, 400, { error: "malformed X-Filename header" });
+  }
   if (!formatOf(name)) return sendJson(res, 415, { error: `unsupported format: .${extOf(name)}` });
   let bytes: Buffer;
   try {
