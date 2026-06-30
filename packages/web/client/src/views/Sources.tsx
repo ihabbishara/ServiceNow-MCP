@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { DragEvent, FormEvent } from "react";
 import type { ChatState } from "../state.js";
 import { uploadDocument, addUrl, listSources, deleteSource, type SourceRow } from "../api.js";
@@ -16,13 +16,13 @@ export function Sources({ state }: { state: ChatState }) {
   const fileInput = useRef<HTMLInputElement>(null);
   const maxBytes = state.config?.uploadMaxBytes ?? DEFAULT_MAX;
 
-  const refresh = () => listSources().then((r) => setSources(r.sources)).catch(() => {});
-  useEffect(() => { refresh(); }, []);
+  const refresh = useCallback(() => listSources().then((r) => setSources(r.sources)).catch(() => {}), []);
+  useEffect(() => { refresh(); }, [refresh]);
   // When any in-flight ingest reaches a terminal phase, re-pull the list.
   const ingestKey = JSON.stringify(state.ingest);
   useEffect(() => {
     if (Object.values(state.ingest).some((i) => i.phase === "indexed")) refresh();
-  }, [ingestKey]);
+  }, [ingestKey, refresh]);
 
   const sendFiles = async (files: FileList | File[]) => {
     const errs: string[] = [];
@@ -69,11 +69,11 @@ export function Sources({ state }: { state: ChatState }) {
       <Card
         className={"p-8 text-center border-2 border-dashed transition-colors " +
           (dragging ? "border-primary-container bg-primary-container/5" : "border-outline")}
+        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+        onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragging(false); }}
+        onDrop={onDrop}
       >
         <div
-          onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-          onDragLeave={() => setDragging(false)}
-          onDrop={onDrop}
           className="space-y-3"
         >
           <p className="text-body-lg text-on-surface">Drag documents here</p>
