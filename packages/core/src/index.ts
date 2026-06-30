@@ -15,5 +15,6 @@ export * from "./services/incidents.js";
 export * from "./services/report.js";
 export * from "./services/knowledge/index.js";
 export * from "./services/knowledge/types.js";
+export * from "./clients/docparse/index.js";
 export { SharePointService, createSharePointService } from "./services/sharepoint/index.js";
 export type { IncidentDocsResult, IncidentDocument } from "./clients/sharepoint/types.js";

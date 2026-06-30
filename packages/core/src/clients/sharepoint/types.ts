@@ -1,3 +1,6 @@
+import type { DocFormat, Parsers, ExtractResult } from "../docparse/types.js";
+export type { DocFormat, Parsers, ExtractResult };
+
 export interface SharePointConfig {
   enabled: boolean;
   siteUrl: string;          // https://acme.sharepoint.com/sites/SRE
@@ -31,10 +34,6 @@ export interface DriveFile {
   path: string;             // e.g. "Docs/sub/runbook.docx"
 }
 
-export type ExtractResult = { text: string } | { skipped: string };
-
-export type DocFormat = "docx" | "xlsx" | "pptx" | "pdf";
-
 export interface IncidentDocument {
   name: string;
   path: string;
@@ -63,9 +62,3 @@ export interface GraphPort {
   download(driveId: string, itemId: string, maxBytes?: number): Promise<Buffer>;
 }
 
-export interface Parsers {
-  docx: (b: Buffer) => Promise<string>;
-  xlsx: (b: Buffer) => Promise<string>;
-  pptx: (b: Buffer) => Promise<string>;
-  pdf: (b: Buffer) => Promise<string>;
-}

@@ -31,7 +31,9 @@ const parsers: Parsers = {
   docx: async (b) => b.toString(),
   xlsx: async (b) => b.toString(),
   pptx: async (b) => b.toString(),
-  pdf: async (b) => b.toString()
+  pdf: async (b) => b.toString(),
+  csv: async (b) => b.toString(),
+  txt: async (b) => b.toString()
 };
 
 describe("SharePointService.getIncidentDocuments", () => {
@@ -82,7 +84,7 @@ describe("SharePointService.getIncidentDocuments", () => {
       {
         "/drives/drive1/root/children": [folder("INC1 a", "incF")],
         "/drives/drive1/items/incF/children": [folder("Docs", "docs")],
-        "/drives/drive1/items/docs/children": [file("huge.docx", "huge", 5_000_000), file("notes.txt", "n")]
+        "/drives/drive1/items/docs/children": [file("huge.docx", "huge", 5_000_000), file("notes.one", "n")]
       },
       {}
     );
@@ -91,7 +93,7 @@ describe("SharePointService.getIncidentDocuments", () => {
     expect(out.count).toBe(0);
     expect(out.skipped).toEqual([
       { name: "huge.docx", reason: "exceeds max file bytes (5000000 > 1000000)" },
-      { name: "notes.txt", reason: "unsupported format: .txt" }
+      { name: "notes.one", reason: "unsupported format: .one" }
     ]);
   });
 
