@@ -8,7 +8,8 @@ import { RobotsClient } from "../../clients/crawler/robotsClient.js";
 import { KnowledgeStore } from "./store.js";
 import { crawl, canonical, inScope, type CrawlBounds, type CrawlResult } from "./crawl.js";
 import { search, type SearchResponse } from "./search.js";
-import type { KnowledgeStats } from "./types.js";
+import type { KnowledgeStats, SourceRow } from "./types.js";
+import { indexDocument as runIndexDocument, type IngestDoc, type IngestPhase, type IngestResult } from "./ingest.js";
 
 export interface CrawlOverrides {
   seeds?: string[];
@@ -88,9 +89,26 @@ export class KnowledgeService {
     return store.stats();
   }
 
+  async indexDocument(doc: IngestDoc, onPhase?: (p: IngestPhase) => void): Promise<IngestResult> {
+    const store = await this.ensureStore();
+    return runIndexDocument({ embedder: this.embedder, store, now: () => Date.now() }, doc, onPhase);
+  }
+
+  async listSources(): Promise<SourceRow[]> {
+    const store = await this.ensureStore();
+    return store.listPages();
+  }
+
+  async deleteSource(key: string): Promise<void> {
+    const store = await this.ensureStore();
+    store.deletePage(key);
+  }
+
   async close(): Promise<void> {
     this.store?.close();
     this.store = undefined;
     await this.embedder.dispose();
   }
 }
+
+export type { IngestDoc, IngestPhase, IngestResult } from "./ingest.js";
