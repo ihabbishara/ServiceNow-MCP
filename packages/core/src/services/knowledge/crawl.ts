@@ -38,7 +38,7 @@ export interface CrawlResult {
   dropped: number; // links not followed because a cap was hit
 }
 
-const canonical = (url: string): string => {
+export const canonical = (url: string): string => {
   try {
     const u = new URL(url);
     u.hash = "";
@@ -50,7 +50,7 @@ const canonical = (url: string): string => {
   }
 };
 
-const inScope = (url: string, allow: string[]): boolean => {
+export const inScope = (url: string, allow: string[]): boolean => {
   try {
     return allow.includes(new URL(url).host);
   } catch {

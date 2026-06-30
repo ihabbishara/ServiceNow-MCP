@@ -6,7 +6,7 @@ import { Fetcher } from "../../clients/crawler/fetcher.js";
 import { extractPage } from "../../clients/crawler/extract.js";
 import { RobotsClient } from "../../clients/crawler/robotsClient.js";
 import { KnowledgeStore } from "./store.js";
-import { crawl, type CrawlBounds, type CrawlResult } from "./crawl.js";
+import { crawl, canonical, inScope, type CrawlBounds, type CrawlResult } from "./crawl.js";
 import { search, type SearchResponse } from "./search.js";
 import type { KnowledgeStats } from "./types.js";
 
@@ -64,6 +64,18 @@ export class KnowledgeService {
       },
       bounds
     );
+  }
+
+  /**
+   * Configured seeds (in-scope) that have no page row yet — i.e. never crawled.
+   * Lets the boot gate index a freshly-added seed even when the index as a whole
+   * is still "fresh" by TTL (lastCrawl is a global MAX, blind to per-seed gaps).
+   */
+  async unindexedSeeds(): Promise<string[]> {
+    const store = await this.ensureStore();
+    return this.cfg.seeds
+      .map(canonical)
+      .filter((c) => inScope(c, this.cfg.allowDomains) && store.getPageHash(c) === undefined);
   }
 
   async search(query: string, k?: number, domain?: string): Promise<SearchResponse> {

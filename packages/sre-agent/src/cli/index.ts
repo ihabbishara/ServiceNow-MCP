@@ -10,7 +10,7 @@ import { buildTools } from "../tools/index.js";
 import { buildWorkflowPrompt } from "../workflows/index.js";
 import { runDoctor, runChecks } from "../doctor.js";
 import { runInit } from "../init.js";
-import { runCrawl } from "./crawl.js";
+import { runCrawl, bootCrawl } from "./crawl.js";
 import { printBanner } from "../banner.js";
 
 const HELP_TEXT = `Workflow commands:
@@ -162,6 +162,9 @@ const main = async () => {
   }
 
   const runtime = createMcpRuntime(); // reuses core config from process.env
+
+  // Auto-crawl-on-boot (background, freshness-gated). No-op unless CRAWL_SEEDS set.
+  bootCrawl(runtime, { enabled: config.knowledgeEnabled, ttlHours: config.crawlTtlHours });
 
   // readline owns the terminal; create it before the engine so the write
   // confirm prompt can reuse the same interface during a tool call.

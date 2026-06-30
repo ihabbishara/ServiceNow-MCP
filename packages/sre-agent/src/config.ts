@@ -62,7 +62,10 @@ const schema = z.object({
   CORRELATION_HOURS_BEFORE: z.coerce.number().positive().default(24),
   CORRELATION_HOURS_AFTER: z.coerce.number().positive().default(4),
   // SharePoint
-  SHAREPOINT_ENABLED: bool(false)
+  SHAREPOINT_ENABLED: bool(false),
+  // Auto-crawl-on-boot freshness gate: skip the boot crawl if the index was last
+  // crawled within this many hours. 0 = always crawl on boot. Default 24h.
+  CRAWL_TTL_HOURS: z.coerce.number().nonnegative().default(24)
 });
 
 export interface AgentConfig {
@@ -82,6 +85,8 @@ export interface AgentConfig {
   turnTimeoutMs: number;
   /** True when the crawler is configured (CRAWL_SEEDS set) → steer chat toward search_knowledge. */
   knowledgeEnabled: boolean;
+  /** Skip the auto-crawl-on-boot if the index was crawled within this many hours (0 = always). */
+  crawlTtlHours: number;
   /** True when SharePoint is configured → steer chat toward get_incident_documents. */
   sharePointEnabled: boolean;
   /** Copilot seat auth knobs; only consulted in seat mode. */
@@ -130,6 +135,7 @@ export const loadAgentConfig = (
     confirmWrites: e.CONFIRM_WRITES,
     turnTimeoutMs: e.TURN_TIMEOUT_MS,
     knowledgeEnabled: !!(env.CRAWL_SEEDS && String(env.CRAWL_SEEDS).trim()),
+    crawlTtlHours: e.CRAWL_TTL_HOURS,
     sharePointEnabled: e.SHAREPOINT_ENABLED,
     copilot: {
       githubToken: e.COPILOT_GITHUB_TOKEN,
