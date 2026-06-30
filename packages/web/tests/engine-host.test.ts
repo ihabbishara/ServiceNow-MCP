@@ -133,6 +133,7 @@ describe("EngineHost ingest", () => {
     );
     expect(events.map((e) => e.type)).toContain("ingest-status");
     expect(events.some((e) => e.type === "ingest-status" && e.phase === "indexed" && e.chunks === 1)).toBe(true);
+    expect(events.some((e) => e.type === "ingest-status" && e.phase === "embedding" && e.detail === "0/1")).toBe(true);
   });
 
   it("ingestFile emits skipped for an unsupported format", async () => {
@@ -153,7 +154,7 @@ describe("EngineHost ingest", () => {
     });
     await host.ingestFile("deck.ppt", Buffer.from("x"));
     expect(knowledge.indexDocument).not.toHaveBeenCalled();
-    expect(events.some((e) => e.type === "ingest-status" && e.phase === "skipped")).toBe(true);
+    expect(events.some((e) => e.type === "ingest-status" && e.phase === "skipped" && e.reason === "unsupported format")).toBe(true);
   });
 
   it("ingestUrl crawls the single seed and emits indexed", async () => {
@@ -175,6 +176,56 @@ describe("EngineHost ingest", () => {
     await host.ingestUrl("https://h/p");
     expect(knowledge.crawl).toHaveBeenCalledWith({ seeds: ["https://h/p"] });
     expect(events.some((e) => e.type === "ingest-status" && e.phase === "indexed" && e.chunks === 4)).toBe(true);
+  });
+
+  it("ingestFile emits skipped with 'knowledge index not configured' when runtimeFactory is omitted", async () => {
+    const events: ServerEvent[] = [];
+    const host = createEngineHost({
+      config: { uploadMaxBytes: 1000 } as any,
+      tools: [],
+      engineFactory: () => fakeEngine,
+      emit: (e) => events.push(e),
+      // runtimeFactory intentionally omitted
+    });
+    await host.ingestFile("notes.txt", Buffer.from("hi"));
+    expect(events.some((e) => e.type === "ingest-status" && e.phase === "skipped" && e.reason === "knowledge index not configured")).toBe(true);
+  });
+
+  it("ingestUrl emits skipped with 'knowledge index not configured' when runtimeFactory is omitted", async () => {
+    const events: ServerEvent[] = [];
+    const host = createEngineHost({
+      config: { uploadMaxBytes: 1000 } as any,
+      tools: [],
+      engineFactory: () => fakeEngine,
+      emit: (e) => events.push(e),
+      // runtimeFactory intentionally omitted
+    });
+    await host.ingestUrl("https://example.com");
+    expect(events.some((e) => e.type === "ingest-status" && e.phase === "skipped" && e.reason === "knowledge index not configured")).toBe(true);
+  });
+
+  it("ingestFile emits skipped with reason when indexDocument returns a skipped result", async () => {
+    const events: ServerEvent[] = [];
+    const knowledge = {
+      close: async () => {},
+      indexDocument: vi.fn(async (_doc: any, _onPhase: any) => ({
+        indexed: false,
+        chunks: 0,
+        skipped: "no extractable text",
+      })),
+      crawl: vi.fn(),
+      listSources: vi.fn(async () => []),
+      deleteSource: vi.fn(),
+    };
+    const host = createEngineHost({
+      config: { uploadMaxBytes: 1000 } as any,
+      tools: [],
+      engineFactory: () => fakeEngine,
+      emit: (e) => events.push(e),
+      runtimeFactory: () => ({ knowledge }) as any,
+    });
+    await host.ingestFile("notes.txt", Buffer.from("hello"));
+    expect(events.some((e) => e.type === "ingest-status" && e.phase === "skipped" && e.reason === "no extractable text")).toBe(true);
   });
 });
 
