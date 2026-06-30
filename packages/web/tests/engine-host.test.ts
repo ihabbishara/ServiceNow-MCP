@@ -97,6 +97,87 @@ describe("engine-host snapshot", () => {
   });
 });
 
+// Minimal fake ChatEngine for ingest tests (no FakeEngine class dependency needed)
+const fakeEngine = {
+  start: async () => {},
+  stop: async () => {},
+  abort: async () => {},
+  send: async () => {},
+  getAuthStatus: async () => ({ isAuthenticated: true }),
+} as any;
+
+describe("EngineHost ingest", () => {
+  it("ingestFile extracts then indexes, emitting status", async () => {
+    const events: ServerEvent[] = [];
+    const knowledge = {
+      close: async () => {},
+      indexDocument: vi.fn(async (_doc: any, onPhase: (p: any) => void) => {
+        onPhase({ phase: "embedding", done: 0, total: 1 });
+        return { indexed: true, chunks: 1 };
+      }),
+      crawl: vi.fn(),
+      listSources: vi.fn(async () => []),
+      deleteSource: vi.fn(),
+    };
+    const host = createEngineHost({
+      config: { uploadMaxBytes: 1000 } as any,
+      tools: [],
+      engineFactory: () => fakeEngine,
+      emit: (e) => events.push(e),
+      runtimeFactory: () => ({ knowledge }) as any,
+    });
+    await host.ingestFile("notes.txt", Buffer.from("hello"));
+    expect(knowledge.indexDocument).toHaveBeenCalledWith(
+      expect.objectContaining({ key: "upload://notes.txt", title: "notes.txt", text: "hello" }),
+      expect.any(Function)
+    );
+    expect(events.map((e) => e.type)).toContain("ingest-status");
+    expect(events.some((e) => e.type === "ingest-status" && e.phase === "indexed" && e.chunks === 1)).toBe(true);
+  });
+
+  it("ingestFile emits skipped for an unsupported format", async () => {
+    const events: ServerEvent[] = [];
+    const knowledge = {
+      close: async () => {},
+      indexDocument: vi.fn(),
+      crawl: vi.fn(),
+      listSources: vi.fn(),
+      deleteSource: vi.fn(),
+    };
+    const host = createEngineHost({
+      config: { uploadMaxBytes: 1000 } as any,
+      tools: [],
+      engineFactory: () => fakeEngine,
+      emit: (e) => events.push(e),
+      runtimeFactory: () => ({ knowledge }) as any,
+    });
+    await host.ingestFile("deck.ppt", Buffer.from("x"));
+    expect(knowledge.indexDocument).not.toHaveBeenCalled();
+    expect(events.some((e) => e.type === "ingest-status" && e.phase === "skipped")).toBe(true);
+  });
+
+  it("ingestUrl crawls the single seed and emits indexed", async () => {
+    const events: ServerEvent[] = [];
+    const knowledge = {
+      close: async () => {},
+      indexDocument: vi.fn(),
+      crawl: vi.fn(async () => ({ pagesCrawled: 1, pagesIndexed: 1, pagesSkipped: 0, chunksAdded: 4, dropped: 0 })),
+      listSources: vi.fn(),
+      deleteSource: vi.fn(),
+    };
+    const host = createEngineHost({
+      config: { uploadMaxBytes: 1000 } as any,
+      tools: [],
+      engineFactory: () => fakeEngine,
+      emit: (e) => events.push(e),
+      runtimeFactory: () => ({ knowledge }) as any,
+    });
+    await host.ingestUrl("https://h/p");
+    expect(knowledge.crawl).toHaveBeenCalledWith({ seeds: ["https://h/p"] });
+    expect(events.some((e) => e.type === "ingest-status" && e.phase === "indexed" && e.chunks === 4)).toBe(true);
+  });
+});
+
 describe("engine-host config-status", () => {
   const fullConfig = {
     llm: { mode: "seat", model: "gpt-5" },

@@ -11,6 +11,8 @@ import {
   type AgentConfig,
   type EngineDeps,
 } from "@sre/sre-agent";
+import { extractText, formatOf, defaultParsers } from "@sre/core";
+import type { SourceRow, IngestDoc, IngestPhase, IngestResult } from "@sre/core";
 import type { Tool } from "@github/copilot-sdk";
 import { SseHub } from "./sse.js";
 import { readEnvFile, writeEnvFile } from "./dotenv-file.js";
@@ -36,7 +38,15 @@ export interface EngineHostOptions {
   idFactory?: () => string;
   hub?: SseHub;
   /** Seam: builds the ONNX/knowledge runtime; tests inject a lightweight fake. */
-  runtimeFactory?: () => { knowledge: { close(): Promise<unknown> } };
+  runtimeFactory?: () => {
+    knowledge: {
+      close(): Promise<unknown>;
+      indexDocument(doc: IngestDoc, onPhase?: (p: IngestPhase) => void): Promise<IngestResult>;
+      crawl(overrides: { seeds?: string[] }, log?: (m: string) => void): Promise<{ chunksAdded: number }>;
+      listSources(): Promise<SourceRow[]>;
+      deleteSource(key: string): Promise<void>;
+    };
+  };
   /** Seam: defaults to copilotLogin; tests inject a mock. */
   loginFn?: typeof copilotLogin;
   /** Seam: defaults to loadAgentConfig; tests inject a mock. */
@@ -59,6 +69,11 @@ export interface EngineHost {
   readEnv(): Promise<Record<string, string>>;
   applyEnv(vars: Record<string, string>): Promise<{ ok: true } | { ok: false; issues: string }>;
   snapshot(): ServerEvent[];
+  ingestFile(name: string, bytes: Buffer): Promise<void>;
+  ingestUrl(url: string): Promise<void>;
+  listSources(): Promise<SourceRow[]>;
+  deleteSource(url: string): Promise<void>;
+  uploadMaxBytes: number;
 }
 
 export const createEngineHost = (opts: EngineHostOptions): EngineHost => {
@@ -195,6 +210,49 @@ export const createEngineHost = (opts: EngineHostOptions): EngineHost => {
     },
     async abort() {
       await engine.abort();
+    },
+    uploadMaxBytes: config.uploadMaxBytes,
+    async ingestFile(name, bytes) {
+      const source = `upload://${name}`;
+      if (!runtime) {
+        emit({ type: "ingest-status", source, phase: "skipped", reason: "knowledge index not configured" });
+        return;
+      }
+      if (!formatOf(name)) {
+        emit({ type: "ingest-status", source, phase: "skipped", reason: `unsupported format` });
+        return;
+      }
+      emit({ type: "ingest-status", source, phase: "parsing" });
+      const ex = await extractText(name, bytes, defaultParsers);
+      if ("skipped" in ex) {
+        emit({ type: "ingest-status", source, phase: "skipped", reason: ex.skipped });
+        return;
+      }
+      const res = await runtime.knowledge.indexDocument(
+        { key: source, title: name, text: ex.text },
+        (p) => {
+          if (p.phase === "embedding") {
+            emit({ type: "ingest-status", source, phase: "embedding", detail: `${p.done}/${p.total}` });
+          }
+        }
+      );
+      if (res.skipped) emit({ type: "ingest-status", source, phase: "skipped", reason: res.skipped });
+      else emit({ type: "ingest-status", source, phase: "indexed", chunks: res.chunks });
+    },
+    async ingestUrl(url) {
+      if (!runtime) {
+        emit({ type: "ingest-status", source: url, phase: "skipped", reason: "knowledge index not configured" });
+        return;
+      }
+      emit({ type: "ingest-status", source: url, phase: "crawling" });
+      const res = await runtime.knowledge.crawl({ seeds: [url] });
+      emit({ type: "ingest-status", source: url, phase: "indexed", chunks: res.chunksAdded });
+    },
+    async listSources() {
+      return runtime ? runtime.knowledge.listSources() : [];
+    },
+    async deleteSource(url) {
+      await runtime?.knowledge.deleteSource(url);
     },
     authStatus,
     async login() {
