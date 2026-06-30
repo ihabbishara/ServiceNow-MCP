@@ -32,9 +32,14 @@ export class LocalEmbedder implements Embedder {
 
   ready(): Promise<void> {
     return (this.readyPromise ??= (async () => {
-      this.pipe = (await pipeline("feature-extraction", this.model)) as unknown as EmbedPipe;
-      const probe = await this.pipe("x", { pooling: "mean", normalize: true });
-      this.dim = probe.data.length;
+      try {
+        this.pipe = (await pipeline("feature-extraction", this.model)) as unknown as EmbedPipe;
+        const probe = await this.pipe("x", { pooling: "mean", normalize: true });
+        this.dim = probe.data.length;
+      } catch (e) {
+        this.readyPromise = undefined; // clear the memo so a later call can retry
+        throw e;
+      }
     })());
   }
 

@@ -70,6 +70,16 @@ describe("LocalEmbedder", () => {
     await Promise.all([e.ready(), e.ready(), e.ready()]);
     expect(pipeline).toHaveBeenCalledTimes(1);
   });
+
+  it("ready() clears its memo on failure so a later call can retry", async () => {
+    pipeline.mockRejectedValueOnce(new Error("model load failed"));
+    const e = new LocalEmbedder("m");
+    await expect(e.ready()).rejects.toThrow("model load failed");
+    // second attempt must rebuild, not replay the cached rejection
+    await e.ready();
+    expect(pipeline).toHaveBeenCalledTimes(2);
+    expect(e.dim).toBe(3);
+  });
 });
 
 describe("LocalEmbedder serialization", () => {
