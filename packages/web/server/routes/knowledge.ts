@@ -45,6 +45,7 @@ export const handleListSources = async (_req: IncomingMessage, res: ServerRespon
 
 export const handleDeleteSource = async (req: IncomingMessage, res: ServerResponse, host: EngineHost) => {
   const { url } = await readJson<{ url: string }>(req);
+  if (!url || typeof url !== "string") return sendJson(res, 400, { error: "missing url" });
   await host.deleteSource(url);
   sendJson(res, 200, { ok: true });
 };

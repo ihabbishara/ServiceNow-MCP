@@ -29,7 +29,7 @@ export function Sources({ state }: { state: ChatState }) {
     for (const f of Array.from(files)) {
       const v = validateFile(f, maxBytes);
       if (!v.ok) { errs.push(`${f.name}: ${v.reason}`); continue; }
-      await uploadDocument(f); // sequential: one shared embedder
+      await uploadDocument(f); // uploads are accepted (202) then ingested in the background; the shared ONNX embedder serializes embed calls at the model layer.
     }
     setLocalErrors(errs);
   };

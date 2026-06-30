@@ -174,8 +174,74 @@ describe("EngineHost ingest", () => {
       runtimeFactory: () => ({ knowledge }) as any,
     });
     await host.ingestUrl("https://h/p");
-    expect(knowledge.crawl).toHaveBeenCalledWith({ seeds: ["https://h/p"] });
+    expect(knowledge.crawl).toHaveBeenCalledWith(expect.objectContaining({ seeds: ["https://h/p"], allowDomains: ["h"] }));
     expect(events.some((e) => e.type === "ingest-status" && e.phase === "indexed" && e.chunks === 4)).toBe(true);
+  });
+
+  it("ingestUrl emits skipped when crawl returns pagesCrawled:0", async () => {
+    const events: ServerEvent[] = [];
+    const knowledge = {
+      close: async () => {},
+      indexDocument: vi.fn(),
+      crawl: vi.fn(async () => ({ pagesCrawled: 0, pagesIndexed: 0, pagesSkipped: 1, chunksAdded: 0, dropped: 0 })),
+      listSources: vi.fn(),
+      deleteSource: vi.fn(),
+    };
+    const host = createEngineHost({
+      config: { uploadMaxBytes: 1000 } as any,
+      tools: [],
+      engineFactory: () => fakeEngine,
+      emit: (e) => events.push(e),
+      runtimeFactory: () => ({ knowledge }) as any,
+    });
+    await host.ingestUrl("https://example.com/page");
+    const skipped = events.find((e) => e.type === "ingest-status" && e.phase === "skipped");
+    expect(skipped).toBeTruthy();
+    expect((skipped as any).reason).toMatch(/nothing indexed/);
+  });
+
+  it("ingestUrl emits skipped when crawl throws", async () => {
+    const events: ServerEvent[] = [];
+    const knowledge = {
+      close: async () => {},
+      indexDocument: vi.fn(),
+      crawl: vi.fn(async () => { throw new Error("network failure"); }),
+      listSources: vi.fn(),
+      deleteSource: vi.fn(),
+    };
+    const host = createEngineHost({
+      config: { uploadMaxBytes: 1000 } as any,
+      tools: [],
+      engineFactory: () => fakeEngine,
+      emit: (e) => events.push(e),
+      runtimeFactory: () => ({ knowledge }) as any,
+    });
+    await host.ingestUrl("https://example.com/page");
+    const skipped = events.find((e) => e.type === "ingest-status" && e.phase === "skipped");
+    expect(skipped).toBeTruthy();
+    expect((skipped as any).reason).toBe("network failure");
+  });
+
+  it("ingestFile emits skipped when indexDocument throws", async () => {
+    const events: ServerEvent[] = [];
+    const knowledge = {
+      close: async () => {},
+      indexDocument: vi.fn(async () => { throw new Error("embed store error"); }),
+      crawl: vi.fn(),
+      listSources: vi.fn(async () => []),
+      deleteSource: vi.fn(),
+    };
+    const host = createEngineHost({
+      config: { uploadMaxBytes: 1000 } as any,
+      tools: [],
+      engineFactory: () => fakeEngine,
+      emit: (e) => events.push(e),
+      runtimeFactory: () => ({ knowledge }) as any,
+    });
+    await host.ingestFile("notes.txt", Buffer.from("hello"));
+    const skipped = events.find((e) => e.type === "ingest-status" && e.phase === "skipped");
+    expect(skipped).toBeTruthy();
+    expect((skipped as any).reason).toBe("embed store error");
   });
 
   it("ingestFile emits skipped with 'knowledge index not configured' when runtimeFactory is omitted", async () => {

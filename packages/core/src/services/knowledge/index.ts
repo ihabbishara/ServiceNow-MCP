@@ -13,6 +13,7 @@ import { indexDocument as runIndexDocument, type IngestDoc, type IngestPhase, ty
 
 export interface CrawlOverrides {
   seeds?: string[];
+  allowDomains?: string[];
   maxPages?: number;
   maxDepth?: number;
 }
@@ -41,7 +42,7 @@ export class KnowledgeService {
   async crawl(overrides: CrawlOverrides = {}, log: (m: string) => void = () => {}): Promise<CrawlResult> {
     const bounds: CrawlBounds = {
       seeds: overrides.seeds ?? this.cfg.seeds,
-      allowDomains: this.cfg.allowDomains,
+      allowDomains: overrides.allowDomains ?? this.cfg.allowDomains,
       maxPages: overrides.maxPages ?? this.cfg.maxPages,
       maxDepth: overrides.maxDepth ?? this.cfg.maxDepth,
       concurrency: this.cfg.concurrency,

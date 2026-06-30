@@ -141,6 +141,14 @@ describe("knowledge routes", () => {
     expect(host.deleteSource).toHaveBeenCalledWith("upload://a");
   });
 
+  it("delete with missing url returns 400 and does not call deleteSource", async () => {
+    const host = hostOf();
+    const res = resOf();
+    await handleDeleteSource(reqOf({}, Buffer.from(JSON.stringify({}))), res, host);
+    expect(res.statusCode).toBe(400);
+    expect(host.deleteSource).not.toHaveBeenCalled();
+  });
+
   it("upload rejects missing X-Filename with 400", async () => {
     const host = hostOf();
     const res = resOf();
