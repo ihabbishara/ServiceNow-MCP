@@ -1,0 +1,4 @@
+action,ref,type,title,description,board,area_path,iteration_path,tags,assigned_to,priority,story_points,parent_id,parent_ref,source_id,include_children,link_to_source
+create,S1,User Story,Add SSO login,Users can sign in via corporate SSO,Team Alpha,,,auth;security,,2,5,,,,,
+create,,Task,Wire up OIDC client,Configure the OIDC redirect + token exchange,Team Alpha,,,auth,,2,,,S1,,,
+clone,,,,,Team Beta,,,,,,,,,1234,true,true
