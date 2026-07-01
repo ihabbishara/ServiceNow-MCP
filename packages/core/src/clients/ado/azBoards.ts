@@ -99,7 +99,7 @@ export class AzBoardsClient implements AzureDevOpsClient {
 
   async listChildren(parentId: number): Promise<number[]> {
     if (!Number.isInteger(parentId)) throw new Error("parent id must be an integer");
-    const wiql = `SELECT [System.Id] FROM workitems WHERE [System.Parent] = ${parentId} ORDER BY [System.Id]`;
+    const wiql = `SELECT [System.Id] FROM WorkItems WHERE [System.Parent] = ${parentId} ORDER BY [System.Id]`;
     const rows = await this.runner.json<Array<{ id: number }>>([
       "boards", "query", "--wiql", wiql, "--org", this.cfg.orgUrl, "--project", this.cfg.project
     ]);
@@ -107,6 +107,7 @@ export class AzBoardsClient implements AzureDevOpsClient {
   }
 
   async addRelation(fromId: number, toId: number, relType: "parent" | "related"): Promise<void> {
+    if (!Number.isInteger(fromId) || !Number.isInteger(toId)) throw new Error("work item ids must be integers");
     await this.runner.json([
       "boards", "work-item", "relation", "add",
       "--id", String(fromId), "--relation-type", relType, "--target-id", String(toId), "--org", this.cfg.orgUrl

@@ -149,7 +149,8 @@ describe("AzBoardsClient", () => {
   it("listChildren queries by parent and returns ids", async () => {
     const runner = makeRunner(() => [{ id: 11 }, { id: 12 }]);
     const ids = await new AzBoardsClient(cfg as any, runner as any).listChildren(9);
-    const wiql = (runner.json as any).mock.calls[0][0][3] as string;
+    const callArgs = (runner.json as any).mock.calls[0][0] as string[];
+    const wiql = callArgs[callArgs.indexOf("--wiql") + 1];
     expect(wiql).toContain("[System.Parent] = 9");
     expect(ids).toEqual([11, 12]);
   });
@@ -161,5 +162,11 @@ describe("AzBoardsClient", () => {
     expect(args).toEqual([
       "boards", "work-item", "relation", "add", "--id", "3", "--relation-type", "parent", "--target-id", "2", "--org", cfg.orgUrl
     ]);
+  });
+
+  it("addRelation rejects a non-integer id without calling az", async () => {
+    const runner = makeRunner(() => ({}));
+    await expect(new AzBoardsClient(cfg as any, runner as any).addRelation(1.5, 2, "parent")).rejects.toThrow(/integer/);
+    expect((runner.json as any).mock.calls).toHaveLength(0);
   });
 });

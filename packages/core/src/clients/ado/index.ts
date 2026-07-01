@@ -175,6 +175,7 @@ export class AdoPatClient implements AzureDevOpsClient {
   }
 
   async addRelation(fromId: number, toId: number, relType: "parent" | "related"): Promise<void> {
+    if (!Number.isInteger(fromId) || !Number.isInteger(toId)) throw new Error("work item ids must be integers");
     if (!this.cfg.enabled) throw new Error("ADO integration is disabled");
     this.assertConfigured();
     const rel = relType === "parent" ? "System.LinkTypes.Hierarchy-Reverse" : "System.LinkTypes.Related";

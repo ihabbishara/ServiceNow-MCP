@@ -232,4 +232,9 @@ describe("AdoPatClient", () => {
     const ops = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
     expect(ops[0].value.rel).toBe("System.LinkTypes.Related");
   });
+
+  it("addRelation rejects a non-integer id without fetching", async () => {
+    await expect(new AdoPatClient(cfg).addRelation(1.5, 2, "parent")).rejects.toThrow(/integer/);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });
