@@ -37,8 +37,8 @@ export const readCsvFile = async (dir: string, filename: string, maxBytes: numbe
   // macOS, or /tmp) does not cause a false-positive containment failure below.
   const base = await fs.realpath(resolve(dir));
 
-  // Layer 2 — the lexically resolved path must stay inside `base`. Independent of
-  // Layer 1: an absolute filename would resolve outside `base` and be rejected here.
+  // Layer 2 — belt-and-suspenders lexical containment check, independent of Layer 1's
+  // filename filter. Kept so a future weakening of Layer 1 still cannot escape `base`.
   const full = resolve(base, filename);
   if (!full.startsWith(`${base}${sep}`)) throw new Error("path escapes the CSV directory");
 

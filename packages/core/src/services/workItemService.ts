@@ -99,6 +99,15 @@ export class WorkItemService {
 
     const base = this.payloadFromFields(fields, areaPath, iterationPath, input.titlePrefix ?? "");
     const o = input.overrides ?? {};
+
+    // If an override description is provided, drop the carried raw description field
+    // so it does not clobber the override — buildCreateOps / az emit `fields` last.
+    if (o.description !== undefined && base.fields) {
+      delete base.fields["System.Description"];
+      delete base.fields["Microsoft.VSTS.TCM.ReproSteps"];
+      if (Object.keys(base.fields).length === 0) base.fields = undefined;
+    }
+
     const payload: CreateWorkItemPayload = {
       ...base,
       ...(o.type !== undefined ? { type: o.type } : {}),

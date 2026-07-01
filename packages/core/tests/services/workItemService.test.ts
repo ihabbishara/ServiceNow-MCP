@@ -140,4 +140,13 @@ describe("WorkItemService.clone", () => {
     expect(res.childrenCopied).toBe(1);
     expect(client.addRelation).toHaveBeenCalledWith(901, 900, "parent");
   });
+
+  it("lets an override description win over the carried source description", async () => {
+    const client = makeClient({ getWorkItemFields: vi.fn(async () => sourceFields) });
+    const svc = new WorkItemService(client as any, cfg);
+    await svc.clone({ sourceId: 1, board: "Team Alpha", overrides: { description: "NEW BODY" } });
+    const payload = (client.createWorkItem as any).mock.calls[0][0];
+    expect(payload.description).toBe("NEW BODY");
+    expect(payload.fields?.["System.Description"]).toBeUndefined();
+  });
 });
