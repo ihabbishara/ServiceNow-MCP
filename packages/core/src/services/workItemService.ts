@@ -29,7 +29,9 @@ export interface CloneWorkItemInput {
   includeChildren?: boolean;
   linkToSource?: boolean;
   titlePrefix?: string;
-  overrides?: Partial<CreateWorkItemInput>;
+  // Board/area targeting and parent linking are controlled by the top-level
+  // clone input, not overrides — narrow them out to avoid a no-op API surface.
+  overrides?: Omit<Partial<CreateWorkItemInput>, "parentId" | "board" | "areaPath">;
 }
 
 export interface CloneResult {
@@ -67,7 +69,7 @@ export class WorkItemService {
   ): CreateWorkItemPayload {
     const type = String(fields["System.WorkItemType"] ?? "Task");
     const rawFields: Record<string, string> = {};
-    const desc = fields["System.Description"] ?? fields["Microsoft.VSTS.TCM.ReproSteps"];
+    const desc = fields["System.Description"] || fields["Microsoft.VSTS.TCM.ReproSteps"];
     if (typeof desc === "string" && desc) {
       rawFields[type === "Bug" ? "Microsoft.VSTS.TCM.ReproSteps" : "System.Description"] = desc;
     }
@@ -115,6 +117,8 @@ export class WorkItemService {
       const children = await this.client.listChildren(input.sourceId);
       for (const childId of children) {
         const cf = await this.client.getWorkItemFields(childId);
+        // A child whose fields can't be read (deleted or no permission) is skipped;
+        // childrenCopied reflects only children successfully copied.
         if (!cf) continue;
         const childPayload = this.payloadFromFields(cf, areaPath, iterationPath);
         const created = await this.client.createWorkItem(childPayload);

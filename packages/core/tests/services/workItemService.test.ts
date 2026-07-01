@@ -126,4 +126,18 @@ describe("WorkItemService.clone", () => {
     const svc = new WorkItemService(client as any, cfg);
     await expect(svc.clone({ sourceId: 999 })).rejects.toThrow(/999.*not found/);
   });
+
+  it("skips a child whose fields cannot be read and counts only copied ones", async () => {
+    const client = makeClient({
+      getWorkItemFields: vi.fn(async (id: number) =>
+        id === 1 ? sourceFields : id === 55 ? { "System.Title": "ok", "System.WorkItemType": "Task" } : null
+      ),
+      listChildren: vi.fn(async () => [55, 66]),
+      createWorkItem: vi.fn(async (p: any) => ({ id: p.type === "Task" ? 901 : 900, title: p.title, state: "New" }))
+    });
+    const svc = new WorkItemService(client as any, cfg);
+    const res = await svc.clone({ sourceId: 1, board: "Team Alpha", includeChildren: true });
+    expect(res.childrenCopied).toBe(1);
+    expect(client.addRelation).toHaveBeenCalledWith(901, 900, "parent");
+  });
 });
