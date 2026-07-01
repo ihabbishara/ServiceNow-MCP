@@ -31,7 +31,7 @@ export interface CloneWorkItemInput {
   titlePrefix?: string;
   // Board/area targeting and parent linking are controlled by the top-level
   // clone input, not overrides — narrow them out to avoid a no-op API surface.
-  overrides?: Omit<Partial<CreateWorkItemInput>, "parentId" | "board" | "areaPath">;
+  overrides?: Omit<Partial<CreateWorkItemInput>, "parentId" | "board" | "areaPath" | "iterationPath">;
 }
 
 export interface CloneResult {
@@ -46,6 +46,11 @@ export class WorkItemService {
     private readonly client: AzureDevOpsClient,
     private readonly cfg: WorkItemServiceConfig
   ) {}
+
+  /** True when a board name resolves to a mapped area path (else the caller fell back to the default). */
+  isBoardKnown(board: string): boolean {
+    return Boolean(this.cfg.boardMap[board]);
+  }
 
   resolveAreaPath(board?: string, areaPath?: string): string | undefined {
     if (areaPath) return areaPath;

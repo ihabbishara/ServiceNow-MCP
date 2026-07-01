@@ -150,3 +150,11 @@ describe("WorkItemService.clone", () => {
     expect(payload.fields?.["System.Description"]).toBeUndefined();
   });
 });
+
+describe("WorkItemService.isBoardKnown", () => {
+  it("is true for a mapped board and false otherwise", () => {
+    const svc = new WorkItemService(makeClient() as any, cfg);
+    expect(svc.isBoardKnown("Team Alpha")).toBe(true);
+    expect(svc.isBoardKnown("Nope")).toBe(false);
+  });
+});
