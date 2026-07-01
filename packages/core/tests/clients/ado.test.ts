@@ -195,4 +195,41 @@ describe("AdoPatClient", () => {
     expect(ops).toContainEqual({ op: "add", path: "/fields/Microsoft.VSTS.TCM.ReproSteps", value: "x<br>y" });
     expect(ops.some((o: { path: string }) => o.path === "/fields/System.Description")).toBe(false);
   });
+
+  it("getWorkItemFields returns the raw fields map", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ id: 5, fields: { "System.Title": "S", "System.WorkItemType": "User Story" } }));
+    const f = await new AdoPatClient(cfg).getWorkItemFields(5);
+    const url = fetchMock.mock.calls[0][0] as string;
+    expect(url).toBe("https://dev.azure.com/acme/Platform/_apis/wit/workitems/5?$expand=fields&api-version=7.1");
+    expect(f).toEqual({ "System.Title": "S", "System.WorkItemType": "User Story" });
+  });
+
+  it("listChildren queries WIQL by parent and returns ids", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ workItems: [{ id: 11 }, { id: 12 }] }));
+    const ids = await new AdoPatClient(cfg).listChildren(9);
+    const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
+    expect(body.query).toBe("SELECT [System.Id] FROM WorkItems WHERE [System.Parent] = 9 ORDER BY [System.Id]");
+    expect(ids).toEqual([11, 12]);
+  });
+
+  it("addRelation patches a Hierarchy-Reverse link for a parent", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ id: 3 }));
+    await new AdoPatClient(cfg).addRelation(3, 2, "parent");
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://dev.azure.com/acme/Platform/_apis/wit/workitems/3?api-version=7.1");
+    expect(init.method).toBe("PATCH");
+    const ops = JSON.parse(init.body as string);
+    expect(ops[0]).toEqual({
+      op: "add",
+      path: "/relations/-",
+      value: { rel: "System.LinkTypes.Hierarchy-Reverse", url: "https://dev.azure.com/acme/_apis/wit/workitems/2" }
+    });
+  });
+
+  it("addRelation uses System.LinkTypes.Related for a related link", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ id: 3 }));
+    await new AdoPatClient(cfg).addRelation(3, 8, "related");
+    const ops = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
+    expect(ops[0].value.rel).toBe("System.LinkTypes.Related");
+  });
 });

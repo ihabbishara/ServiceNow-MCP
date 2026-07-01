@@ -38,4 +38,7 @@ export interface AzureDevOpsClient {
   getWorkItem(id: number): Promise<WorkItem | null>;
   createBug(p: CreateBugPayload): Promise<{ id: number; title: string }>;
   createWorkItem(p: CreateWorkItemPayload): Promise<WorkItem>;
+  getWorkItemFields(id: number): Promise<Record<string, unknown> | null>;
+  listChildren(parentId: number): Promise<number[]>;
+  addRelation(fromId: number, toId: number, relType: "parent" | "related"): Promise<void>;
 }

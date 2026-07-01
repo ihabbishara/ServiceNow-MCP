@@ -147,6 +147,50 @@ export class AdoPatClient implements AzureDevOpsClient {
     return mapAzWorkItem(created);
   }
 
+  async getWorkItemFields(id: number): Promise<Record<string, unknown> | null> {
+    if (!this.cfg.enabled) return null;
+    this.assertConfigured();
+    if (!Number.isInteger(id)) throw new Error("work item id must be an integer");
+    const row = await this.requestJson<AzWorkItemRaw>(
+      this.apiUrl(`wit/workitems/${id}?$expand=fields&api-version=7.1`),
+      { headers: { Accept: "application/json", Authorization: this.authHeader } }
+    );
+    return row?.fields ?? null;
+  }
+
+  async listChildren(parentId: number): Promise<number[]> {
+    if (!this.cfg.enabled) return [];
+    this.assertConfigured();
+    if (!Number.isInteger(parentId)) throw new Error("parent id must be an integer");
+    const query = `SELECT [System.Id] FROM WorkItems WHERE [System.Parent] = ${parentId} ORDER BY [System.Id]`;
+    const wiql = await this.requestJson<{ workItems?: Array<{ id: number }> }>(
+      this.apiUrl("wit/wiql?api-version=7.1"),
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json", Authorization: this.authHeader },
+        body: JSON.stringify({ query })
+      }
+    );
+    return (wiql.workItems ?? []).map((w) => w.id);
+  }
+
+  async addRelation(fromId: number, toId: number, relType: "parent" | "related"): Promise<void> {
+    if (!this.cfg.enabled) throw new Error("ADO integration is disabled");
+    this.assertConfigured();
+    const rel = relType === "parent" ? "System.LinkTypes.Hierarchy-Reverse" : "System.LinkTypes.Related";
+    const targetUrl = `${this.cfg.orgUrl}/_apis/wit/workitems/${toId}`;
+    const ops = [{ op: "add", path: "/relations/-", value: { rel, url: targetUrl } }];
+    await this.requestJson<AzWorkItemRaw>(this.apiUrl(`wit/workitems/${fromId}?api-version=7.1`), {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json-patch+json",
+        Accept: "application/json",
+        Authorization: this.authHeader
+      },
+      body: JSON.stringify(ops)
+    });
+  }
+
   async createBug(p: CreateBugPayload): Promise<{ id: number; title: string }> {
     const wi = await this.createWorkItem({
       type: "Bug",

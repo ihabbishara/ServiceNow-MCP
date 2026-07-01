@@ -89,6 +89,30 @@ export class AzBoardsClient implements AzureDevOpsClient {
     return mapAzWorkItem(row);
   }
 
+  async getWorkItemFields(id: number): Promise<Record<string, unknown> | null> {
+    if (!Number.isInteger(id)) throw new Error("work item id must be an integer");
+    const row = await this.runner.json<AzWorkItemRaw | null>([
+      "boards", "work-item", "show", "--id", String(id), "--expand", "fields", "--org", this.cfg.orgUrl
+    ]);
+    return row?.fields ?? null;
+  }
+
+  async listChildren(parentId: number): Promise<number[]> {
+    if (!Number.isInteger(parentId)) throw new Error("parent id must be an integer");
+    const wiql = `SELECT [System.Id] FROM workitems WHERE [System.Parent] = ${parentId} ORDER BY [System.Id]`;
+    const rows = await this.runner.json<Array<{ id: number }>>([
+      "boards", "query", "--wiql", wiql, "--org", this.cfg.orgUrl, "--project", this.cfg.project
+    ]);
+    return (rows ?? []).map((r) => r.id);
+  }
+
+  async addRelation(fromId: number, toId: number, relType: "parent" | "related"): Promise<void> {
+    await this.runner.json([
+      "boards", "work-item", "relation", "add",
+      "--id", String(fromId), "--relation-type", relType, "--target-id", String(toId), "--org", this.cfg.orgUrl
+    ]);
+  }
+
   async createBug(p: CreateBugPayload): Promise<{ id: number; title: string }> {
     if (!this.cfg.createBugEnabled) throw new Error("ADO bug creation is disabled");
     const wi = await this.createWorkItem({

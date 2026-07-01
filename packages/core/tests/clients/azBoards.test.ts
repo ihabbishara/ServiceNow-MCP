@@ -137,4 +137,29 @@ describe("AzBoardsClient", () => {
     expect(wi.id).toBe(7);
     expect(wi.workItemType).toBe("User Story");
   });
+
+  it("getWorkItemFields shows the item and returns its fields", async () => {
+    const runner = makeRunner(() => ({ id: 5, fields: { "System.Title": "S", "System.WorkItemType": "User Story" } }));
+    const f = await new AzBoardsClient(cfg as any, runner as any).getWorkItemFields(5);
+    const args = (runner.json as any).mock.calls[0][0] as string[];
+    expect(args).toEqual(["boards", "work-item", "show", "--id", "5", "--expand", "fields", "--org", cfg.orgUrl]);
+    expect(f).toEqual({ "System.Title": "S", "System.WorkItemType": "User Story" });
+  });
+
+  it("listChildren queries by parent and returns ids", async () => {
+    const runner = makeRunner(() => [{ id: 11 }, { id: 12 }]);
+    const ids = await new AzBoardsClient(cfg as any, runner as any).listChildren(9);
+    const wiql = (runner.json as any).mock.calls[0][0][3] as string;
+    expect(wiql).toContain("[System.Parent] = 9");
+    expect(ids).toEqual([11, 12]);
+  });
+
+  it("addRelation shells relation add with the relation type", async () => {
+    const runner = makeRunner(() => ({}));
+    await new AzBoardsClient(cfg as any, runner as any).addRelation(3, 2, "parent");
+    const args = (runner.json as any).mock.calls[0][0] as string[];
+    expect(args).toEqual([
+      "boards", "work-item", "relation", "add", "--id", "3", "--relation-type", "parent", "--target-id", "2", "--org", cfg.orgUrl
+    ]);
+  });
 });
