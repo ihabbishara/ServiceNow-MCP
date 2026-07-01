@@ -143,3 +143,32 @@ describe("sharePoint config", () => {
     });
   });
 });
+
+describe("loadConfig ADO_BOARD_MAP", () => {
+  it("parses a JSON board map", () => {
+    const c = loadConfig({ ...base, ADO_BOARD_MAP: '{"Team Alpha":"Platform\\\\Alpha"}' });
+    expect(c.azureDevOps.boardMap).toEqual({ "Team Alpha": "Platform\\Alpha" });
+  });
+
+  it("defaults to an empty map when unset", () => {
+    const c = loadConfig({ ...base });
+    expect(c.azureDevOps.boardMap).toEqual({});
+  });
+
+  it("ignores invalid JSON without throwing", () => {
+    const c = loadConfig({ ...base, ADO_BOARD_MAP: "{not json" });
+    expect(c.azureDevOps.boardMap).toEqual({});
+  });
+});
+
+describe("loadConfig ADO_CSV_DIR", () => {
+  it("passes through csvDir and defaults csvMaxBytes", () => {
+    const c = loadConfig({ ...base, ADO_CSV_DIR: "/data/csvs" });
+    expect(c.azureDevOps.csvDir).toBe("/data/csvs");
+    expect(c.azureDevOps.csvMaxBytes).toBe(5242880);
+  });
+  it("leaves csvDir undefined when unset", () => {
+    const c = loadConfig({ ...base });
+    expect(c.azureDevOps.csvDir).toBeUndefined();
+  });
+});

@@ -30,6 +30,9 @@ const envSchema = z.object({
   ADO_AREA_PATH: z.string().optional().transform((v) => v || undefined),
   ADO_ITERATION_PATH: z.string().optional().transform((v) => v || undefined),
   ADO_ASSIGNED_TEAM: z.string().optional().transform((v) => v || undefined),
+  ADO_BOARD_MAP: z.string().optional(),
+  ADO_CSV_DIR: optional(z.string().min(1)),
+  ADO_CSV_MAX_BYTES: z.coerce.number().int().positive().default(5242880),
   ADO_CREATE_BUG_ENABLED: trueBoolString,
   STALE_P1_MIN: z.coerce.number().int().positive().default(30),
   STALE_P2_MIN: z.coerce.number().int().positive().default(120),
@@ -88,6 +91,9 @@ export interface AdoConfig {
   defaultIterationPath?: string;
   defaultAssignedTeam?: string;
   proxyUrl?: string; // HTTP proxy for Azure DevOps calls (ADO_PROXY)
+  boardMap?: Record<string, string>;
+  csvDir?: string;
+  csvMaxBytes: number;
 }
 
 export interface KnowledgeConfig {
@@ -148,6 +154,21 @@ const hostOf = (u: string): string | undefined => {
   } catch {
     return undefined;
   }
+};
+
+const parseBoardMap = (raw?: string): Record<string, string> => {
+  if (!raw) return {};
+  try {
+    const v = JSON.parse(raw);
+    if (v && typeof v === "object" && !Array.isArray(v)) {
+      return Object.fromEntries(
+        Object.entries(v as Record<string, unknown>).filter(([, val]) => typeof val === "string") as [string, string][]
+      );
+    }
+  } catch {
+    // ponytail: invalid board map JSON is ignored, not fatal — never block startup
+  }
+  return {};
 };
 
 export const loadConfig = (env: Record<string, string | undefined> = process.env): AppConfig => {
@@ -213,7 +234,10 @@ export const loadConfig = (env: Record<string, string | undefined> = process.env
       defaultAreaPath: e.ADO_AREA_PATH ?? e.ADO_PROJECT,
       defaultIterationPath: e.ADO_ITERATION_PATH ?? e.ADO_PROJECT,
       defaultAssignedTeam: e.ADO_ASSIGNED_TEAM,
-      proxyUrl: e.ADO_PROXY
+      proxyUrl: e.ADO_PROXY,
+      boardMap: parseBoardMap(e.ADO_BOARD_MAP),
+      csvDir: e.ADO_CSV_DIR,
+      csvMaxBytes: e.ADO_CSV_MAX_BYTES
     },
     sharePoint: {
       enabled: e.SHAREPOINT_ENABLED,

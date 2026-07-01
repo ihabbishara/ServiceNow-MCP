@@ -1,4 +1,4 @@
-import type { AzureDevOpsClient, WorkItemSearchFilters, CreateBugPayload } from "./types.js";
+import type { AzureDevOpsClient, WorkItemSearchFilters, CreateBugPayload, CreateWorkItemPayload } from "./types.js";
 import type { WorkItem } from "../../types.js";
 import { AzRunner } from "./az.js";
 import { mapAzWorkItem, AzWorkItemRaw } from "./map.js";
@@ -62,26 +62,69 @@ export class AzBoardsClient implements AzureDevOpsClient {
     return row ? mapAzWorkItem(row) : null;
   }
 
-  async createBug(p: CreateBugPayload): Promise<{ id: number; title: string }> {
-    if (!this.cfg.createBugEnabled) throw new Error("ADO bug creation is disabled");
+  async createWorkItem(p: CreateWorkItemPayload): Promise<WorkItem> {
     const area = p.areaPath ?? this.cfg.defaultAreaPath;
     const iter = p.iterationPath ?? this.cfg.defaultIterationPath;
-
     const fields: string[] = [];
+    if (p.description != null) {
+      const html = p.description.replace(/\n/g, "<br>");
+      fields.push(p.type === "Bug" ? `Microsoft.VSTS.TCM.ReproSteps=${html}` : `System.Description=${html}`);
+    }
     if (p.tags?.length) fields.push(`System.Tags=${p.tags.join("; ")}`);
     const prio = p.priority ? Number(p.priority) : NaN;
     if (Number.isInteger(prio) && prio >= 1 && prio <= 4) fields.push(`Microsoft.VSTS.Common.Priority=${prio}`);
-    fields.push(`Microsoft.VSTS.TCM.ReproSteps=${p.description.replace(/\n/g, "<br>")}`);
+    if (typeof p.storyPoints === "number") fields.push(`Microsoft.VSTS.Scheduling.StoryPoints=${p.storyPoints}`);
+    for (const [k, v] of Object.entries(p.fields ?? {})) fields.push(`${k}=${v}`);
 
     const args = [
-      "boards", "work-item", "create", "--type", "Bug", "--title", p.title,
+      "boards", "work-item", "create", "--type", p.type, "--title", p.title,
       "--org", this.cfg.orgUrl, "--project", this.cfg.project
     ];
     if (area) args.push("--area", area);
     if (iter) args.push("--iteration", iter);
+    if (p.assignedTo) args.push("--assigned-to", p.assignedTo);
     if (fields.length) args.push("--fields", ...fields);
 
     const row = await this.runner.json<AzWorkItemRaw>(args);
-    return { id: row.id, title: row.fields?.["System.Title"] ?? p.title };
+    return mapAzWorkItem(row);
+  }
+
+  async getWorkItemFields(id: number): Promise<Record<string, unknown> | null> {
+    if (!Number.isInteger(id)) throw new Error("work item id must be an integer");
+    const row = await this.runner.json<AzWorkItemRaw | null>([
+      "boards", "work-item", "show", "--id", String(id), "--expand", "fields", "--org", this.cfg.orgUrl
+    ]);
+    return row?.fields ?? null;
+  }
+
+  async listChildren(parentId: number): Promise<number[]> {
+    if (!Number.isInteger(parentId)) throw new Error("parent id must be an integer");
+    const wiql = `SELECT [System.Id] FROM WorkItems WHERE [System.Parent] = ${parentId} ORDER BY [System.Id]`;
+    const rows = await this.runner.json<Array<{ id: number }>>([
+      "boards", "query", "--wiql", wiql, "--org", this.cfg.orgUrl, "--project", this.cfg.project
+    ]);
+    return (rows ?? []).map((r) => r.id);
+  }
+
+  async addRelation(fromId: number, toId: number, relType: "parent" | "related"): Promise<void> {
+    if (!Number.isInteger(fromId) || !Number.isInteger(toId)) throw new Error("work item ids must be integers");
+    await this.runner.json([
+      "boards", "work-item", "relation", "add",
+      "--id", String(fromId), "--relation-type", relType, "--target-id", String(toId), "--org", this.cfg.orgUrl
+    ]);
+  }
+
+  async createBug(p: CreateBugPayload): Promise<{ id: number; title: string }> {
+    if (!this.cfg.createBugEnabled) throw new Error("ADO bug creation is disabled");
+    const wi = await this.createWorkItem({
+      type: "Bug",
+      title: p.title,
+      description: p.description,
+      areaPath: p.areaPath,
+      iterationPath: p.iterationPath,
+      tags: p.tags,
+      priority: p.priority
+    });
+    return { id: wi.id, title: wi.title || p.title };
   }
 }

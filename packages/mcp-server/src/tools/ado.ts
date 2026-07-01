@@ -139,4 +139,103 @@ export const registerAdoTools = (server: McpServer, runtime: McpRuntime): void =
       }
     }
   );
+
+  // create_work_item - Create any ADO work item type on a board/backlog
+  server.tool(
+    "create_work_item",
+    "Create an Azure DevOps work item (User Story, Task, Bug, Feature, Epic, Issue) on a board/backlog. Target the board via `board` (friendly name, resolved to an area path) or an explicit `area_path`. Optionally link under a parent work item.",
+    {
+      type: z.enum(["User Story", "Task", "Bug", "Feature", "Epic", "Issue"]).describe("Work item type"),
+      title: z.string().describe("Work item title"),
+      description: z.string().optional().describe("Body/description"),
+      board: z.string().optional().describe("Friendly board/team name, resolved to an area path via config"),
+      area_path: z.string().optional().describe("Explicit ADO area path (overrides board)"),
+      iteration_path: z.string().optional().describe("ADO iteration/sprint path"),
+      tags: z.array(z.string()).optional().describe("Tags"),
+      assigned_to: z.string().optional().describe("Assignee email/display name"),
+      priority: z.enum(["1", "2", "3", "4"]).optional().describe("Priority 1 (highest) - 4"),
+      story_points: z.number().optional().describe("Story points"),
+      parent_id: z.number().optional().describe("Existing work item id to link this under (parent)")
+    },
+    async (args) => {
+      try {
+        if (!runtime.config.azureDevOps.enabled) {
+          return { content: [{ type: "text", text: "Azure DevOps integration is disabled. Set ADO_ENABLED=true." }], isError: true };
+        }
+        const wi = await runtime.workItemService.create({
+          type: args.type,
+          title: args.title,
+          description: args.description,
+          board: args.board,
+          areaPath: args.area_path,
+          iterationPath: args.iteration_path,
+          tags: args.tags,
+          assignedTo: args.assigned_to,
+          priority: args.priority,
+          storyPoints: args.story_points,
+          parentId: args.parent_id
+        });
+        return { content: [{ type: "text", text: JSON.stringify({ success: true, id: wi.id, title: wi.title, type: wi.workItemType, areaPath: wi.areaPath, parentId: args.parent_id }, null, 2) }] };
+      } catch (error) {
+        return { content: [{ type: "text", text: `Error creating work item: ${error}` }], isError: true };
+      }
+    }
+  );
+
+  // clone_work_item - Clone a work item to another board
+  server.tool(
+    "clone_work_item",
+    "Clone an existing Azure DevOps work item to another board. Carries over fields (title, description, tags, priority, story points, acceptance criteria), resets state to New and clears the assignee. Optionally copies child tasks and adds a Related link back to the source.",
+    {
+      source_id: z.number().describe("Work item id to clone"),
+      board: z.string().optional().describe("Target board/team name, resolved to an area path"),
+      area_path: z.string().optional().describe("Explicit target area path (overrides board)"),
+      iteration_path: z.string().optional().describe("Target iteration/sprint path"),
+      include_children: z.boolean().optional().describe("Copy child tasks too (default false)"),
+      link_to_source: z.boolean().optional().describe("Add a Related link back to the source (default false)"),
+      title_prefix: z.string().optional().describe("Prefix prepended to the cloned title (e.g. '[CLONE] ')"),
+      overrides: z
+        .object({
+          title: z.string().optional(),
+          description: z.string().optional(),
+          tags: z.array(z.string()).optional(),
+          assigned_to: z.string().optional(),
+          priority: z.enum(["1", "2", "3", "4"]).optional(),
+          story_points: z.number().optional()
+        })
+        .optional()
+        .describe("Field overrides applied on top of the carried-over source fields")
+    },
+    async (args) => {
+      try {
+        if (!runtime.config.azureDevOps.enabled) {
+          return { content: [{ type: "text", text: "Azure DevOps integration is disabled. Set ADO_ENABLED=true." }], isError: true };
+        }
+        const o = args.overrides;
+        const res = await runtime.workItemService.clone({
+          sourceId: args.source_id,
+          board: args.board,
+          areaPath: args.area_path,
+          iterationPath: args.iteration_path,
+          includeChildren: args.include_children,
+          linkToSource: args.link_to_source,
+          titlePrefix: args.title_prefix,
+          overrides: o
+            ? {
+                type: undefined,
+                title: o.title,
+                description: o.description,
+                tags: o.tags,
+                assignedTo: o.assigned_to,
+                priority: o.priority,
+                storyPoints: o.story_points
+              }
+            : undefined
+        });
+        return { content: [{ type: "text", text: JSON.stringify({ success: true, ...res }, null, 2) }] };
+      } catch (error) {
+        return { content: [{ type: "text", text: `Error cloning work item: ${error}` }], isError: true };
+      }
+    }
+  );
 };
