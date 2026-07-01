@@ -1,0 +1,252 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="drawio" version="26.0.0">
+<diagram id="pg1" name="1 - Inheritance and Ports">
+    <mxGraphModel dx="800" dy="600" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="group_0" value="ado" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#6c8ebf;fontColor=#6c8ebf;verticalAlign=top;fontStyle=2;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="6" y="16" width="428" height="284" as="geometry"/>
+        </mxCell>
+        <mxCell id="group_1" value="chat" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#82b366;fontColor=#82b366;verticalAlign=top;fontStyle=2;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="446" y="16" width="358" height="284" as="geometry"/>
+        </mxCell>
+        <mxCell id="group_2" value="embed" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#d79b00;fontColor=#d79b00;verticalAlign=top;fontStyle=2;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="816" y="6" width="248" height="194" as="geometry"/>
+        </mxCell>
+        <mxCell id="group_3" value="error" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#d6b656;fontColor=#d6b656;verticalAlign=top;fontStyle=2;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="1076" y="16" width="208" height="184" as="geometry"/>
+        </mxCell>
+        <mxCell id="group_4" value="graph" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#9673a6;fontColor=#9673a6;verticalAlign=top;fontStyle=2;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="1286" y="16" width="298" height="284" as="geometry"/>
+        </mxCell>
+        <mxCell id="createAdo" value="createAdoClient()  «factory»" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;dashed=1;" vertex="1" parent="group_0">
+          <mxGeometry x="104" y="24" width="210" height="46" as="geometry"/>
+        </mxCell>
+        <mxCell id="azBoards" value="AzBoardsClient" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="group_0">
+          <mxGeometry x="34" y="114" width="160" height="46" as="geometry"/>
+        </mxCell>
+        <mxCell id="adoPat" value="AdoPatClient" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="group_0">
+          <mxGeometry x="214" y="114" width="160" height="46" as="geometry"/>
+        </mxCell>
+        <mxCell id="azRunner" value="AzRunner" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="group_0">
+          <mxGeometry x="24" y="204" width="140" height="46" as="geometry"/>
+        </mxCell>
+        <mxCell id="adoPort" value="AzureDevOpsClient  «port»" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="group_0">
+          <mxGeometry x="184" y="204" width="220" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="makeChat" value="makeChatModel()  «factory»" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;dashed=1;" vertex="1" parent="group_1">
+          <mxGeometry x="74" y="24" width="210" height="46" as="geometry"/>
+        </mxCell>
+        <mxCell id="anthropic" value="AnthropicChat" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="group_1">
+          <mxGeometry x="24" y="114" width="150" height="46" as="geometry"/>
+        </mxCell>
+        <mxCell id="openai" value="OpenAiChat" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="group_1">
+          <mxGeometry x="184" y="114" width="150" height="46" as="geometry"/>
+        </mxCell>
+        <mxCell id="chatPort" value="ChatModel  «port»" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="group_1">
+          <mxGeometry x="94" y="204" width="180" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="localEmbedder" value="LocalEmbedder&#xa;(in clients/)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="group_2">
+          <mxGeometry x="44" y="24" width="160" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="embedderPort" value="Embedder  «port»&#xa;(in services/knowledge/)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="group_2">
+          <mxGeometry x="24" y="114" width="200" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="createSharePoint" value="createSharePointService()  «factory»" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;dashed=1;" vertex="1" parent="group_4">
+          <mxGeometry x="24" y="24" width="250" height="46" as="geometry"/>
+        </mxCell>
+        <mxCell id="graphClient" value="GraphClient" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="group_4">
+          <mxGeometry x="74" y="114" width="150" height="46" as="geometry"/>
+        </mxCell>
+        <mxCell id="graphPort" value="GraphPort  «port»" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="group_4">
+          <mxGeometry x="64" y="204" width="170" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="busyError" value="BusyError" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="group_3">
+          <mxGeometry x="34" y="24" width="140" height="46" as="geometry"/>
+        </mxCell>
+        <mxCell id="errorCls" value="Error (JS builtin)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="group_3">
+          <mxGeometry x="24" y="114" width="160" height="46" as="geometry"/>
+        </mxCell>
+        <mxCell id="e0" value="implements" style="endArrow=block;endFill=0;dashed=1;html=1;rounded=0;strokeColor=#9673a6;" edge="1" parent="1" source="azBoards" target="adoPort">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="200" y="180"/><mxPoint x="200" y="210"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e1" value="implements" style="endArrow=block;endFill=0;dashed=1;html=1;rounded=0;strokeColor=#9673a6;" edge="1" parent="1" source="adoPat" target="adoPort">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="300" y="180"/><mxPoint x="300" y="210"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e2" value="implements" style="endArrow=block;endFill=0;dashed=1;html=1;rounded=0;strokeColor=#9673a6;" edge="1" parent="1" source="anthropic" target="chatPort">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="580" y="180"/><mxPoint x="580" y="210"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e3" value="implements" style="endArrow=block;endFill=0;dashed=1;html=1;rounded=0;strokeColor=#9673a6;" edge="1" parent="1" source="openai" target="chatPort">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="670" y="180"/><mxPoint x="670" y="210"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e4" value="implements" style="endArrow=block;endFill=0;dashed=1;html=1;rounded=0;strokeColor=#9673a6;" edge="1" parent="1" source="localEmbedder" target="embedderPort">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="940" y="90"/><mxPoint x="940" y="110"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e5" value="implements" style="endArrow=block;endFill=0;dashed=1;html=1;rounded=0;strokeColor=#9673a6;" edge="1" parent="1" source="graphClient" target="graphPort">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="1440" y="180"/><mxPoint x="1440" y="210"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e6" value="extends" style="endArrow=block;endFill=0;html=1;rounded=0;strokeColor=#666666;" edge="1" parent="1" source="busyError" target="errorCls">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="1180" y="80"/><mxPoint x="1180" y="120"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e7" value="creates" style="endArrow=open;dashed=1;html=1;rounded=0;strokeColor=#d79b00;" edge="1" parent="1" source="createAdo" target="azBoards">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="160" y="80"/><mxPoint x="160" y="120"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e8" value="creates" style="endArrow=open;dashed=1;html=1;rounded=0;strokeColor=#d79b00;" edge="1" parent="1" source="createAdo" target="adoPat">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="270" y="80"/><mxPoint x="270" y="120"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e9" value="creates" style="endArrow=open;dashed=1;html=1;rounded=0;strokeColor=#d79b00;" edge="1" parent="1" source="makeChat" target="anthropic">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="570" y="80"/><mxPoint x="570" y="120"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e10" value="creates" style="endArrow=open;dashed=1;html=1;rounded=0;strokeColor=#d79b00;" edge="1" parent="1" source="makeChat" target="openai">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="680" y="80"/><mxPoint x="680" y="120"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e11" value="creates" style="endArrow=open;dashed=1;html=1;rounded=0;strokeColor=#d79b00;" edge="1" parent="1" source="createSharePoint" target="graphClient">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="1440" y="80"/><mxPoint x="1440" y="120"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e12" value="uses" style="endArrow=open;html=1;rounded=0;strokeColor=#6c8ebf;" edge="1" parent="1" source="azBoards" target="azRunner">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="110" y="180"/><mxPoint x="110" y="210"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="lg0" value="LEGEND" style="swimlane;startSize=24;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#333333;fontStyle=1;verticalAlign=top;" vertex="1" parent="1"><mxGeometry x="-360" y="0" width="330" height="150" as="geometry"/></mxCell>
+        <mxCell id="lg1" value="port interface" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="lg0"><mxGeometry x="10" y="34" width="95" height="26" as="geometry"/></mxCell>
+        <mxCell id="lg2" value="concrete class" style="rounded=1;html=1;whiteSpace=wrap;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="lg0"><mxGeometry x="115" y="34" width="95" height="26" as="geometry"/></mxCell>
+        <mxCell id="lg3" value="service class" style="rounded=1;html=1;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="lg0"><mxGeometry x="220" y="34" width="95" height="26" as="geometry"/></mxCell>
+        <mxCell id="lg4" value="factory fn" style="rounded=1;html=1;whiteSpace=wrap;fillColor=#ffe6cc;strokeColor=#d79b00;dashed=1;" vertex="1" parent="lg0"><mxGeometry x="10" y="66" width="95" height="26" as="geometry"/></mxCell>
+        <mxCell id="lg5" value="comp. root" style="rounded=1;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="lg0"><mxGeometry x="115" y="66" width="95" height="26" as="geometry"/></mxCell>
+        <mxCell id="lg6" value="functional/ext" style="rounded=1;html=1;whiteSpace=wrap;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="lg0"><mxGeometry x="220" y="66" width="95" height="26" as="geometry"/></mxCell>
+        <mxCell id="lgA" value="" style="endArrow=block;endFill=0;dashed=1;html=1;strokeColor=#9673a6;" edge="1" parent="lg0"><mxGeometry relative="1" as="geometry"><mxPoint x="10" y="112" as="sourcePoint"/><mxPoint x="45" y="112" as="targetPoint"/></mxGeometry></mxCell>
+        <mxCell id="lgAt" value="implements" style="text;html=1;align=left;fontSize=10;" vertex="1" parent="lg0"><mxGeometry x="48" y="100" width="65" height="22" as="geometry"/></mxCell>
+        <mxCell id="lgB" value="" style="endArrow=block;endFill=0;html=1;strokeColor=#666666;" edge="1" parent="lg0"><mxGeometry relative="1" as="geometry"><mxPoint x="120" y="112" as="sourcePoint"/><mxPoint x="155" y="112" as="targetPoint"/></mxGeometry></mxCell>
+        <mxCell id="lgBt" value="extends" style="text;html=1;align=left;fontSize=10;" vertex="1" parent="lg0"><mxGeometry x="158" y="100" width="55" height="22" as="geometry"/></mxCell>
+        <mxCell id="lgC" value="" style="endArrow=open;dashed=1;html=1;strokeColor=#d79b00;" edge="1" parent="lg0"><mxGeometry relative="1" as="geometry"><mxPoint x="220" y="112" as="sourcePoint"/><mxPoint x="255" y="112" as="targetPoint"/></mxGeometry></mxCell>
+        <mxCell id="lgCt" value="creates/imports" style="text;html=1;align=left;fontSize=10;" vertex="1" parent="lg0"><mxGeometry x="258" y="100" width="72" height="22" as="geometry"/></mxCell>
+        <mxCell id="lgD" value="" style="endArrow=open;html=1;strokeColor=#6c8ebf;" edge="1" parent="lg0"><mxGeometry relative="1" as="geometry"><mxPoint x="10" y="138" as="sourcePoint"/><mxPoint x="45" y="138" as="targetPoint"/></mxGeometry></mxCell>
+        <mxCell id="lgDt" value="uses (association)" style="text;html=1;align=left;fontSize=10;" vertex="1" parent="lg0"><mxGeometry x="48" y="126" width="130" height="22" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+<diagram id="pg2" name="2 - Service Wiring">
+    <mxGraphModel dx="800" dy="600" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="reportSvc" value="ReportService" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="10" y="380" width="160" height="46" as="geometry"/>
+        </mxCell>
+        <mxCell id="incidentSvc" value="IncidentService" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="220" y="400" width="170" height="46" as="geometry"/>
+        </mxCell>
+        <mxCell id="workItemSvc" value="WorkItemService" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="220" y="560" width="170" height="46" as="geometry"/>
+        </mxCell>
+        <mxCell id="knowledgeSvc" value="KnowledgeService" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="0" y="160" width="175" height="46" as="geometry"/>
+        </mxCell>
+        <mxCell id="sharePointSvc" value="SharePointService" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="0" y="0" width="180" height="46" as="geometry"/>
+        </mxCell>
+        <mxCell id="slaRiskSvc" value="SlaRiskService" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="450" y="430" width="160" height="46" as="geometry"/>
+        </mxCell>
+        <mxCell id="staleSvc" value="StaleTicketService" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="440" y="500" width="175" height="46" as="geometry"/>
+        </mxCell>
+        <mxCell id="corrSvc" value="ChangeCorrelationService" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="420" y="370" width="210" height="46" as="geometry"/>
+        </mxCell>
+        <mxCell id="snClient" value="ServiceNowClient" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="440" y="300" width="170" height="46" as="geometry"/>
+        </mxCell>
+        <mxCell id="adoPort" value="AzureDevOpsClient «port»" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="430" y="560" width="200" height="46" as="geometry"/>
+        </mxCell>
+        <mxCell id="localEmbedder" value="LocalEmbedder" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="220" y="60" width="160" height="46" as="geometry"/>
+        </mxCell>
+        <mxCell id="chatPort" value="ChatModel «port»" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="220" y="130" width="160" height="46" as="geometry"/>
+        </mxCell>
+        <mxCell id="fetcher" value="Fetcher" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="240" y="190" width="130" height="46" as="geometry"/>
+        </mxCell>
+        <mxCell id="knowledgeStore" value="KnowledgeStore" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="220" y="260" width="160" height="66" as="geometry"/>
+        </mxCell>
+        <mxCell id="graphPort" value="GraphPort «port»" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="220" y="0" width="160" height="46" as="geometry"/>
+        </mxCell>
+        <mxCell id="e0" value="uses" style="endArrow=open;html=1;rounded=0;strokeColor=#6c8ebf;" edge="1" parent="1" source="reportSvc" target="incidentSvc">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="170" y="410"/><mxPoint x="210" y="410"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e1" value="uses" style="endArrow=open;html=1;rounded=0;strokeColor=#6c8ebf;" edge="1" parent="1" source="reportSvc" target="snClient">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="90" y="360"/><mxPoint x="90" y="330"/><mxPoint x="90" y="330"/><mxPoint x="90" y="330"/><mxPoint x="430" y="330"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e2" value="uses" style="endArrow=open;html=1;rounded=0;strokeColor=#6c8ebf;" edge="1" parent="1" source="incidentSvc" target="snClient">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="300" y="380"/><mxPoint x="300" y="340"/><mxPoint x="300" y="340"/><mxPoint x="300" y="340"/><mxPoint x="430" y="340"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e3" value="uses" style="endArrow=open;html=1;rounded=0;strokeColor=#6c8ebf;" edge="1" parent="1" source="incidentSvc" target="adoPort">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="410" y="440"/><mxPoint x="430" y="440"/><mxPoint x="430" y="440"/><mxPoint x="430" y="440"/><mxPoint x="430" y="550"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e4" value="uses" style="endArrow=open;html=1;rounded=0;strokeColor=#6c8ebf;" edge="1" parent="1" source="incidentSvc" target="slaRiskSvc">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="390" y="440"/><mxPoint x="440" y="440"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e5" value="uses" style="endArrow=open;html=1;rounded=0;strokeColor=#6c8ebf;" edge="1" parent="1" source="incidentSvc" target="staleSvc">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="420" y="440"/><mxPoint x="440" y="440"/><mxPoint x="440" y="440"/><mxPoint x="440" y="440"/><mxPoint x="440" y="490"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e6" value="uses" style="endArrow=open;html=1;rounded=0;strokeColor=#6c8ebf;" edge="1" parent="1" source="incidentSvc" target="corrSvc">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="390" y="410"/><mxPoint x="410" y="410"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e7" value="uses" style="endArrow=open;html=1;rounded=0;strokeColor=#6c8ebf;" edge="1" parent="1" source="workItemSvc" target="adoPort">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="390" y="580"/><mxPoint x="420" y="580"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e8" value="uses" style="endArrow=open;html=1;rounded=0;strokeColor=#6c8ebf;" edge="1" parent="1" source="knowledgeSvc" target="localEmbedder">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="90" y="130"/><mxPoint x="90" y="90"/><mxPoint x="90" y="90"/><mxPoint x="90" y="90"/><mxPoint x="210" y="90"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e9" value="uses" style="endArrow=open;html=1;rounded=0;strokeColor=#6c8ebf;" edge="1" parent="1" source="knowledgeSvc" target="chatPort">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="180" y="170"/><mxPoint x="210" y="170"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e10" value="uses" style="endArrow=open;html=1;rounded=0;strokeColor=#6c8ebf;" edge="1" parent="1" source="knowledgeSvc" target="fetcher">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="180" y="200"/><mxPoint x="230" y="200"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e11" value="uses" style="endArrow=open;html=1;rounded=0;strokeColor=#6c8ebf;" edge="1" parent="1" source="knowledgeSvc" target="knowledgeStore">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="210" y="200"/><mxPoint x="230" y="200"/><mxPoint x="230" y="200"/><mxPoint x="230" y="200"/><mxPoint x="230" y="250"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e12" value="uses" style="endArrow=open;html=1;rounded=0;strokeColor=#6c8ebf;" edge="1" parent="1" source="sharePointSvc" target="graphPort">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="180" y="20"/><mxPoint x="210" y="20"/></Array></mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+<diagram id="pg3" name="3 - Package Overview">
+    <mxGraphModel dx="800" dy="600" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="web" value="@sre/web&#xa;EngineHost, SseHub, routes&#xa;(server + client + vite)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="0" y="30" width="220" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="agent" value="@sre/sre-agent&#xa;ChatEngine (Copilot SDK)&#xa;CLI, workflows, tools" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="260" y="0" width="220" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="mcp" value="@sre/mcp-server&#xa;createServer()&#xa;tools/* resources/* prompts/*" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="260" y="140" width="220" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="core" value="@sre/core  (shared hub)&#xa;McpRuntime = composition root&#xa;clients/* + services/*" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="510" y="60" width="260" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="e0" value="uses ChatEngine" style="endArrow=open;dashed=1;html=1;rounded=0;strokeColor=#d79b00;" edge="1" parent="1" source="web" target="agent">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="220" y="60"/><mxPoint x="250" y="60"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e1" value="imports" style="endArrow=open;dashed=1;html=1;rounded=0;strokeColor=#d79b00;" edge="1" parent="1" source="web" target="core">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="220" y="100"/><mxPoint x="500" y="100"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e2" value="imports" style="endArrow=open;dashed=1;html=1;rounded=0;strokeColor=#d79b00;" edge="1" parent="1" source="agent" target="core">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="480" y="70"/><mxPoint x="500" y="70"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e3" value="createMcpRuntime()" style="endArrow=open;dashed=1;html=1;rounded=0;strokeColor=#d79b00;" edge="1" parent="1" source="mcp" target="core">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="480" y="140"/><mxPoint x="500" y="140"/></Array></mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

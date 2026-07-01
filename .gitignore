@@ -7,3 +7,6 @@ dist/
 
 # git worktrees (local dev isolation)
 .worktrees/
+
+# Claude Code local state (worktrees, session config)
+.claude/
