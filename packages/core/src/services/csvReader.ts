@@ -26,21 +26,30 @@ export const listCsvFiles = async (dir: string): Promise<CsvFileInfo[]> => {
 };
 
 export const readCsvFile = async (dir: string, filename: string, maxBytes: number): Promise<CsvTable> => {
-  // Trust boundary: the filename comes from a tool caller. Reject anything that
-  // is not a bare filename in `dir`, then confirm the resolved path stays inside.
+  // Trust boundary: `filename` comes from a tool caller.
+  // Layer 1 — must be a bare basename with no traversal tokens.
   if (filename !== basename(filename) || filename.includes("..") || filename.includes("/") || filename.includes("\\")) {
     throw new Error(`invalid filename: ${filename}`);
   }
   if (extname(filename).toLowerCase() !== ".csv") throw new Error("only .csv files are allowed");
-  const base = resolve(dir);
-  const full = resolve(base, filename);
-  if (full !== `${base}${sep}${filename}` && !full.startsWith(`${base}${sep}`)) {
-    throw new Error("path escapes the CSV directory");
-  }
-  const st = await fs.stat(full);
-  if (st.size > maxBytes) throw new Error(`file exceeds ${maxBytes} bytes`);
 
-  const text = await fs.readFile(full, "utf8");
+  // Realpath the directory root so a symlinked root (e.g. /var -> /private/var on
+  // macOS, or /tmp) does not cause a false-positive containment failure below.
+  const base = await fs.realpath(resolve(dir));
+
+  // Layer 2 — the lexically resolved path must stay inside `base`. Independent of
+  // Layer 1: an absolute filename would resolve outside `base` and be rejected here.
+  const full = resolve(base, filename);
+  if (!full.startsWith(`${base}${sep}`)) throw new Error("path escapes the CSV directory");
+
+  // Layer 3 — resolve symlinks and re-assert containment. fs.stat/readFile follow
+  // symlinks, so a link inside `base` pointing outside must not be read.
+  const real = await fs.realpath(full);
+  if (!real.startsWith(`${base}${sep}`)) throw new Error("path escapes the CSV directory");
+
+  const st = await fs.stat(real);
+  if (st.size > maxBytes) throw new Error(`file exceeds ${maxBytes} bytes`);
+  const text = await fs.readFile(real, "utf8");
   const matrix = parse(text, { skip_empty_lines: true, trim: true }) as string[][];
   if (!matrix.length) return { headers: [], rows: [], rowCount: 0 };
   const headers = matrix[0];

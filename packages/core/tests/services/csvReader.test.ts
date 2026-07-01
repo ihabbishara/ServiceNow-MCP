@@ -47,4 +47,22 @@ describe("readCsvFile", () => {
   it("rejects a file larger than maxBytes", async () => {
     await expect(readCsvFile(dir, "stories.csv", 5)).rejects.toThrow(/exceeds/);
   });
+
+  it("rejects a backslash path even where the OS separator is '/'", async () => {
+    await expect(readCsvFile(dir, "evil\\path.csv", 1_000_000)).rejects.toThrow(/invalid filename/);
+  });
+
+  it("returns empty headers and rows for an empty CSV file", async () => {
+    await fs.writeFile(join(dir, "empty.csv"), "");
+    const table = await readCsvFile(dir, "empty.csv", 1_000_000);
+    expect(table).toEqual({ headers: [], rows: [], rowCount: 0 });
+  });
+
+  it("rejects a symlink that points outside the directory", async () => {
+    const outside = join(tmpdir(), "csvreader-secret-target.csv");
+    await fs.writeFile(outside, "a,b\n1,2\n");
+    await fs.symlink(outside, join(dir, "link.csv"));
+    await expect(readCsvFile(dir, "link.csv", 1_000_000)).rejects.toThrow(/escapes the CSV directory/);
+    await fs.rm(outside, { force: true });
+  });
 });
