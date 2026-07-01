@@ -162,4 +162,37 @@ describe("AdoPatClient", () => {
     } as unknown as Response);
     await expect(new AdoPatClient(cfg).searchWorkItems({ text: "x" })).rejects.toThrow(/403.*TF401027/);
   });
+
+  it("createWorkItem posts json-patch for a User Story with parent-less fields", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ id: 500, fields: { "System.Title": "Add SSO" } }));
+    const wi = await new AdoPatClient(cfg).createWorkItem({
+      type: "User Story",
+      title: "Add SSO",
+      description: "line1\nline2",
+      areaPath: "Platform\\Alpha",
+      tags: ["auth"],
+      assignedTo: "jane@x.com",
+      priority: "2",
+      storyPoints: 5
+    });
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://dev.azure.com/acme/Platform/_apis/wit/workitems/$User%20Story?api-version=7.1");
+    const ops = JSON.parse(init.body as string) as Array<{ op: string; path: string; value: string | number }>;
+    expect(ops).toContainEqual({ op: "add", path: "/fields/System.Title", value: "Add SSO" });
+    expect(ops).toContainEqual({ op: "add", path: "/fields/System.Description", value: "line1<br>line2" });
+    expect(ops).toContainEqual({ op: "add", path: "/fields/System.AreaPath", value: "Platform\\Alpha" });
+    expect(ops).toContainEqual({ op: "add", path: "/fields/System.Tags", value: "auth" });
+    expect(ops).toContainEqual({ op: "add", path: "/fields/System.AssignedTo", value: "jane@x.com" });
+    expect(ops).toContainEqual({ op: "add", path: "/fields/Microsoft.VSTS.Common.Priority", value: 2 });
+    expect(ops).toContainEqual({ op: "add", path: "/fields/Microsoft.VSTS.Scheduling.StoryPoints", value: 5 });
+    expect(wi).toMatchObject({ id: 500, title: "Add SSO" });
+  });
+
+  it("createWorkItem routes a Bug description to ReproSteps", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ id: 1, fields: { "System.Title": "b" } }));
+    await new AdoPatClient(cfg).createWorkItem({ type: "Bug", title: "b", description: "x\ny" });
+    const ops = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
+    expect(ops).toContainEqual({ op: "add", path: "/fields/Microsoft.VSTS.TCM.ReproSteps", value: "x<br>y" });
+    expect(ops.some((o: { path: string }) => o.path === "/fields/System.Description")).toBe(false);
+  });
 });

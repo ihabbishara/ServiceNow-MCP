@@ -113,4 +113,28 @@ describe("AzBoardsClient", () => {
     ).rejects.toThrow(/disabled/);
     expect((runner.json as any).mock.calls).toHaveLength(0);
   });
+
+  it("createWorkItem shells az create with type, area, and mapped fields", async () => {
+    const runner = makeRunner(() => ({ id: 7, fields: { "System.Title": "Add SSO", "System.WorkItemType": "User Story" } }));
+    const client = new AzBoardsClient(cfg as any, runner as any);
+    const wi = await client.createWorkItem({
+      type: "User Story", title: "Add SSO", description: "a\nb",
+      areaPath: "IngOne\\Alpha", assignedTo: "jane@x.com", priority: "2", storyPoints: 5, tags: ["auth"]
+    });
+    const args = (runner.json as any).mock.calls[0][0] as string[];
+    expect(args.slice(0, 3)).toEqual(["boards", "work-item", "create"]);
+    expect(args).toContain("--type");
+    expect(args).toContain("User Story");
+    expect(args).toContain("--area");
+    expect(args).toContain("IngOne\\Alpha");
+    expect(args).toContain("--assigned-to");
+    expect(args).toContain("jane@x.com");
+    expect(args).toContain("--fields");
+    expect(args).toContain("System.Description=a<br>b");
+    expect(args).toContain("System.Tags=auth");
+    expect(args).toContain("Microsoft.VSTS.Common.Priority=2");
+    expect(args).toContain("Microsoft.VSTS.Scheduling.StoryPoints=5");
+    expect(wi.id).toBe(7);
+    expect(wi.workItemType).toBe("User Story");
+  });
 });

@@ -2,11 +2,11 @@ import { fetch, RequestInit } from "undici";
 import { WorkItem } from "../../types.js";
 import { AdoConfig } from "../../config.js";
 import { proxyDispatcher, FetchDispatcher } from "../proxy.js";
-import type { AzureDevOpsClient, WorkItemSearchFilters, CreateBugPayload } from "./types.js";
+import type { AzureDevOpsClient, WorkItemSearchFilters, CreateBugPayload, CreateWorkItemPayload } from "./types.js";
 import { mapAzWorkItem, AzWorkItemRaw } from "./map.js";
 import { AzBoardsClient } from "./azBoards.js";
 
-export type { AzureDevOpsClient, WorkItemSearchFilters, CreateBugPayload } from "./types.js";
+export type { AzureDevOpsClient, WorkItemSearchFilters, CreateBugPayload, CreateWorkItemPayload } from "./types.js";
 
 interface AdoWorkItemRow {
   id: number;
@@ -103,27 +103,37 @@ export class AdoPatClient implements AzureDevOpsClient {
     return row ? mapAzWorkItem(row) : null;
   }
 
-  async createBug(p: CreateBugPayload): Promise<{ id: number; title: string }> {
-    if (!this.cfg.enabled) throw new Error("ADO integration is disabled");
-    this.assertConfigured();
-
+  private buildCreateOps(p: CreateWorkItemPayload): Array<{ op: "add"; path: string; value: string | number }> {
     const ops: Array<{ op: "add"; path: string; value: string | number }> = [
-      { op: "add", path: "/fields/System.Title", value: p.title },
-      { op: "add", path: "/fields/Microsoft.VSTS.TCM.ReproSteps", value: p.description.replace(/\n/g, "<br>") }
+      { op: "add", path: "/fields/System.Title", value: p.title }
     ];
+    if (p.description != null) {
+      const html = p.description.replace(/\n/g, "<br>");
+      const path = p.type === "Bug" ? "/fields/Microsoft.VSTS.TCM.ReproSteps" : "/fields/System.Description";
+      ops.push({ op: "add", path, value: html });
+    }
     const areaPath = p.areaPath ?? this.cfg.defaultAreaPath;
     const iterationPath = p.iterationPath ?? this.cfg.defaultIterationPath;
     if (areaPath) ops.push({ op: "add", path: "/fields/System.AreaPath", value: areaPath });
     if (iterationPath) ops.push({ op: "add", path: "/fields/System.IterationPath", value: iterationPath });
     if (p.tags?.length) ops.push({ op: "add", path: "/fields/System.Tags", value: p.tags.join("; ") });
-    // ServiceNow priority "1".."4" maps directly to ADO's 1 (highest) .. 4 (lowest).
-    const priority = p.priority ? Number(p.priority) : NaN;
-    if (Number.isInteger(priority) && priority >= 1 && priority <= 4) {
-      ops.push({ op: "add", path: "/fields/Microsoft.VSTS.Common.Priority", value: priority });
+    if (p.assignedTo) ops.push({ op: "add", path: "/fields/System.AssignedTo", value: p.assignedTo });
+    const prio = p.priority ? Number(p.priority) : NaN;
+    if (Number.isInteger(prio) && prio >= 1 && prio <= 4) {
+      ops.push({ op: "add", path: "/fields/Microsoft.VSTS.Common.Priority", value: prio });
     }
+    if (typeof p.storyPoints === "number") {
+      ops.push({ op: "add", path: "/fields/Microsoft.VSTS.Scheduling.StoryPoints", value: p.storyPoints });
+    }
+    for (const [k, v] of Object.entries(p.fields ?? {})) ops.push({ op: "add", path: `/fields/${k}`, value: v });
+    return ops;
+  }
 
-    const created = await this.requestJson<{ id: number; fields: { "System.Title": string } }>(
-      this.apiUrl("wit/workitems/$Bug?api-version=7.1"),
+  async createWorkItem(p: CreateWorkItemPayload): Promise<WorkItem> {
+    if (!this.cfg.enabled) throw new Error("ADO integration is disabled");
+    this.assertConfigured();
+    const created = await this.requestJson<AzWorkItemRaw>(
+      this.apiUrl(`wit/workitems/$${encodeURIComponent(p.type)}?api-version=7.1`),
       {
         method: "POST",
         headers: {
@@ -131,10 +141,23 @@ export class AdoPatClient implements AzureDevOpsClient {
           Accept: "application/json",
           Authorization: this.authHeader
         },
-        body: JSON.stringify(ops)
+        body: JSON.stringify(this.buildCreateOps(p))
       }
     );
-    return { id: created.id, title: created.fields["System.Title"] };
+    return mapAzWorkItem(created);
+  }
+
+  async createBug(p: CreateBugPayload): Promise<{ id: number; title: string }> {
+    const wi = await this.createWorkItem({
+      type: "Bug",
+      title: p.title,
+      description: p.description,
+      areaPath: p.areaPath,
+      iterationPath: p.iterationPath,
+      tags: p.tags,
+      priority: p.priority
+    });
+    return { id: wi.id, title: wi.title };
   }
 }
 
