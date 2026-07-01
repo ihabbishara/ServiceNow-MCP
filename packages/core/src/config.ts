@@ -178,8 +178,14 @@ export const loadConfig = (env: Record<string, string | undefined> = process.env
     throw new Error(`Invalid configuration:\n  ${issues}`);
   }
   const e = parsed.data;
-  if (e.ADO_ENABLED && (!e.ADO_ORG_URL || !e.ADO_PROJECT || !e.ADO_PAT)) {
-    throw new Error("ADO_ENABLED=true requires ADO_ORG_URL, ADO_PROJECT, and ADO_PAT");
+  if (e.ADO_ENABLED) {
+    if (!e.ADO_ORG_URL || !e.ADO_PROJECT) {
+      throw new Error("ADO_ENABLED=true requires ADO_ORG_URL and ADO_PROJECT");
+    }
+    // PAT is only needed in pat mode; azcli authenticates via the `az` CLI session.
+    if (e.ADO_AUTH_MODE === "pat" && !e.ADO_PAT) {
+      throw new Error("ADO_ENABLED=true with ADO_AUTH_MODE=pat requires ADO_PAT");
+    }
   }
   if (e.SHAREPOINT_ENABLED && !e.SHAREPOINT_SITE_URL) {
     throw new Error("SHAREPOINT_ENABLED=true requires SHAREPOINT_SITE_URL");

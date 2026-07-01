@@ -29,7 +29,7 @@ describe("loadConfig", () => {
   });
 
   it("requires ADO vars when ADO_ENABLED=true", () => {
-    expect(() => loadConfig({ ...validEnv, ADO_ENABLED: "true" })).toThrow(/ADO_ORG_URL, ADO_PROJECT, and ADO_PAT/);
+    expect(() => loadConfig({ ...validEnv, ADO_ENABLED: "true" })).toThrow(/ADO_ORG_URL and ADO_PROJECT/);
   });
 
   it("accepts full ADO config, defaults paths to project name", () => {
@@ -170,5 +170,20 @@ describe("loadConfig ADO_CSV_DIR", () => {
   it("leaves csvDir undefined when unset", () => {
     const c = loadConfig({ ...base });
     expect(c.azureDevOps.csvDir).toBeUndefined();
+  });
+});
+
+describe("loadConfig ADO auth-mode validation", () => {
+  const adoBase = { ...base, ADO_ENABLED: "true", ADO_ORG_URL: "https://dev.azure.com/org", ADO_PROJECT: "Proj" };
+  it("allows azcli mode without a PAT", () => {
+    const c = loadConfig({ ...adoBase, ADO_AUTH_MODE: "azcli" });
+    expect(c.azureDevOps.enabled).toBe(true);
+    expect(c.azureDevOps.pat).toBeUndefined();
+  });
+  it("requires a PAT in pat mode", () => {
+    expect(() => loadConfig({ ...adoBase, ADO_AUTH_MODE: "pat" })).toThrow(/ADO_PAT/);
+  });
+  it("requires org and project when enabled", () => {
+    expect(() => loadConfig({ ...base, ADO_ENABLED: "true", ADO_AUTH_MODE: "azcli" })).toThrow(/ADO_ORG_URL and ADO_PROJECT/);
   });
 });
