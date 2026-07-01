@@ -162,6 +162,10 @@ export const registerAdoTools = (server: McpServer, runtime: McpRuntime): void =
         if (!runtime.config.azureDevOps.enabled) {
           return { content: [{ type: "text", text: "Azure DevOps integration is disabled. Set ADO_ENABLED=true." }], isError: true };
         }
+        const boardWarning =
+          args.board && !args.area_path && !runtime.workItemService.isBoardKnown(args.board)
+            ? `board "${args.board}" was not found in ADO_BOARD_MAP; used the default area path`
+            : undefined;
         const wi = await runtime.workItemService.create({
           type: args.type,
           title: args.title,
@@ -175,7 +179,7 @@ export const registerAdoTools = (server: McpServer, runtime: McpRuntime): void =
           storyPoints: args.story_points,
           parentId: args.parent_id
         });
-        return { content: [{ type: "text", text: JSON.stringify({ success: true, id: wi.id, title: wi.title, type: wi.workItemType, areaPath: wi.areaPath, parentId: args.parent_id }, null, 2) }] };
+        return { content: [{ type: "text", text: JSON.stringify({ success: true, id: wi.id, title: wi.title, type: wi.workItemType, areaPath: wi.areaPath, parentId: args.parent_id, ...(boardWarning ? { boardWarning } : {}) }, null, 2) }] };
       } catch (error) {
         return { content: [{ type: "text", text: `Error creating work item: ${error}` }], isError: true };
       }
@@ -211,6 +215,10 @@ export const registerAdoTools = (server: McpServer, runtime: McpRuntime): void =
         if (!runtime.config.azureDevOps.enabled) {
           return { content: [{ type: "text", text: "Azure DevOps integration is disabled. Set ADO_ENABLED=true." }], isError: true };
         }
+        const boardWarning =
+          args.board && !args.area_path && !runtime.workItemService.isBoardKnown(args.board)
+            ? `board "${args.board}" was not found in ADO_BOARD_MAP; used the default area path`
+            : undefined;
         const o = args.overrides;
         const res = await runtime.workItemService.clone({
           sourceId: args.source_id,
@@ -232,7 +240,7 @@ export const registerAdoTools = (server: McpServer, runtime: McpRuntime): void =
               }
             : undefined
         });
-        return { content: [{ type: "text", text: JSON.stringify({ success: true, ...res }, null, 2) }] };
+        return { content: [{ type: "text", text: JSON.stringify({ success: true, ...res, ...(boardWarning ? { boardWarning } : {}) }, null, 2) }] };
       } catch (error) {
         return { content: [{ type: "text", text: `Error cloning work item: ${error}` }], isError: true };
       }
