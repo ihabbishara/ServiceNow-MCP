@@ -143,3 +143,20 @@ describe("sharePoint config", () => {
     });
   });
 });
+
+describe("loadConfig ADO_BOARD_MAP", () => {
+  it("parses a JSON board map", () => {
+    const c = loadConfig({ ...base, ADO_BOARD_MAP: '{"Team Alpha":"Platform\\\\Alpha"}' });
+    expect(c.azureDevOps.boardMap).toEqual({ "Team Alpha": "Platform\\Alpha" });
+  });
+
+  it("defaults to an empty map when unset", () => {
+    const c = loadConfig({ ...base });
+    expect(c.azureDevOps.boardMap).toEqual({});
+  });
+
+  it("ignores invalid JSON without throwing", () => {
+    const c = loadConfig({ ...base, ADO_BOARD_MAP: "{not json" });
+    expect(c.azureDevOps.boardMap).toEqual({});
+  });
+});
