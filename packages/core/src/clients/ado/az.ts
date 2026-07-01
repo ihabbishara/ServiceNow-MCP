@@ -13,13 +13,13 @@ export type ExecFn = (
 
 const execFileP = promisify(execFile);
 
-// Windows command-line quoting for a single argument (cross-spawn style): wrap
-// in double quotes when it contains whitespace or quotes, escaping embedded
-// double-quotes and trailing backslashes. WIQL uses single quotes + brackets,
-// which cmd treats literally inside double quotes.
-const winQuote = (a: string): string => {
+// Windows command-line quoting for a single argument (cross-spawn style): ALWAYS
+// wrap in double quotes and escape embedded double-quotes / trailing backslashes.
+// Quoting unconditionally is required for safety: inside double quotes cmd.exe
+// treats metacharacters (& | > < ^ ( )) literally, so untrusted values (work-item
+// titles, --fields values, CSV-derived strings) cannot break out of the argument.
+export const winQuote = (a: string): string => {
   if (a === "") return '""';
-  if (!/[\s"]/.test(a)) return a;
   return '"' + a.replace(/(\\*)"/g, '$1$1\\"').replace(/(\\*)$/, '$1$1') + '"';
 };
 
