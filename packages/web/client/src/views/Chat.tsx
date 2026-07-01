@@ -162,14 +162,23 @@ export function Chat({
           }
         }}
       >
-        <input
+        <textarea
           aria-label="Message"
           name="message"
           autoComplete="off"
-          className="flex-1 border border-outline rounded px-3 py-2 text-body-md focus-visible:border-primary-container"
+          rows={1}
+          className="flex-1 resize-none min-h-[44px] max-h-[200px] border border-outline rounded px-3 py-2 text-body-md focus-visible:border-primary-container"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask about incidents, changes, ADO work items…"
+          onKeyDown={(e) => {
+            // Enter sends; Shift+Enter inserts a newline. Ignore Enter while an
+            // IME composition is active so it commits text instead of sending.
+            if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+              e.preventDefault();
+              e.currentTarget.form?.requestSubmit();
+            }
+          }}
+          placeholder="Ask about incidents, changes, ADO work items… (Shift+Enter for new line)"
         />
         <Button type="submit">Send</Button>
         <Button variant="outline" onClick={() => abortTurn()}>
