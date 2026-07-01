@@ -160,3 +160,15 @@ describe("loadConfig ADO_BOARD_MAP", () => {
     expect(c.azureDevOps.boardMap).toEqual({});
   });
 });
+
+describe("loadConfig ADO_CSV_DIR", () => {
+  it("passes through csvDir and defaults csvMaxBytes", () => {
+    const c = loadConfig({ ...base, ADO_CSV_DIR: "/data/csvs" });
+    expect(c.azureDevOps.csvDir).toBe("/data/csvs");
+    expect(c.azureDevOps.csvMaxBytes).toBe(5242880);
+  });
+  it("leaves csvDir undefined when unset", () => {
+    const c = loadConfig({ ...base });
+    expect(c.azureDevOps.csvDir).toBeUndefined();
+  });
+});

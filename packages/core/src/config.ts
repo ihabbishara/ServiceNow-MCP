@@ -31,6 +31,8 @@ const envSchema = z.object({
   ADO_ITERATION_PATH: z.string().optional().transform((v) => v || undefined),
   ADO_ASSIGNED_TEAM: z.string().optional().transform((v) => v || undefined),
   ADO_BOARD_MAP: z.string().optional(),
+  ADO_CSV_DIR: optional(z.string().min(1)),
+  ADO_CSV_MAX_BYTES: z.coerce.number().int().positive().default(5242880),
   ADO_CREATE_BUG_ENABLED: trueBoolString,
   STALE_P1_MIN: z.coerce.number().int().positive().default(30),
   STALE_P2_MIN: z.coerce.number().int().positive().default(120),
@@ -90,6 +92,8 @@ export interface AdoConfig {
   defaultAssignedTeam?: string;
   proxyUrl?: string; // HTTP proxy for Azure DevOps calls (ADO_PROXY)
   boardMap?: Record<string, string>;
+  csvDir?: string;
+  csvMaxBytes: number;
 }
 
 export interface KnowledgeConfig {
@@ -231,7 +235,9 @@ export const loadConfig = (env: Record<string, string | undefined> = process.env
       defaultIterationPath: e.ADO_ITERATION_PATH ?? e.ADO_PROJECT,
       defaultAssignedTeam: e.ADO_ASSIGNED_TEAM,
       proxyUrl: e.ADO_PROXY,
-      boardMap: parseBoardMap(e.ADO_BOARD_MAP)
+      boardMap: parseBoardMap(e.ADO_BOARD_MAP),
+      csvDir: e.ADO_CSV_DIR,
+      csvMaxBytes: e.ADO_CSV_MAX_BYTES
     },
     sharePoint: {
       enabled: e.SHAREPOINT_ENABLED,
