@@ -51,6 +51,13 @@ story) from one board to another.
    type, tags, priority, story points, acceptance criteria; set area/iteration to
    the target; **reset** state → New and **clear** `assignedTo`. `overrides`
    patches any field.
+4. **CSV via dedicated folder, not RAG.** The knowledge/RAG pipeline embeds
+   uploads into vector chunks and discards the original file, so it cannot return
+   CSV rows/columns faithfully. Instead, a dedicated raw-CSV folder
+   (`ADO_CSV_DIR`) is read directly. Tools return **structured rows**; the agent
+   detects which rows are stories/tasks and loops the create/clone tools. No
+   server-side bulk mapper (detection is LLM judgment).
+5. **A canonical CSV template ships with the repo** so users fill-and-drop.
 
 ## New MCP tools
 
@@ -180,6 +187,10 @@ New optional env `ADO_BOARD_MAP` — JSON object string, e.g.
 `azureDevOps.boardMap: Record<string, string>` (empty object if unset/invalid;
 invalid JSON logs a warning and is ignored, never throws).
 
+New optional env `ADO_CSV_DIR` — absolute path to a folder holding raw CSV
+files. Parsed into `azureDevOps.csvDir?: string`. When unset, the CSV tools are
+inert (return a disabled message).
+
 ### Runtime
 
 `createMcpRuntime` instantiates `WorkItemService` and exposes it as
@@ -191,6 +202,88 @@ invalid JSON logs a warning and is ignored, never throws).
 `clone_work_item`, thin handlers that call `runtime.workItemService`, guarded by
 the same `azureDevOps.enabled` check as the existing tools, following the
 established `server.tool(...)` pattern.
+
+## CSV-driven creation (folder + template)
+
+Ad-hoc bulk work: a user drops a CSV of stories/tasks into `ADO_CSV_DIR`; the
+agent reads it, detects the rows, and loops the create/clone tools. RAG is
+bypassed entirely (it embeds+discards files; see Decision 4).
+
+### CSV reader (core, `packages/core/src/services/csvReader.ts`)
+
+A small module — **not** part of `AzureDevOpsClient`:
+
+```ts
+interface CsvTable { headers: string[]; rows: Record<string, string>[]; rowCount: number; }
+
+function listCsvFiles(dir: string): Promise<{ name: string; sizeBytes: number; modified: string }[]>;
+function readCsvFile(dir: string, filename: string, maxBytes: number): Promise<CsvTable>;
+```
+
+- Parsing uses the **`csv-parse`** dependency (`csv-parse/sync`, `columns: true`,
+  `skip_empty_lines: true`, `trim: true`) — a battle-tested parser that handles
+  quoted fields, embedded commas, and newlines. Hand-rolling CSV is explicitly
+  rejected.
+- **Path-traversal guard (trust boundary):** `readCsvFile` rejects a `filename`
+  that contains a path separator or `..`, resolves it against `dir`, and asserts
+  the resolved absolute path starts with `dir + path.sep`. Only a `.csv`
+  extension is allowed. Files larger than `maxBytes` are rejected before parse.
+
+### MCP tools (new file `packages/mcp-server/src/tools/workItemCsv.ts`)
+
+- `list_work_item_csvs` → `{ files: [{ name, sizeBytes, modified }] }` for files
+  in `ADO_CSV_DIR`.
+- `read_work_item_csv({ filename })` → `{ headers, rows, rowCount }`. The agent
+  then classifies rows and calls `create_work_item` / `clone_work_item` per row.
+
+Both are guarded by `azureDevOps.enabled` **and** a configured `csvDir`; unset
+`csvDir` returns a disabled message naming the `ADO_CSV_DIR` env var.
+
+### CSV template (shipped, `templates/work-items.csv`)
+
+Canonical columns the agent understands. All values are strings; blank = omit.
+`tags` is `;`-separated; booleans are `true`/`false`/blank.
+
+| column | required | applies to | meaning |
+|---|---|---|---|
+| `action` | no (default `create`) | both | `create` or `clone` |
+| `ref` | no | create | row-local key for intra-CSV parent linking |
+| `type` | yes for `create` | create | `User Story` / `Task` / `Bug` / `Feature` / `Epic` / `Issue` |
+| `title` | yes for `create` | create; clone override | work item title |
+| `description` | no | create; clone override | body |
+| `board` | no | both | friendly board/team name → area path |
+| `area_path` | no | both | explicit; overrides `board` |
+| `iteration_path` | no | both | iteration/sprint path |
+| `tags` | no | create; clone override | `;`-separated |
+| `assigned_to` | no | create; clone override | email/display name |
+| `priority` | no | create; clone override | `1`–`4` |
+| `story_points` | no | create; clone override | number |
+| `parent_id` | no | create | link under an existing ADO parent id |
+| `parent_ref` | no | create | link under another row's `ref` (agent resolves order) |
+| `source_id` | yes for `clone` | clone | id of the item to clone |
+| `include_children` | no | clone | `true`/`false` |
+| `link_to_source` | no | clone | `true`/`false` |
+
+Example (`templates/work-items.csv`):
+
+```csv
+action,ref,type,title,description,board,area_path,iteration_path,tags,assigned_to,priority,story_points,parent_id,parent_ref,source_id,include_children,link_to_source
+create,S1,User Story,Add SSO login,Users can sign in via corporate SSO,Team Alpha,,,auth;security,,2,5,,,,,
+create,,Task,Wire up OIDC client,Configure the OIDC redirect + token exchange,Team Alpha,,,auth,,2,,,S1,,,
+clone,,,,,Team Beta,,,,,,,,,1234,true,true
+```
+
+Row 1 creates a story (`ref` S1); row 2 creates a task linked under S1 via
+`parent_ref`; row 3 deep-clones item 1234 to Team Beta with a backlink.
+
+**Intra-CSV parenting is agent logic, not server logic:** the agent creates
+`ref`-parents first, captures the returned ids, then creates `parent_ref`
+children with the real `parent_id`. `csvReader` just returns rows; ordering and
+`ref` resolution live in the agent's loop.
+
+**Template access:** the file is committed to the repo. A `get_csv_template`
+tool is deferred (out of scope) — the agent can read the committed file or
+describe the columns from this spec.
 
 ## Error handling
 
@@ -204,6 +297,10 @@ established `server.tool(...)` pattern.
   also unset, the item is created without an explicit area path (ADO uses the
   project root), and the tool response notes that the board name was
   unresolved.
+- CSV tools return a readable error when `csvDir` is unset, the file is missing,
+  the filename fails the path-traversal guard, the extension is not `.csv`, or
+  the file exceeds `maxBytes`. A malformed CSV surfaces the parser error rather
+  than a partial table.
 
 ## Testing
 
@@ -217,6 +314,12 @@ established `server.tool(...)` pattern.
   `createBug` still behaves identically after delegating to `createWorkItem`.
 - **Tool tests** (if the existing suite covers tools): `create_work_item` and
   `clone_work_item` disabled-guard and happy path against a stub runtime.
+- **`csvReader`** unit tests (temp dir): `listCsvFiles` lists only `.csv`;
+  `readCsvFile` parses headers/rows including quoted fields with embedded commas
+  and newlines; **path-traversal rejection** (`../etc/passwd`, absolute paths,
+  nested separators), non-`.csv` rejection, and `maxBytes` rejection.
+- **CSV tool tests**: `list_work_item_csvs` / `read_work_item_csv` disabled when
+  `csvDir` unset; happy path returns structured rows.
 
 ## Out of scope (deferred)
 
@@ -224,6 +327,9 @@ established `server.tool(...)` pattern.
   now).
 - Bulk create, cross-project clone, editing/updating existing items, deleting.
 - Board column / swimlane placement beyond area path + type.
+- Server-side `create_all_from_csv` bulk tool (agent loops instead; add if CSVs
+  get large enough that per-row round-trips hurt).
+- `get_csv_template` MCP tool (template file is committed; agent reads it).
 
 ## Files touched
 
@@ -231,8 +337,13 @@ established `server.tool(...)` pattern.
 - `packages/core/src/clients/ado/index.ts` — `AdoPatClient` new methods; `createBug` delegates.
 - `packages/core/src/clients/ado/azBoards.ts` — `AzBoardsClient` new methods; `createBug` delegates.
 - `packages/core/src/services/workItemService.ts` — new.
-- `packages/core/src/config.ts` — `ADO_BOARD_MAP` → `boardMap`.
+- `packages/core/src/services/csvReader.ts` — new (list + parse CSV, path guard).
+- `packages/core/src/config.ts` — `ADO_BOARD_MAP` → `boardMap`; `ADO_CSV_DIR` → `csvDir`.
 - `packages/core/src/runtime.ts` — instantiate `workItemService`.
 - `packages/core/src/index.ts` — export new service/types if needed.
-- `packages/mcp-server/src/tools/ado.ts` — two new tools.
+- `packages/mcp-server/src/tools/ado.ts` — `create_work_item`, `clone_work_item` tools.
+- `packages/mcp-server/src/tools/workItemCsv.ts` — new (`list_work_item_csvs`, `read_work_item_csv`).
+- `packages/mcp-server/src/tools/index.ts` + `server.ts` — wire new tool registrars.
+- `templates/work-items.csv` — new (shipped CSV template).
+- `packages/core/package.json` — add `csv-parse` dependency.
 - Tests under `packages/core/tests/` (and mcp-server tests if present).
