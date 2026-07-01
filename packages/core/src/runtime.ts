@@ -9,6 +9,7 @@ import { IncidentService } from "./services/incidents.js";
 import { ReportService } from "./services/report.js";
 import { KnowledgeService } from "./services/knowledge/index.js";
 import { SharePointService, createSharePointService } from "./services/sharepoint/index.js";
+import { WorkItemService } from "./services/workItemService.js";
 
 export interface McpRuntime {
   config: AppConfig;
@@ -21,6 +22,7 @@ export interface McpRuntime {
   correlationService: ChangeCorrelationService;
   knowledge: KnowledgeService;
   sharePoint?: SharePointService;
+  workItemService: WorkItemService;
 }
 
 export const createMcpRuntime = (env: Record<string, string | undefined> = process.env): McpRuntime => {
@@ -28,6 +30,12 @@ export const createMcpRuntime = (env: Record<string, string | undefined> = proce
 
   const serviceNowClient = new ServiceNowClient(config.serviceNow);
   const azureDevOpsClient = createAdoClient(config.azureDevOps);
+
+  const workItemService = new WorkItemService(azureDevOpsClient, {
+    boardMap: config.azureDevOps.boardMap ?? {},
+    defaultAreaPath: config.azureDevOps.defaultAreaPath,
+    defaultIterationPath: config.azureDevOps.defaultIterationPath
+  });
 
   const slaRiskService = new SlaRiskService();
   const staleTicketService = new StaleTicketService(config.thresholds.staleByPriorityMinutes);
@@ -55,6 +63,7 @@ export const createMcpRuntime = (env: Record<string, string | undefined> = proce
     staleTicketService,
     correlationService,
     knowledge,
-    sharePoint
+    sharePoint,
+    workItemService
   };
 };
