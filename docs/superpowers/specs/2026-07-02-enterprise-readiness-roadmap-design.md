@@ -83,15 +83,20 @@ the LLM engine.
 ## 4. Phased plan
 
 Each phase ships independently, is green in CI before the next starts, and gets its
-own detailed implementation plan (writing-plans) when reached.
+own detailed implementation plan (writing-plans) when reached. **Git flow
+(decided): one branch + one PR per phase** (`feature/p0-guardrails`,
+`feature/p1-registry`, `feature/p2-cross-cuts`, `feature/p3-code-localization`),
+reviewed and merged before the next phase begins.
 
 ### P0 — Guardrails (backstops everything)
 - **CI** `.github/workflows/ci.yml`: `npm ci && npm run build && npm test`,
   matrix Node 20/22 × {ubuntu, macos, windows} (proves native/ONNX install).
 - **ESLint + Prettier** at root with `lint`/`format` scripts + CI gate;
   `.editorconfig`.
-- **Resolve zod split:** pin one major or firewall the core(v3)↔agent(v4) boundary
-  so core schemas never cross as instances into the agent runtime.
+- **Resolve zod split (decided): upgrade `core` + `mcp-server` from zod v3 to
+  zod v4** so the P1 ToolSpec registry schema is one type across all packages
+  (agent is already v4 via `@github/copilot-sdk@1.0.1`). Requires a careful pass
+  over core's config schema + any response validation for v3→v4 breaking changes.
 - **Hygiene:** `.nvmrc`; regenerate `.env.example` from schema (fix 5 missing vars);
   add root solution `tsconfig.json`; add LICENSE + SECURITY.md; `.gitignore`
   `.superpowers/`.
