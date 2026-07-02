@@ -26,8 +26,12 @@ describe("buildEnvFile", () => {
 
   it("leaves unanswered lines — including commented-out vars — untouched", () => {
     const out = buildEnvFile(template, { ADO_PROJECT: "IngOne" });
-    expect(out).toContain("# LLM_PROVIDER=azure                                # commented-out var");
-    expect(out).toContain("SERVICENOW_PASSWORD=change-me                        # password (SECRET)");
+    expect(out).toContain(
+      "# LLM_PROVIDER=azure                                # commented-out var"
+    );
+    expect(out).toContain(
+      "SERVICENOW_PASSWORD=change-me                        # password (SECRET)"
+    );
   });
 
   it("appends answered keys that are absent from the template", () => {

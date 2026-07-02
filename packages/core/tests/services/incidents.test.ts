@@ -8,21 +8,33 @@ import { AzureDevOpsClient } from "../../src/clients/ado/index.js";
 import { Incident, ChangeRecord } from "../../src/types.js";
 
 const incident: Incident = {
-  number: "INC0001", sysId: "x", priority: "1", state: "New", shortDescription: "DB down",
-  openedAt: "2026-06-11T10:00:00Z", updatedAt: "2026-06-11T10:00:00Z", cmdbCi: "db-prod-01"
+  number: "INC0001",
+  sysId: "x",
+  priority: "1",
+  state: "New",
+  shortDescription: "DB down",
+  openedAt: "2026-06-11T10:00:00Z",
+  updatedAt: "2026-06-11T10:00:00Z",
+  cmdbCi: "db-prod-01"
 };
 
 const relatedChange: ChangeRecord = {
-  number: "CHG0001", sysId: "c", state: "Closed", shortDescription: "patch",
-  cmdbCi: "db-prod-01", actualStartDate: "2026-06-11T09:00:00Z"
+  number: "CHG0001",
+  sysId: "c",
+  state: "Closed",
+  shortDescription: "patch",
+  cmdbCi: "db-prod-01",
+  actualStartDate: "2026-06-11T09:00:00Z"
 };
 
 const window = { beforeHours: 24, afterHours: 4 };
 
-const makeService = (overrides: {
-  sn?: Partial<ServiceNowClient>;
-  ado?: Partial<AzureDevOpsClient>;
-} = {}) => {
+const makeService = (
+  overrides: {
+    sn?: Partial<ServiceNowClient>;
+    ado?: Partial<AzureDevOpsClient>;
+  } = {}
+) => {
   const sn = {
     getIncidentByNumber: vi.fn().mockResolvedValue(incident),
     listIncidents: vi.fn().mockResolvedValue([incident]),
@@ -30,13 +42,22 @@ const makeService = (overrides: {
     ...overrides.sn
   } as unknown as ServiceNowClient;
   const ado = {
-    searchWorkItems: vi.fn().mockResolvedValue([{ id: 42, title: "[INC0001] DB down", state: "Active" }]),
+    searchWorkItems: vi
+      .fn()
+      .mockResolvedValue([{ id: 42, title: "[INC0001] DB down", state: "Active" }]),
     ...overrides.ado
   } as unknown as AzureDevOpsClient;
   return {
-    sn, ado,
-    svc: new IncidentService(sn, ado, new SlaRiskService(), new StaleTicketService({ "1": 30 }),
-      new ChangeCorrelationService(window), window)
+    sn,
+    ado,
+    svc: new IncidentService(
+      sn,
+      ado,
+      new SlaRiskService(),
+      new StaleTicketService({ "1": 30 }),
+      new ChangeCorrelationService(window),
+      window
+    )
   };
 };
 
@@ -49,7 +70,8 @@ describe("IncidentService", () => {
     expect(result.relatedWorkItems[0].id).toBe(42);
     // change candidates fetched from a window starting beforeHours before openedAt
     expect((sn.listChangesWithFilters as ReturnType<typeof vi.fn>).mock.calls[0][0]).toMatchObject({
-      startedAfter: "2026-06-10T10:00:00.000Z", limit: 200
+      startedAfter: "2026-06-10T10:00:00.000Z",
+      limit: 200
     });
   });
 
@@ -59,7 +81,9 @@ describe("IncidentService", () => {
   });
 
   it("summarizeIncident survives ADO search failure", async () => {
-    const { svc } = makeService({ ado: { searchWorkItems: vi.fn().mockRejectedValue(new Error("ADO down")) } });
+    const { svc } = makeService({
+      ado: { searchWorkItems: vi.fn().mockRejectedValue(new Error("ADO down")) }
+    });
     const result = await svc.summarizeIncident("INC0001");
     expect(result.relatedWorkItems).toEqual([]);
     expect(result.relatedChanges).toHaveLength(1);
@@ -67,7 +91,9 @@ describe("IncidentService", () => {
 
   it("summarizeIncident returns empty relatedChanges when openedAt is blank instead of crashing", async () => {
     const blank = { ...incident, openedAt: "" };
-    const { svc, sn } = makeService({ sn: { getIncidentByNumber: vi.fn().mockResolvedValue(blank) } });
+    const { svc, sn } = makeService({
+      sn: { getIncidentByNumber: vi.fn().mockResolvedValue(blank) }
+    });
     const result = await svc.summarizeIncident("INC0001");
     expect(result.relatedChanges).toEqual([]);
     expect(sn.listChangesWithFilters).not.toHaveBeenCalled();
@@ -82,18 +108,23 @@ describe("IncidentService", () => {
 
   it("listSlaRisks filters by priorities client-side", async () => {
     const p2 = { ...incident, number: "INC-P2", priority: "2", slaDue: "2026-06-11T10:30:00Z" };
-    const { svc } = makeService({ sn: { listIncidents: vi.fn().mockResolvedValue([incident, p2]) } });
+    const { svc } = makeService({
+      sn: { listIncidents: vi.fn().mockResolvedValue([incident, p2]) }
+    });
     const risks = await svc.listSlaRisks({ onlyOpen: true, priorities: ["2"] });
     expect(risks.every((r) => r.priority === "2")).toBe(true);
   });
 
   it("listStaleIncidents delegates to stale service over open incidents", async () => {
     const staleInc = { ...incident, updatedAt: "2026-06-11T00:00:00Z" };
-    const { svc, sn } = makeService({ sn: { listIncidents: vi.fn().mockResolvedValue([staleInc]) } });
+    const { svc, sn } = makeService({
+      sn: { listIncidents: vi.fn().mockResolvedValue([staleInc]) }
+    });
     const stale = await svc.listStaleIncidents({ onlyOpen: true, assignmentGroup: "Platform SRE" });
     expect(stale).toHaveLength(1);
     expect((sn.listIncidents as ReturnType<typeof vi.fn>).mock.calls[0][0]).toEqual({
-      onlyOpen: true, assignmentGroup: "Platform SRE"
+      onlyOpen: true,
+      assignmentGroup: "Platform SRE"
     });
   });
 });

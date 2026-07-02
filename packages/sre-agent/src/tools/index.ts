@@ -34,7 +34,10 @@ export const buildTools = (runtime: McpRuntime) => [
         .string()
         .optional()
         .describe("Filter by assigned user name (mutually exclusive with unassigned_only)"),
-      short_description_contains: z.string().optional().describe("Search text in short description"),
+      short_description_contains: z
+        .string()
+        .optional()
+        .describe("Search text in short description"),
       unassigned_only: z
         .boolean()
         .optional()
@@ -44,7 +47,9 @@ export const buildTools = (runtime: McpRuntime) => [
     handler: async (a) => {
       try {
         if (a.unassigned_only && a.assigned_to) {
-          return { error: "unassigned_only and assigned_to are mutually exclusive — pass only one." };
+          return {
+            error: "unassigned_only and assigned_to are mutually exclusive — pass only one."
+          };
         }
         const incidents = await runtime.serviceNowClient.listIncidentsWithFilters({
           stateNot: a.state_not,
@@ -397,7 +402,10 @@ export const buildTools = (runtime: McpRuntime) => [
     description: "Search Azure DevOps work items by text, type, state, area path, or assignee",
     skipPermission: true,
     parameters: z.object({
-      query_text: z.string().optional().describe("Text to search for in the title (e.g., incident number)"),
+      query_text: z
+        .string()
+        .optional()
+        .describe("Text to search for in the title (e.g., incident number)"),
       work_item_type: z
         .enum(["Bug", "Task", "User Story", "Issue"])
         .optional()
@@ -570,10 +578,18 @@ export const buildTools = (runtime: McpRuntime) => [
     handler: async (a) => {
       try {
         const res = await runtime.knowledge.crawl(
-          { seeds: [a.url], maxDepth: Math.min(a.depth ?? 1, 2), maxPages: Math.min(a.max_pages ?? 10, 25) },
+          {
+            seeds: [a.url],
+            maxDepth: Math.min(a.depth ?? 1, 2),
+            maxPages: Math.min(a.max_pages ?? 10, 25)
+          },
           () => {}
         );
-        return { pages_crawled: res.pagesCrawled, chunks_added: res.chunksAdded, skipped: res.pagesSkipped };
+        return {
+          pages_crawled: res.pagesCrawled,
+          chunks_added: res.chunksAdded,
+          skipped: res.pagesSkipped
+        };
       } catch (err) {
         return { error: String(err) };
       }

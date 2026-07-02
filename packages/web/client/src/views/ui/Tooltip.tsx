@@ -20,7 +20,16 @@ export function Tooltip({ text }: { text: string }) {
         onBlur={() => setOpen(false)}
         className="grid place-items-center h-5 w-5 rounded-full border border-outline text-on-surface-variant hover:text-primary-container hover:border-primary-container focus-visible:border-primary-container transition-colors"
       >
-        <svg viewBox="0 0 20 20" className="h-3 w-3" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+        <svg
+          viewBox="0 0 20 20"
+          className="h-3 w-3"
+          aria-hidden="true"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1.8}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
           <circle cx="10" cy="10" r="7.5" />
           <path d="M10 9.2v4M10 6.6h.01" />
         </svg>

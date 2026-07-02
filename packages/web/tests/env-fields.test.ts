@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { groupOf, isSecret, labelOf, describe as describeField } from "../client/src/views/env-fields.js";
+import {
+  groupOf,
+  isSecret,
+  labelOf,
+  describe as describeField
+} from "../client/src/views/env-fields.js";
 
 describe("env-fields registry", () => {
   it("groups known keys and falls back to Other", () => {

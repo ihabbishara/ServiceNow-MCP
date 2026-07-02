@@ -4,7 +4,11 @@ import { applyServerEvent, initialState, type ChatState } from "./state.js";
 import { sendPrompt } from "./api.js";
 import type { ServerEvent } from "../../shared/events.js";
 
-export const useServerStream = (): { state: ChatState; connected: boolean; send: (text: string) => void } => {
+export const useServerStream = (): {
+  state: ChatState;
+  connected: boolean;
+  send: (text: string) => void;
+} => {
   const [state, dispatch] = useReducer(applyServerEvent, initialState);
   const [connected, setConnected] = useState(false);
   useEffect(() => {

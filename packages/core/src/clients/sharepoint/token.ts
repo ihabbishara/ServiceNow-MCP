@@ -2,8 +2,8 @@ import type { AzRunner } from "../ado/az.js";
 
 interface AzToken {
   accessToken: string;
-  expiresOn?: string;   // local time "YYYY-MM-DD HH:MM:SS.ffffff"
-  expires_on?: number;  // unix seconds (newer az)
+  expiresOn?: string; // local time "YYYY-MM-DD HH:MM:SS.ffffff"
+  expires_on?: number; // unix seconds (newer az)
 }
 
 const GRAPH_RESOURCE = "https://graph.microsoft.com";
@@ -28,7 +28,10 @@ export class GraphTokenProvider {
       return this.cached.token;
     }
     const t = await this.az.json<AzToken>([
-      "account", "get-access-token", "--resource", this.resource
+      "account",
+      "get-access-token",
+      "--resource",
+      this.resource
     ]);
     if (!t?.accessToken) throw new Error("az returned no accessToken for Microsoft Graph");
     const expiresAtMs =
@@ -37,7 +40,10 @@ export class GraphTokenProvider {
         : t.expiresOn
           ? Date.parse(t.expiresOn.replace(" ", "T"))
           : this.now() + 3_600_000;
-    this.cached = { token: t.accessToken, expiresAtMs: Number.isFinite(expiresAtMs) ? expiresAtMs : this.now() + 3_600_000 };
+    this.cached = {
+      token: t.accessToken,
+      expiresAtMs: Number.isFinite(expiresAtMs) ? expiresAtMs : this.now() + 3_600_000
+    };
     return this.cached.token;
   }
 }

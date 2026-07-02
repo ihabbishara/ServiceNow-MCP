@@ -6,11 +6,13 @@ const file = (name: string, id: string) => ({ id, name, file: {} });
 
 describe("findIncidentFolder", () => {
   it("matches a folder whose name starts with the incident number (case-insensitive)", async () => {
-    const getAllPages = vi.fn().mockResolvedValue([
-      file("INC123456 notes.txt", "f0"),
-      folder("INC123456 iDeal", "f1"),
-      folder("INC999999 Other", "f2")
-    ]);
+    const getAllPages = vi
+      .fn()
+      .mockResolvedValue([
+        file("INC123456 notes.txt", "f0"),
+        folder("INC123456 iDeal", "f1"),
+        folder("INC999999 Other", "f2")
+      ]);
     const graph = { get: vi.fn(), getAllPages, download: vi.fn() };
     const out = await findIncidentFolder(graph as any, "drive1", "", "inc123456");
     expect(out).toEqual({ id: "f1", name: "INC123456 iDeal", webUrl: undefined });
@@ -25,7 +27,11 @@ describe("findIncidentFolder", () => {
   });
 
   it("returns null when no folder matches", async () => {
-    const graph = { get: vi.fn(), getAllPages: vi.fn().mockResolvedValue([file("x.docx", "f0")]), download: vi.fn() };
+    const graph = {
+      get: vi.fn(),
+      getAllPages: vi.fn().mockResolvedValue([file("x.docx", "f0")]),
+      download: vi.fn()
+    };
     expect(await findIncidentFolder(graph as any, "drive1", "", "INC123456")).toBeNull();
   });
 });

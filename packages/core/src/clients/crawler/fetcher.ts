@@ -15,7 +15,12 @@ export class Fetcher {
   }
 
   async get(url: string): Promise<FetchResult> {
-    const empty = (status: number, ct = ""): FetchResult => ({ ok: false, status, contentType: ct, body: "" });
+    const empty = (status: number, ct = ""): FetchResult => ({
+      ok: false,
+      status,
+      contentType: ct,
+      body: ""
+    });
     try {
       const res = await fetch(url, {
         method: "GET",

@@ -20,7 +20,7 @@ const execFileP = promisify(execFile);
 // titles, --fields values, CSV-derived strings) cannot break out of the argument.
 export const winQuote = (a: string): string => {
   if (a === "") return '""';
-  return '"' + a.replace(/(\\*)"/g, '$1$1\\"').replace(/(\\*)$/, '$1$1') + '"';
+  return '"' + a.replace(/(\\*)"/g, '$1$1\\"').replace(/(\\*)$/, "$1$1") + '"';
 };
 
 // On Windows the Azure CLI is `az.cmd` (a batch script). Node >= 20.12 refuses
@@ -57,7 +57,10 @@ export class AzRunner {
       // Bound a hung `az` (e.g. an interactive auth stall) and allow large
       // `az boards query` payloads (full-field results can exceed the ~1 MB
       // execFile default and reject with a confusing maxBuffer error).
-      const { stdout } = await this.exec(this.azPath, full, { timeout: 30000, maxBuffer: 16 * 1024 * 1024 });
+      const { stdout } = await this.exec(this.azPath, full, {
+        timeout: 30000,
+        maxBuffer: 16 * 1024 * 1024
+      });
       return JSON.parse(stdout) as T;
     } catch (err: unknown) {
       const e = err as { stderr?: string; message?: string };

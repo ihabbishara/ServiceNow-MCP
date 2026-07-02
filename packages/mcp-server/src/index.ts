@@ -31,7 +31,9 @@ const main = async () => {
   // Log to stderr (stdout is reserved for MCP protocol)
   console.error("[sre-ops-mcp] Server started");
   console.error("[sre-ops-mcp] ServiceNow: enabled");
-  console.error(`[sre-ops-mcp] Azure DevOps: ${runtime.config.azureDevOps.enabled ? "enabled" : "disabled"}`);
+  console.error(
+    `[sre-ops-mcp] Azure DevOps: ${runtime.config.azureDevOps.enabled ? "enabled" : "disabled"}`
+  );
 };
 
 main().catch((error) => {

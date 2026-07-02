@@ -17,7 +17,11 @@ export const extOf = (name: string): string => {
 export const formatOf = (name: string): DocFormat | null => EXT_TO_FORMAT[extOf(name)] ?? null;
 
 /** Extract plain text from a document buffer. Unknown format or parser failure → a skip reason. */
-export const extractText = async (name: string, bytes: Buffer, parsers: Parsers): Promise<ExtractResult> => {
+export const extractText = async (
+  name: string,
+  bytes: Buffer,
+  parsers: Parsers
+): Promise<ExtractResult> => {
   const format = formatOf(name);
   if (!format) return { skipped: `unsupported format: .${extOf(name)}` };
   try {

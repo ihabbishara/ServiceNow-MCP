@@ -36,7 +36,12 @@ describe("docparse", () => {
   });
 
   it("skips on parser failure", async () => {
-    const throwing = { ...fakeParsers, pdf: async () => { throw new Error("bad pdf"); } };
+    const throwing = {
+      ...fakeParsers,
+      pdf: async () => {
+        throw new Error("bad pdf");
+      }
+    };
     const r = await extractText("x.pdf", Buffer.from(""), throwing);
     expect(r).toEqual({ skipped: "parse failed: bad pdf" });
   });

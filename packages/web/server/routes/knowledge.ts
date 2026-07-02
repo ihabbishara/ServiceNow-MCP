@@ -10,7 +10,8 @@ export const handleUpload = async (
   maxBytes: number
 ) => {
   const raw = req.headers["x-filename"];
-  if (typeof raw !== "string" || !raw) return sendJson(res, 400, { error: "missing X-Filename header" });
+  if (typeof raw !== "string" || !raw)
+    return sendJson(res, 400, { error: "missing X-Filename header" });
   let name: string;
   try {
     name = decodeURIComponent(raw);
@@ -44,18 +45,27 @@ export const handleAddUrl = async (req: IncomingMessage, res: ServerResponse, ho
   sendJson(res, 202, { accepted: true });
 };
 
-export const handleListSources = async (_req: IncomingMessage, res: ServerResponse, host: EngineHost) => {
+export const handleListSources = async (
+  _req: IncomingMessage,
+  res: ServerResponse,
+  host: EngineHost
+) => {
   sendJson(res, 200, { sources: await host.listSources() });
 };
 
-export const handleDeleteSource = async (req: IncomingMessage, res: ServerResponse, host: EngineHost) => {
+export const handleDeleteSource = async (
+  req: IncomingMessage,
+  res: ServerResponse,
+  host: EngineHost
+) => {
   let body: { url?: string };
   try {
     body = await readJson<{ url: string }>(req);
   } catch {
     return sendJson(res, 400, { error: "invalid JSON body" });
   }
-  if (!body.url || typeof body.url !== "string") return sendJson(res, 400, { error: "missing url" });
+  if (!body.url || typeof body.url !== "string")
+    return sendJson(res, 400, { error: "missing url" });
   await host.deleteSource(body.url);
   sendJson(res, 200, { ok: true });
 };

@@ -8,11 +8,19 @@ import { registerDashboardResources } from "../../src/resources/dashboards.js";
 import { McpRuntime, Incident, ChangeRecord } from "@sre/core";
 
 const incident: Incident = {
-  number: "INC0012345", sysId: "x", priority: "1", state: "In Progress", shortDescription: "DB down",
-  openedAt: "2026-06-11T10:00:00Z", updatedAt: "2026-06-11T11:00:00Z"
+  number: "INC0012345",
+  sysId: "x",
+  priority: "1",
+  state: "In Progress",
+  shortDescription: "DB down",
+  openedAt: "2026-06-11T10:00:00Z",
+  updatedAt: "2026-06-11T11:00:00Z"
 };
 const change: ChangeRecord = {
-  number: "CHG0005432", sysId: "c", state: "Implement", shortDescription: "DB patch"
+  number: "CHG0005432",
+  sysId: "c",
+  state: "Implement",
+  shortDescription: "DB patch"
 };
 
 const makeRuntime = () => {
@@ -76,7 +84,9 @@ describe("MCP resource surface", () => {
   it("passes the decoded team name (with spaces) to the query and fetches incidents once", async () => {
     const res = await client.readResource({ uri: "team://Platform%20SRE/incidents" });
     expect(listIncidents).toHaveBeenCalledTimes(1);
-    expect(listIncidents).toHaveBeenCalledWith(expect.objectContaining({ assignmentGroup: "Platform SRE" }));
+    expect(listIncidents).toHaveBeenCalledWith(
+      expect.objectContaining({ assignmentGroup: "Platform SRE" })
+    );
     expect(res.contents[0].text).toContain("Platform SRE Team");
   });
 
@@ -87,8 +97,9 @@ describe("MCP resource surface", () => {
 
   it("returns a graceful error instead of rejecting when the backend throws", async () => {
     const made = makeRuntime();
-    (made.runtime.serviceNowClient.getIncidentByNumber as ReturnType<typeof vi.fn>)
-      .mockRejectedValue(new Error("ServiceNow 503"));
+    (
+      made.runtime.serviceNowClient.getIncidentByNumber as ReturnType<typeof vi.fn>
+    ).mockRejectedValue(new Error("ServiceNow 503"));
     const c = await connect(made.runtime);
     const res = await c.readResource({ uri: "incident://INC0000001" });
     expect(res.contents[0].text).toMatch(/Error.*503/);

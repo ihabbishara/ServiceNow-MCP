@@ -9,7 +9,12 @@ vi.mock("undici", async (orig) => {
   return { ...actual, fetch: vi.fn() };
 });
 
-const cfg = { enabled: true, baseUrl: "https://example.service-now.com", username: "u", password: "p" };
+const cfg = {
+  enabled: true,
+  baseUrl: "https://example.service-now.com",
+  username: "u",
+  password: "p"
+};
 
 const snField = (value: string, display = value) => ({ value, display_value: display });
 
@@ -49,7 +54,12 @@ const changeRow = {
 };
 
 const okResponse = (rows: unknown[]) =>
-  ({ ok: true, status: 200, json: async () => ({ result: rows }), text: async () => "" }) as unknown as Response;
+  ({
+    ok: true,
+    status: 200,
+    json: async () => ({ result: rows }),
+    text: async () => ""
+  }) as unknown as Response;
 
 describe("ServiceNowClient", () => {
   const fetchMock = fetch as unknown as Mock;
@@ -110,7 +120,9 @@ describe("ServiceNowClient", () => {
 
   it("strips ^ from free-text filter values to prevent query injection", async () => {
     fetchMock.mockResolvedValue(okResponse([]));
-    await new ServiceNowClient(cfg).listIncidentsWithFilters({ assignmentGroup: "SRE^assigned_toISEMPTY" });
+    await new ServiceNowClient(cfg).listIncidentsWithFilters({
+      assignmentGroup: "SRE^assigned_toISEMPTY"
+    });
     const url = new URL(fetchMock.mock.calls[0][0] as string);
     expect(url.searchParams.get("sysparm_query")).toBe(
       "assignment_group.name=SREassigned_toISEMPTY^ORDERBYDESCsys_updated_on"
@@ -119,7 +131,10 @@ describe("ServiceNowClient", () => {
 
   it("listIncidents onlyOpen excludes resolved/closed/canceled states", async () => {
     fetchMock.mockResolvedValue(okResponse([]));
-    await new ServiceNowClient(cfg).listIncidents({ onlyOpen: true, assignmentGroup: "Platform SRE" });
+    await new ServiceNowClient(cfg).listIncidents({
+      onlyOpen: true,
+      assignmentGroup: "Platform SRE"
+    });
     const url = new URL(fetchMock.mock.calls[0][0] as string);
     expect(url.searchParams.get("sysparm_query")).toBe(
       "stateNOT IN6,7,8^assignment_group.name=Platform SRE^ORDERBYDESCsys_updated_on"
@@ -133,7 +148,9 @@ describe("ServiceNowClient", () => {
 
   it("maps change fields including planned/actual dates", async () => {
     fetchMock.mockResolvedValue(okResponse([changeRow]));
-    const result = await new ServiceNowClient(cfg).listChangesWithFilters({ startedAfter: "2026-06-09T00:00:00Z" });
+    const result = await new ServiceNowClient(cfg).listChangesWithFilters({
+      startedAfter: "2026-06-09T00:00:00Z"
+    });
     const url = new URL(fetchMock.mock.calls[0][0] as string);
     expect(url.pathname).toBe("/api/now/table/change_request");
     expect(url.searchParams.get("sysparm_query")).toContain("start_date>=2026-06-09 00:00:00");
@@ -153,7 +170,9 @@ describe("ServiceNowClient", () => {
     fetchMock.mockResolvedValue(okResponse([]));
     await new ServiceNowClient(cfg).listChangesWithFilters({ stateNot: "3^assigned_toISEMPTY" });
     const url = new URL(fetchMock.mock.calls[0][0] as string);
-    expect(url.searchParams.get("sysparm_query")).toContain("state!=3assigned_toISEMPTY^ORDERBYDESCstart_date");
+    expect(url.searchParams.get("sysparm_query")).toContain(
+      "state!=3assigned_toISEMPTY^ORDERBYDESCstart_date"
+    );
   });
 
   it("strips ^ from incident stateNot (unmapped value) to prevent query injection", async () => {
@@ -175,7 +194,9 @@ describe("ServiceNowClient", () => {
 
   it("passes a proxy dispatcher to fetch when proxyUrl is set, none otherwise", async () => {
     fetchMock.mockResolvedValue(okResponse([]));
-    await new ServiceNowClient({ ...cfg, proxyUrl: "http://proxy.example:8080" }).listIncidents({ onlyOpen: true });
+    await new ServiceNowClient({ ...cfg, proxyUrl: "http://proxy.example:8080" }).listIncidents({
+      onlyOpen: true
+    });
     expect((fetchMock.mock.calls[0][1] as { dispatcher?: unknown }).dispatcher).toBeDefined();
 
     fetchMock.mockClear();
@@ -185,8 +206,13 @@ describe("ServiceNowClient", () => {
 
   it("throws with status and body snippet on non-2xx", async () => {
     fetchMock.mockResolvedValue({
-      ok: false, status: 401, json: async () => ({}), text: async () => "User Not Authenticated"
+      ok: false,
+      status: 401,
+      json: async () => ({}),
+      text: async () => "User Not Authenticated"
     } as unknown as Response);
-    await expect(new ServiceNowClient(cfg).getIncidentByNumber("INC1")).rejects.toThrow(/401.*User Not Authenticated/);
+    await expect(new ServiceNowClient(cfg).getIncidentByNumber("INC1")).rejects.toThrow(
+      /401.*User Not Authenticated/
+    );
   });
 });

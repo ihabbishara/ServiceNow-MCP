@@ -27,7 +27,11 @@ describe("KnowledgeStore", () => {
   it("re-upsert replaces a page's chunks (no stale rows)", () => {
     const s = new KnowledgeStore(":memory:", { model: "e", dim: 3 });
     const page = (text: string, emb: number[]) => ({
-      url: "https://h/a", title: "A", hash: "h", crawledAt: 1, indexed: true,
+      url: "https://h/a",
+      title: "A",
+      hash: "h",
+      crawledAt: 1,
+      indexed: true,
       chunks: [{ ord: 0, text, embedding: emb }]
     });
     s.upsertPage(page("old", vec(1, 0, 0)));
@@ -55,8 +59,16 @@ describe("KnowledgeStore", () => {
 describe("KnowledgeStore listPages/deletePage", () => {
   const seed = (s: KnowledgeStore, url: string, n: number, at: number) =>
     s.upsertPage({
-      url, title: url, hash: "h" + url, crawledAt: at, indexed: true,
-      chunks: Array.from({ length: n }, (_, i) => ({ ord: i, text: "t" + i, embedding: [0.1, 0.2, 0.3] }))
+      url,
+      title: url,
+      hash: "h" + url,
+      crawledAt: at,
+      indexed: true,
+      chunks: Array.from({ length: n }, (_, i) => ({
+        ord: i,
+        text: "t" + i,
+        embedding: [0.1, 0.2, 0.3]
+      }))
     });
 
   it("lists pages newest-first with chunk counts", () => {

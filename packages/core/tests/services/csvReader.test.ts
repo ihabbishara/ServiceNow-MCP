@@ -8,10 +8,15 @@ let dir: string;
 
 beforeAll(async () => {
   dir = await fs.mkdtemp(join(tmpdir(), "csvreader-"));
-  await fs.writeFile(join(dir, "stories.csv"), 'type,title,description\nUser Story,"Add, SSO","line1\nline2"\nTask,Wire OIDC,do it\n');
+  await fs.writeFile(
+    join(dir, "stories.csv"),
+    'type,title,description\nUser Story,"Add, SSO","line1\nline2"\nTask,Wire OIDC,do it\n'
+  );
   await fs.writeFile(join(dir, "notes.txt"), "ignore me");
 });
-afterAll(async () => { await fs.rm(dir, { recursive: true, force: true }); });
+afterAll(async () => {
+  await fs.rm(dir, { recursive: true, force: true });
+});
 
 describe("listCsvFiles", () => {
   it("lists only .csv files with metadata", async () => {
@@ -27,17 +32,25 @@ describe("readCsvFile", () => {
     const table = await readCsvFile(dir, "stories.csv", 1_000_000);
     expect(table.headers).toEqual(["type", "title", "description"]);
     expect(table.rowCount).toBe(2);
-    expect(table.rows[0]).toEqual({ type: "User Story", title: "Add, SSO", description: "line1\nline2" });
+    expect(table.rows[0]).toEqual({
+      type: "User Story",
+      title: "Add, SSO",
+      description: "line1\nline2"
+    });
     expect(table.rows[1].title).toBe("Wire OIDC");
   });
 
   it("rejects a filename with a path separator", async () => {
     await expect(readCsvFile(dir, "../secret.csv", 1_000_000)).rejects.toThrow(/invalid filename/);
-    await expect(readCsvFile(dir, "sub/stories.csv", 1_000_000)).rejects.toThrow(/invalid filename/);
+    await expect(readCsvFile(dir, "sub/stories.csv", 1_000_000)).rejects.toThrow(
+      /invalid filename/
+    );
   });
 
   it("rejects an absolute path", async () => {
-    await expect(readCsvFile(dir, "/etc/passwd", 1_000_000)).rejects.toThrow(/invalid filename|only .csv/);
+    await expect(readCsvFile(dir, "/etc/passwd", 1_000_000)).rejects.toThrow(
+      /invalid filename|only .csv/
+    );
   });
 
   it("rejects a non-.csv extension", async () => {
@@ -62,7 +75,9 @@ describe("readCsvFile", () => {
     const outside = join(tmpdir(), "csvreader-secret-target.csv");
     await fs.writeFile(outside, "a,b\n1,2\n");
     await fs.symlink(outside, join(dir, "link.csv"));
-    await expect(readCsvFile(dir, "link.csv", 1_000_000)).rejects.toThrow(/escapes the CSV directory/);
+    await expect(readCsvFile(dir, "link.csv", 1_000_000)).rejects.toThrow(
+      /escapes the CSV directory/
+    );
     await fs.rm(outside, { force: true });
   });
 });

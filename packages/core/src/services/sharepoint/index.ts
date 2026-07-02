@@ -7,7 +7,11 @@ import { walkDocs } from "../../clients/sharepoint/walk.js";
 import { extractText, formatOf, extOf } from "../../clients/sharepoint/extract.js";
 import { defaultParsers } from "../../clients/sharepoint/parsers.js";
 import type {
-  SharePointConfig, GraphPort, Parsers, IncidentDocsResult, IncidentDocument
+  SharePointConfig,
+  GraphPort,
+  Parsers,
+  IncidentDocsResult,
+  IncidentDocument
 } from "../../clients/sharepoint/types.js";
 
 const estTokens = (chars: number): number => Math.ceil(chars / 4);
@@ -36,14 +40,19 @@ export class SharePointService {
     let usedTokens = 0;
     const budget = this.cfg.maxDocTokens;
 
-    for await (const f of walkDocs(this.graph, driveId, folder.id, this.cfg.docsSubfolder, { maxFiles: this.cfg.maxFiles })) {
+    for await (const f of walkDocs(this.graph, driveId, folder.id, this.cfg.docsSubfolder, {
+      maxFiles: this.cfg.maxFiles
+    })) {
       const format = formatOf(f.name);
       if (!format) {
         skipped.push({ name: f.name, reason: `unsupported format: .${extOf(f.name)}` });
         continue;
       }
       if (f.size > this.cfg.maxFileBytes) {
-        skipped.push({ name: f.name, reason: `exceeds max file bytes (${f.size} > ${this.cfg.maxFileBytes})` });
+        skipped.push({
+          name: f.name,
+          reason: `exceeds max file bytes (${f.size} > ${this.cfg.maxFileBytes})`
+        });
         continue;
       }
       let bytes: Buffer;

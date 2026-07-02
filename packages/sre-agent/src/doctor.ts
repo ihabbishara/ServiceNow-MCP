@@ -154,7 +154,11 @@ const checkKnowledge = async (): Promise<CheckResult> => {
     const rt = createMcpRuntime();
     const s = await rt.knowledge.stats();
     await rt.knowledge.close?.();
-    return { name: "Knowledge index", ok: true, detail: `pages=${s.pages}, chunks=${s.chunks}, model=${s.model ?? "?"}` };
+    return {
+      name: "Knowledge index",
+      ok: true,
+      detail: `pages=${s.pages}, chunks=${s.chunks}, model=${s.model ?? "?"}`
+    };
   } catch (e) {
     return {
       name: "Knowledge index",
@@ -178,7 +182,11 @@ const checkSharePoint = async (): Promise<CheckResult> => {
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     if (msg.includes("No SharePoint folder found")) {
-      return { name: "SharePoint", ok: true, detail: "auth + site reachable (probe folder absent, as expected)" };
+      return {
+        name: "SharePoint",
+        ok: true,
+        detail: "auth + site reachable (probe folder absent, as expected)"
+      };
     }
     return {
       name: "SharePoint",

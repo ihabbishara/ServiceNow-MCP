@@ -29,7 +29,9 @@ describe("AzRunner", () => {
   it("throws with stderr on non-zero exit", async () => {
     const exec = fakeExec(1, "", "ERROR: Please run 'az login'");
     const runner = new AzRunner("az", exec as any);
-    await expect(runner.json(["boards", "work-item", "show", "--id", "1"])).rejects.toThrow(/az login/);
+    await expect(runner.json(["boards", "work-item", "show", "--id", "1"])).rejects.toThrow(
+      /az login/
+    );
   });
 });
 

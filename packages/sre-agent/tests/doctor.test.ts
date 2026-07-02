@@ -12,7 +12,13 @@ describe("runDoctor", () => {
     await runDoctor("/usr/local/bin/az", exec as any);
     expect(exec).toHaveBeenCalledTimes(1);
     expect(exec.mock.calls[0][0]).toBe("/usr/local/bin/az");
-    expect(exec.mock.calls[0][1]).toEqual(["account", "show", "--output", "json", "--only-show-errors"]);
+    expect(exec.mock.calls[0][1]).toEqual([
+      "account",
+      "show",
+      "--output",
+      "json",
+      "--only-show-errors"
+    ]);
   });
 
   it("throws 'az login' guidance when not logged in", async () => {

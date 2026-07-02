@@ -6,7 +6,10 @@ describe("validateFile", () => {
     expect(validateFile({ name: "a.pdf", size: 100 }, 1000)).toEqual({ ok: true });
   });
   it("rejects an unsupported extension", () => {
-    expect(validateFile({ name: "deck.ppt", size: 1 }, 1000)).toEqual({ ok: false, reason: "unsupported format: .ppt" });
+    expect(validateFile({ name: "deck.ppt", size: 1 }, 1000)).toEqual({
+      ok: false,
+      reason: "unsupported format: .ppt"
+    });
   });
   it("rejects an oversize file", () => {
     const r = validateFile({ name: "a.pdf", size: 2000 }, 1000);

@@ -3,7 +3,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // Mock the heavy ML lib so tests never load a real model.
 // vi.hoisted ensures these are available when vi.mock factory is hoisted to the top.
 const { pipe, pipeline, env } = vi.hoisted(() => {
-  const pipe: any = vi.fn(async (_text: string, _opts: unknown) => ({ data: new Float32Array([0.1, 0.2, 0.3]) }));
+  const pipe: any = vi.fn(async (_text: string, _opts: unknown) => ({
+    data: new Float32Array([0.1, 0.2, 0.3])
+  }));
   pipe.dispose = vi.fn(async () => {});
   const pipeline = vi.fn(async () => pipe);
   const env: any = {};
@@ -34,9 +36,7 @@ describe("LocalEmbedder", () => {
   it("embed returns a plain number[] (mean+normalize opts passed)", async () => {
     const e = new LocalEmbedder("m");
     const v = await e.embed("hello");
-    expect(v).toEqual([
-      expect.closeTo(0.1), expect.closeTo(0.2), expect.closeTo(0.3)
-    ]);
+    expect(v).toEqual([expect.closeTo(0.1), expect.closeTo(0.2), expect.closeTo(0.3)]);
     expect(Array.isArray(v)).toBe(true);
     expect(pipe).toHaveBeenCalledWith("hello", { pooling: "mean", normalize: true });
   });
@@ -104,7 +104,11 @@ describe("LocalEmbedder serialization", () => {
     });
     const results = await Promise.all([e.embed("a"), e.embed("bb"), e.embed("ccc")]);
     expect(maxActive).toBe(1); // serialized, not overlapped
-    expect(results).toEqual([[1, 0, 0], [2, 0, 0], [3, 0, 0]]);
+    expect(results).toEqual([
+      [1, 0, 0],
+      [2, 0, 0],
+      [3, 0, 0]
+    ]);
   });
 
   it("keeps the queue alive after one embed rejects", async () => {

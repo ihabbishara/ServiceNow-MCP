@@ -31,11 +31,15 @@ export class ReportService {
     const majorIncidents = open.filter((i) => i.priority === "1");
     const failedOrHighRiskChanges = recentChanges.filter(
       // both "cancelled" and "canceled" spellings appear across instances — keep both
-      (c) => c.risk?.toLowerCase() === "high" || ["failed", "cancelled", "canceled"].includes(c.state.toLowerCase())
+      (c) =>
+        c.risk?.toLowerCase() === "high" ||
+        ["failed", "cancelled", "canceled"].includes(c.state.toLowerCase())
     );
     const upcomingChanges = recentChanges.filter((c) => {
       const start = c.plannedStartDate ? Date.parse(c.plannedStartDate) : NaN;
-      return Number.isFinite(start) && start > now.getTime() && start <= now.getTime() + 24 * HOUR_MS;
+      return (
+        Number.isFinite(start) && start > now.getTime() && start <= now.getTime() + 24 * HOUR_MS
+      );
     });
 
     const recommendedActions = [
@@ -44,7 +48,10 @@ export class ReportService {
       ...staleIncidents
         .filter((t) => t.priority === "1" || t.priority === "2")
         .slice(0, 5)
-        .map((t) => `${t.incidentNumber}: add work notes — ${t.staleByMinutes} min past update threshold`)
+        .map(
+          (t) =>
+            `${t.incidentNumber}: add work notes — ${t.staleByMinutes} min past update threshold`
+        )
     ];
 
     const executiveSummary =

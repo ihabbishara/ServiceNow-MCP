@@ -156,7 +156,7 @@ describe("copilotLogin device-code capture", () => {
       resolveBin: () => "/fake/index.js",
       execPath: "/usr/bin/node",
       spawnFn: () => child as never,
-      onDeviceCode: (info) => seen.push(info),
+      onDeviceCode: (info) => seen.push(info)
     });
 
     stdout.emit("data", Buffer.from("Open https://github.com/login/device "));
@@ -165,7 +165,7 @@ describe("copilotLogin device-code capture", () => {
 
     await expect(promise).resolves.toBeUndefined();
     expect(seen).toEqual([
-      { verificationUri: "https://github.com/login/device", userCode: "WDJB-MJHT" },
+      { verificationUri: "https://github.com/login/device", userCode: "WDJB-MJHT" }
     ]);
   });
 
@@ -175,7 +175,7 @@ describe("copilotLogin device-code capture", () => {
     const promise = copilotLogin({
       resolveBin: () => "/fake/index.js",
       execPath: "/usr/bin/node",
-      spawnFn: () => child as never,
+      spawnFn: () => child as never
     });
     child.emit("close", 7);
     await expect(promise).rejects.toThrow(/exited with code 7/);

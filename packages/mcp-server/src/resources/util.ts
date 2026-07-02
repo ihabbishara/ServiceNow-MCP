@@ -13,7 +13,9 @@ export const safeResource = <A extends unknown[]>(
       return await handler(uri, ...args);
     } catch (error) {
       return {
-        contents: [{ uri: uri.href, mimeType: "text/plain", text: `Error reading resource: ${error}` }]
+        contents: [
+          { uri: uri.href, mimeType: "text/plain", text: `Error reading resource: ${error}` }
+        ]
       };
     }
   };

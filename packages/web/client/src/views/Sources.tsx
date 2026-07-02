@@ -16,8 +16,16 @@ export function Sources({ state }: { state: ChatState }) {
   const fileInput = useRef<HTMLInputElement>(null);
   const maxBytes = state.config?.uploadMaxBytes ?? DEFAULT_MAX;
 
-  const refresh = useCallback(() => listSources().then((r) => setSources(r.sources)).catch(() => {}), []);
-  useEffect(() => { refresh(); }, [refresh]);
+  const refresh = useCallback(
+    () =>
+      listSources()
+        .then((r) => setSources(r.sources))
+        .catch(() => {}),
+    []
+  );
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
   // When any in-flight ingest reaches a terminal phase, re-pull the list.
   const ingestKey = JSON.stringify(state.ingest);
   useEffect(() => {
@@ -28,7 +36,10 @@ export function Sources({ state }: { state: ChatState }) {
     const errs: string[] = [];
     for (const f of Array.from(files)) {
       const v = validateFile(f, maxBytes);
-      if (!v.ok) { errs.push(`${f.name}: ${v.reason}`); continue; }
+      if (!v.ok) {
+        errs.push(`${f.name}: ${v.reason}`);
+        continue;
+      }
       await uploadDocument(f); // uploads are accepted (202) then ingested in the background; the shared ONNX embedder serializes embed calls at the model layer.
     }
     setLocalErrors(errs);
@@ -47,7 +58,10 @@ export function Sources({ state }: { state: ChatState }) {
     setUrl("");
   };
 
-  const remove = async (u: string) => { await deleteSource(u); refresh(); };
+  const remove = async (u: string) => {
+    await deleteSource(u);
+    refresh();
+  };
 
   // In-flight sources not yet in the persisted list.
   const inFlight = Object.entries(state.ingest).filter(
@@ -56,26 +70,35 @@ export function Sources({ state }: { state: ChatState }) {
 
   const label = (u: string) => (u.startsWith("upload://") ? u.slice("upload://".length) : u);
   const statusText = (i: { phase: string; detail?: string; reason?: string }) =>
-    i.phase === "embedding" ? `embedding ${i.detail ?? ""}…`
-      : i.phase === "skipped" ? `skipped: ${i.reason ?? ""}`
-      : i.phase === "crawling" ? "crawling…"
-      : i.phase === "parsing" ? "parsing…"
-      : i.phase;
+    i.phase === "embedding"
+      ? `embedding ${i.detail ?? ""}…`
+      : i.phase === "skipped"
+        ? `skipped: ${i.reason ?? ""}`
+        : i.phase === "crawling"
+          ? "crawling…"
+          : i.phase === "parsing"
+            ? "parsing…"
+            : i.phase;
 
   return (
     <div className="max-w-container mx-auto w-full p-6 space-y-5 overflow-auto h-full">
       <h2 className="text-headline-md">Sources</h2>
 
       <Card
-        className={"p-8 text-center border-2 border-dashed transition-colors " +
-          (dragging ? "border-primary-container bg-primary-container/5" : "border-outline")}
-        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-        onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragging(false); }}
+        className={
+          "p-8 text-center border-2 border-dashed transition-colors " +
+          (dragging ? "border-primary-container bg-primary-container/5" : "border-outline")
+        }
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragging(false);
+        }}
         onDrop={onDrop}
       >
-        <div
-          className="space-y-3"
-        >
+        <div className="space-y-3">
           <p className="text-body-lg text-on-surface">Drag documents here</p>
           <p className="text-label-sm text-on-surface-variant uppercase tracking-wide">
             {ACCEPTED_EXTS.join(" · ")}
@@ -89,7 +112,10 @@ export function Sources({ state }: { state: ChatState }) {
             multiple
             accept={ACCEPTED_EXTS.map((e) => "." + e).join(",")}
             className="hidden"
-            onChange={(e) => { if (e.target.files) void sendFiles(e.target.files); e.target.value = ""; }}
+            onChange={(e) => {
+              if (e.target.files) void sendFiles(e.target.files);
+              e.target.value = "";
+            }}
           />
         </div>
       </Card>
@@ -107,7 +133,9 @@ export function Sources({ state }: { state: ChatState }) {
 
       {localErrors.length > 0 && (
         <div role="alert" className="text-label-md text-error space-y-1">
-          {localErrors.map((e) => <div key={e}>{e}</div>)}
+          {localErrors.map((e) => (
+            <div key={e}>{e}</div>
+          ))}
         </div>
       )}
 
@@ -137,7 +165,9 @@ export function Sources({ state }: { state: ChatState }) {
           );
         })}
         {sources.length === 0 && inFlight.length === 0 && (
-          <div className="px-4 py-6 text-center text-on-surface-variant text-body-md">No sources indexed yet.</div>
+          <div className="px-4 py-6 text-center text-on-surface-variant text-body-md">
+            No sources indexed yet.
+          </div>
         )}
       </Card>
     </div>

@@ -1,7 +1,11 @@
 // packages/web/client/src/state.ts
 import type { ServerEvent, EngineState } from "../../shared/events.js";
 
-export interface ChatMessage { id: number; role: "user" | "assistant"; text: string }
+export interface ChatMessage {
+  id: number;
+  role: "user" | "assistant";
+  text: string;
+}
 export interface ChatState {
   messages: ChatMessage[];
   streaming: string;
@@ -9,7 +13,15 @@ export interface ChatState {
   activeTool?: string;
   engineState: EngineState;
   auth: { isAuthenticated: boolean; authType?: string; login?: string; ambientEnvWarning: boolean };
-  config?: { llmMode: "seat" | "byok"; model: string; provider?: string; servicenow: boolean; ado: boolean; rag: boolean; uploadMaxBytes?: number };
+  config?: {
+    llmMode: "seat" | "byok";
+    model: string;
+    provider?: string;
+    servicenow: boolean;
+    ado: boolean;
+    rag: boolean;
+    uploadMaxBytes?: number;
+  };
   ingest: Record<string, { phase: string; detail?: string; chunks?: number; reason?: string }>;
   deviceCode?: { verificationUri: string; userCode: string };
   confirm?: { id: string; summary: string };
@@ -24,7 +36,7 @@ export const initialState: ChatState = {
   engineState: "starting",
   auth: { isAuthenticated: false, ambientEnvWarning: false },
   nextMessageId: 0,
-  ingest: {},
+  ingest: {}
 };
 
 export type ClientEvent = { type: "user-message"; text: string };
@@ -36,7 +48,7 @@ export const applyServerEvent = (s: ChatState, e: ServerEvent | ClientEvent): Ch
         ...s,
         busy: true,
         messages: [...s.messages, { id: s.nextMessageId, role: "user", text: e.text }],
-        nextMessageId: s.nextMessageId + 1,
+        nextMessageId: s.nextMessageId + 1
       };
     case "delta":
       return { ...s, streaming: s.streaming + e.text, activeTool: undefined };
@@ -49,10 +61,16 @@ export const applyServerEvent = (s: ChatState, e: ServerEvent | ClientEvent): Ch
           ? [...s.messages, { id: s.nextMessageId, role: "assistant", text: s.streaming }]
           : s.messages,
         streaming: "",
-        nextMessageId: s.streaming ? s.nextMessageId + 1 : s.nextMessageId,
+        nextMessageId: s.streaming ? s.nextMessageId + 1 : s.nextMessageId
       };
     case "turn-error":
-      return { ...s, busy: false, activeTool: undefined, streaming: "", error: { message: e.message, isAuthError: e.isAuthError } };
+      return {
+        ...s,
+        busy: false,
+        activeTool: undefined,
+        streaming: "",
+        error: { message: e.message, isAuthError: e.isAuthError }
+      };
     case "confirm-request":
       return { ...s, confirm: { id: e.id, summary: e.summary } };
     case "device-code":
@@ -65,8 +83,8 @@ export const applyServerEvent = (s: ChatState, e: ServerEvent | ClientEvent): Ch
           isAuthenticated: e.isAuthenticated,
           authType: e.authType,
           login: e.login,
-          ambientEnvWarning: e.ambientEnvWarning,
-        },
+          ambientEnvWarning: e.ambientEnvWarning
+        }
       };
     case "engine-state":
       return { ...s, engineState: e.state };
@@ -80,8 +98,8 @@ export const applyServerEvent = (s: ChatState, e: ServerEvent | ClientEvent): Ch
           servicenow: e.servicenow,
           ado: e.ado,
           rag: e.rag,
-          uploadMaxBytes: e.uploadMaxBytes,
-        },
+          uploadMaxBytes: e.uploadMaxBytes
+        }
       };
     case "ingest-status":
       return {

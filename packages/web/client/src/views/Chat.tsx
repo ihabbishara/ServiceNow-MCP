@@ -10,7 +10,7 @@ const svgProps = {
   stroke: "currentColor",
   strokeWidth: 1.6,
   strokeLinecap: "round",
-  strokeLinejoin: "round",
+  strokeLinejoin: "round"
 } as const;
 
 const PROMPTS = [
@@ -20,7 +20,7 @@ const PROMPTS = [
       <svg viewBox="0 0 20 20" className="h-5 w-5" {...svgProps}>
         <path d="M4 6h12M4 10h12M4 14h8" />
       </svg>
-    ),
+    )
   },
   {
     text: "Triage open P1 incidents",
@@ -29,7 +29,7 @@ const PROMPTS = [
         <path d="M10 3.5 17.5 16.5H2.5z" />
         <path d="M10 8.5v3M10 14.2h.01" />
       </svg>
-    ),
+    )
   },
   {
     text: "Summarize current SLA risk",
@@ -38,7 +38,7 @@ const PROMPTS = [
         <circle cx="10" cy="10" r="6.5" />
         <path d="M10 6v4l2.5 1.5" />
       </svg>
-    ),
+    )
   },
   {
     text: "What changed before INC0010023?",
@@ -47,15 +47,17 @@ const PROMPTS = [
         <path d="M4 10a6 6 0 1 0 1.9-4.4" />
         <path d="M3.5 4v3h3" />
       </svg>
-    ),
-  },
+    )
+  }
 ];
 
 function Welcome({ onPick }: { onPick: (text: string) => void }) {
   return (
     <div className="h-full flex flex-col items-center justify-start pt-[12vh] text-center gap-7 px-6">
       <div className="flex flex-col items-center gap-3">
-        <p className="text-label-sm uppercase tracking-[0.2em] text-primary-container">Site Reliability Copilot</p>
+        <p className="text-label-sm uppercase tracking-[0.2em] text-primary-container">
+          Site Reliability Copilot
+        </p>
         <h2 className="font-display font-bold text-display-lg tracking-tight text-balance text-on-surface">
           Welcome to <span className="text-primary-container">SRE Agent</span>
         </h2>
@@ -71,7 +73,10 @@ function Welcome({ onPick }: { onPick: (text: string) => void }) {
             onClick={() => onPick(p.text)}
             className="group flex items-center gap-3 text-left bg-surface-container-lowest border border-surface-gray rounded-xl px-4 py-3.5 text-body-md text-on-surface shadow-sm transition hover:-translate-y-0.5 hover:border-primary-container hover:shadow-ambient"
           >
-            <span aria-hidden="true" className="grid place-items-center h-9 w-9 shrink-0 rounded-lg bg-primary-container/10 text-primary-container">
+            <span
+              aria-hidden="true"
+              className="grid place-items-center h-9 w-9 shrink-0 rounded-lg bg-primary-container/10 text-primary-container"
+            >
               {p.icon}
             </span>
             <span className="flex-1 min-w-0">{p.text}</span>
@@ -92,15 +97,14 @@ export function Chat({
   state,
   onSend,
   input,
-  setInput,
+  setInput
 }: {
   state: ChatState;
   onSend: (text: string) => void;
   input: string;
   setInput: (v: string) => void;
 }) {
-  const empty =
-    state.messages.length === 0 && !state.streaming && !state.busy && !state.error;
+  const empty = state.messages.length === 0 && !state.streaming && !state.busy && !state.error;
   const scrollRef = useRef<HTMLDivElement>(null);
   // ponytail: always pin to bottom on new content. If users complain about
   // being yanked down while reading scrollback, gate on "already near bottom".
@@ -126,7 +130,7 @@ export function Chat({
                 <div key={m.id} className="rounded px-4 py-2 bg-surface-container">
                   <Markdown>{m.text}</Markdown>
                 </div>
-              ),
+              )
             )}
             {state.streaming && (
               <div className="rounded px-4 py-2 bg-surface-container">
@@ -134,7 +138,11 @@ export function Chat({
               </div>
             )}
             {state.busy && !state.streaming && (
-              <div role="status" aria-live="polite" className="flex items-center gap-2 px-4 py-2 text-on-surface-variant text-label-md">
+              <div
+                role="status"
+                aria-live="polite"
+                className="flex items-center gap-2 px-4 py-2 text-on-surface-variant text-label-md"
+              >
                 <span className="flex gap-1" aria-hidden="true">
                   <span className="h-1.5 w-1.5 rounded-full bg-on-surface-variant motion-safe:animate-bounce [animation-delay:-0.3s]" />
                   <span className="h-1.5 w-1.5 rounded-full bg-on-surface-variant motion-safe:animate-bounce [animation-delay:-0.15s]" />

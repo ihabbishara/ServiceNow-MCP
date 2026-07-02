@@ -1,10 +1,13 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { registerSharePointTools } from "./sharepoint.js";
 
+type Handler = (...args: unknown[]) => unknown;
 const fakeServer = () => {
-  const tools: Record<string, Function> = {};
+  const tools: Record<string, Handler> = {};
   return {
-    tool: (name: string, _d: string, _s: unknown, handler: Function) => { tools[name] = handler; },
+    tool: (name: string, _d: string, _s: unknown, handler: Handler) => {
+      tools[name] = handler;
+    },
     tools
   };
 };
@@ -12,16 +15,23 @@ const fakeServer = () => {
 describe("registerSharePointTools", () => {
   it("registers get_incident_documents that returns JSON text", async () => {
     const server = fakeServer();
-    const runtime: any = { sharePoint: { getIncidentDocuments: async (n: string) => ({ incident: n, count: 0 }) } };
+    const runtime: any = {
+      sharePoint: { getIncidentDocuments: async (n: string) => ({ incident: n, count: 0 }) }
+    };
     registerSharePointTools(server as any, runtime);
-    const out = await server.tools["get_incident_documents"]({ incident: "INC1" });
+    const out = (await server.tools["get_incident_documents"]({ incident: "INC1" })) as {
+      content: Array<{ type: string; text: string }>;
+    };
     expect(out.content[0].text).toContain('"incident": "INC1"');
   });
 
   it("returns an isError result when disabled", async () => {
     const server = fakeServer();
     registerSharePointTools(server as any, { sharePoint: undefined } as any);
-    const out = await server.tools["get_incident_documents"]({ incident: "INC1" });
+    const out = (await server.tools["get_incident_documents"]({ incident: "INC1" })) as {
+      content: Array<{ type: string; text: string }>;
+      isError: boolean;
+    };
     expect(out.isError).toBe(true);
   });
 });

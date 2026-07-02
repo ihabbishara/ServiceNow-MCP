@@ -18,7 +18,12 @@ describe("indexDocument", () => {
     );
     expect(res).toEqual({ indexed: true, chunks: 1 });
     expect(store.upsertPage).toHaveBeenCalledWith(
-      expect.objectContaining({ url: "upload://a.txt", title: "a.txt", indexed: true, crawledAt: 1234 })
+      expect.objectContaining({
+        url: "upload://a.txt",
+        title: "a.txt",
+        indexed: true,
+        crawledAt: 1234
+      })
     );
     expect(onPhase).toHaveBeenCalledWith({ phase: "indexed", chunks: 1 });
   });

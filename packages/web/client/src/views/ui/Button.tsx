@@ -13,12 +13,12 @@ const VARIANTS: Record<Variant, string> = {
   outline:
     "border border-primary-container text-primary-container hover:bg-primary-container/10 active:bg-primary-container/20 disabled:opacity-50 disabled:pointer-events-none",
   ghost:
-    "text-on-surface-variant hover:bg-surface-container active:bg-surface-container-high disabled:opacity-50 disabled:pointer-events-none",
+    "text-on-surface-variant hover:bg-surface-container active:bg-surface-container-high disabled:opacity-50 disabled:pointer-events-none"
 };
 
 const SIZES: Record<Size, string> = {
   md: "px-5 py-2 text-label-md",
-  sm: "px-3 py-1.5 text-label-sm",
+  sm: "px-3 py-1.5 text-label-sm"
 };
 
 export function Button({

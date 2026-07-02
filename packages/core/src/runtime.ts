@@ -25,7 +25,9 @@ export interface McpRuntime {
   workItemService: WorkItemService;
 }
 
-export const createMcpRuntime = (env: Record<string, string | undefined> = process.env): McpRuntime => {
+export const createMcpRuntime = (
+  env: Record<string, string | undefined> = process.env
+): McpRuntime => {
   const config = loadConfig(env);
 
   const serviceNowClient = new ServiceNowClient(config.serviceNow);
@@ -51,7 +53,9 @@ export const createMcpRuntime = (env: Record<string, string | undefined> = proce
   );
   const reportService = new ReportService(incidentService, serviceNowClient);
   const knowledge = new KnowledgeService(config.knowledge);
-  const sharePoint = config.sharePoint.enabled ? createSharePointService(config.sharePoint) : undefined;
+  const sharePoint = config.sharePoint.enabled
+    ? createSharePointService(config.sharePoint)
+    : undefined;
 
   return {
     config,

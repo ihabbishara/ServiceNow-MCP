@@ -16,7 +16,9 @@ const fetchMock = fetch as unknown as Mock;
 const res = (over: Partial<{ status: number; ct: string; body: string }>) => ({
   ok: (over.status ?? 200) < 400,
   status: over.status ?? 200,
-  headers: { get: (h: string) => (h.toLowerCase() === "content-type" ? over.ct ?? "text/html" : null) },
+  headers: {
+    get: (h: string) => (h.toLowerCase() === "content-type" ? (over.ct ?? "text/html") : null)
+  },
   text: async () => over.body ?? "<html></html>"
 });
 
@@ -46,7 +48,9 @@ describe("Fetcher", () => {
 
   describe("getText", () => {
     it("returns the body for a text/plain 200 response", async () => {
-      fetchMock.mockResolvedValue(res({ ct: "text/plain", body: "User-agent: *\nDisallow: /x\n" }) as any);
+      fetchMock.mockResolvedValue(
+        res({ ct: "text/plain", body: "User-agent: *\nDisallow: /x\n" }) as any
+      );
       const f = new Fetcher({ maxBytes: 1000 });
       const txt = await f.getText("https://h/robots.txt");
       expect(txt).toBe("User-agent: *\nDisallow: /x\n");

@@ -9,7 +9,12 @@ import { KnowledgeStore } from "./store.js";
 import { crawl, canonical, inScope, type CrawlBounds, type CrawlResult } from "./crawl.js";
 import { search, type SearchResponse } from "./search.js";
 import type { KnowledgeStats, SourceRow } from "./types.js";
-import { indexDocument as runIndexDocument, type IngestDoc, type IngestPhase, type IngestResult } from "./ingest.js";
+import {
+  indexDocument as runIndexDocument,
+  type IngestDoc,
+  type IngestPhase,
+  type IngestResult
+} from "./ingest.js";
 
 export interface CrawlOverrides {
   seeds?: string[];
@@ -38,12 +43,18 @@ export class KnowledgeService {
   private ensureStore(): Promise<KnowledgeStore> {
     return (this.storePromise ??= (async () => {
       await this.embedder.ready();
-      this.store = new KnowledgeStore(this.cfg.dbPath, { model: this.embedder.model, dim: this.embedder.dim });
+      this.store = new KnowledgeStore(this.cfg.dbPath, {
+        model: this.embedder.model,
+        dim: this.embedder.dim
+      });
       return this.store;
     })());
   }
 
-  async crawl(overrides: CrawlOverrides = {}, log: (m: string) => void = () => {}): Promise<CrawlResult> {
+  async crawl(
+    overrides: CrawlOverrides = {},
+    log: (m: string) => void = () => {}
+  ): Promise<CrawlResult> {
     const bounds: CrawlBounds = {
       seeds: overrides.seeds ?? this.cfg.seeds,
       allowDomains: overrides.allowDomains ?? this.cfg.allowDomains,
@@ -54,7 +65,8 @@ export class KnowledgeService {
       maxLinksPerPage: 50,
       topic: this.cfg.topic
     };
-    if (bounds.seeds.length === 0) throw new Error("no crawl seeds (set CRAWL_SEEDS or pass --seed)");
+    if (bounds.seeds.length === 0)
+      throw new Error("no crawl seeds (set CRAWL_SEEDS or pass --seed)");
     const store = await this.ensureStore();
     const robots = new RobotsClient(this.fetcher, this.cfg.respectRobots);
     return crawl(
@@ -96,7 +108,11 @@ export class KnowledgeService {
 
   async indexDocument(doc: IngestDoc, onPhase?: (p: IngestPhase) => void): Promise<IngestResult> {
     const store = await this.ensureStore();
-    return runIndexDocument({ embedder: this.embedder, store, now: () => Date.now() }, doc, onPhase);
+    return runIndexDocument(
+      { embedder: this.embedder, store, now: () => Date.now() },
+      doc,
+      onPhase
+    );
   }
 
   async listSources(): Promise<SourceRow[]> {

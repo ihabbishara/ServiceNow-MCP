@@ -7,7 +7,7 @@ const res = (status: number, body: unknown, headers: Record<string, string> = {}
   headers: { get: (k: string) => headers[k.toLowerCase()] ?? null },
   json: async () => body,
   text: async () => (typeof body === "string" ? body : JSON.stringify(body)),
-  arrayBuffer: async () => (body as Buffer)
+  arrayBuffer: async () => body as Buffer
 });
 
 const client = (fetchImpl: any) =>
@@ -26,7 +26,12 @@ describe("GraphClient", () => {
   it("getAllPages follows @odata.nextLink and flattens value", async () => {
     const fetchImpl = vi
       .fn()
-      .mockResolvedValueOnce(res(200, { value: [{ id: "a" }], "@odata.nextLink": "https://graph.microsoft.com/v1.0/next" }))
+      .mockResolvedValueOnce(
+        res(200, {
+          value: [{ id: "a" }],
+          "@odata.nextLink": "https://graph.microsoft.com/v1.0/next"
+        })
+      )
       .mockResolvedValueOnce(res(200, { value: [{ id: "b" }] }));
     const out = await client(fetchImpl).getAllPages<{ id: string }>("/drives/d/root/children");
     expect(out.map((i) => i.id)).toEqual(["a", "b"]);
@@ -50,36 +55,46 @@ describe("GraphClient", () => {
 
   it("getAllPages throws on a self-referential @odata.nextLink", async () => {
     const loop = "https://graph.microsoft.com/v1.0/drives/d/root/children?page=loop";
-    const fetchImpl = vi.fn().mockResolvedValue(res(200, { value: [{ id: "a" }], "@odata.nextLink": loop }));
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(res(200, { value: [{ id: "a" }], "@odata.nextLink": loop }));
     await expect(client(fetchImpl).getAllPages(loop)).rejects.toThrow(/pagination loop detected/);
   });
 
   it("throws with status + snippet on non-retryable error", async () => {
     const fetchImpl = vi.fn().mockResolvedValue(res(404, "not found"));
-    await expect(client(fetchImpl).get("/missing")).rejects.toThrow(/Graph GET \/missing failed: 404/);
+    await expect(client(fetchImpl).get("/missing")).rejects.toThrow(
+      /Graph GET \/missing failed: 404/
+    );
   });
 
   it("download returns a Buffer of the item content", async () => {
     const bytes = Buffer.from("hello");
-    const fetchImpl = vi.fn().mockResolvedValue({ ...res(200, ""), arrayBuffer: async () => bytes });
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue({ ...res(200, ""), arrayBuffer: async () => bytes });
     const out = await client(fetchImpl).download("drive1", "item1");
     expect(Buffer.from(out).toString()).toBe("hello");
-    expect(fetchImpl.mock.calls[0][0]).toBe("https://graph.microsoft.com/v1.0/drives/drive1/items/item1/content");
+    expect(fetchImpl.mock.calls[0][0]).toBe(
+      "https://graph.microsoft.com/v1.0/drives/drive1/items/item1/content"
+    );
   });
 
   it("download rejects when content-length header exceeds maxBytes", async () => {
     const bytes = Buffer.from("hello world");
-    const fetchImpl = vi
-      .fn()
-      .mockResolvedValue({ ...res(200, "", { "content-length": "11" }), arrayBuffer: async () => bytes });
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ...res(200, "", { "content-length": "11" }),
+      arrayBuffer: async () => bytes
+    });
     await expect(client(fetchImpl).download("d", "i", 5)).rejects.toThrow(/exceeds max bytes/);
   });
 
   it("download resolves when no maxBytes is provided even if body is large", async () => {
     const bytes = Buffer.from("hello world");
-    const fetchImpl = vi
-      .fn()
-      .mockResolvedValue({ ...res(200, "", { "content-length": "11" }), arrayBuffer: async () => bytes });
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ...res(200, "", { "content-length": "11" }),
+      arrayBuffer: async () => bytes
+    });
     const out = await client(fetchImpl).download("d", "i");
     expect(Buffer.from(out).toString()).toBe("hello world");
   });

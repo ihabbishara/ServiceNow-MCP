@@ -4,7 +4,11 @@ import { search } from "../src/services/knowledge/search.js";
 describe("search", () => {
   it("embeds the query and returns store hits", async () => {
     const embedder = { embed: vi.fn(async () => [1, 0, 0]) };
-    const store = { knn: vi.fn(() => [{ url: "https://h/a", title: "A", text: "full chunk body", snippet: "alpha", score: 0.9 }]) };
+    const store = {
+      knn: vi.fn(() => [
+        { url: "https://h/a", title: "A", text: "full chunk body", snippet: "alpha", score: 0.9 }
+      ])
+    };
     const res = await search({ embedder, store } as any, "how to restart", 3);
     expect(embedder.embed).toHaveBeenCalledWith("how to restart");
     expect(store.knn).toHaveBeenCalledWith([1, 0, 0], 3, undefined);

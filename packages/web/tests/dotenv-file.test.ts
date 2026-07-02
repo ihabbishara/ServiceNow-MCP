@@ -78,7 +78,10 @@ describe("writeEnvFile preserves comments", () => {
   it("edits a value in place without dropping the inline comment", async () => {
     const dir = await mkdtemp(join(tmpdir(), "envtest-"));
     const path = join(dir, ".env");
-    await writeFileRaw(path, 'SERVICENOW_USERNAME=old # ServiceNow username\nADO_ENABLED=false # core PAT path\n');
+    await writeFileRaw(
+      path,
+      "SERVICENOW_USERNAME=old # ServiceNow username\nADO_ENABLED=false # core PAT path\n"
+    );
     await writeEnvFile(path, { SERVICENOW_USERNAME: "NPA_T", ADO_ENABLED: "false" });
     const text = await readFile(path, "utf8");
     expect(text).toContain("SERVICENOW_USERNAME=NPA_T # ServiceNow username");
@@ -98,7 +101,7 @@ describe("round-trip with special characters", () => {
       EQUALS: "p@ss=w0rd",
       QUOTED: 'has"quote',
       MULTILINE: "line1\nline2",
-      EMPTY: "",
+      EMPTY: ""
     };
     expect(parseEnv(serializeEnv(vars))).toEqual(vars);
   });

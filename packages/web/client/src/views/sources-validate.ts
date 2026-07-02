@@ -11,6 +11,7 @@ export const validateFile = (
 ): { ok: true } | { ok: false; reason: string } => {
   const ext = extOf(file.name);
   if (!ACCEPTED_EXTS.includes(ext)) return { ok: false, reason: `unsupported format: .${ext}` };
-  if (file.size > maxBytes) return { ok: false, reason: `exceeds ${Math.round(maxBytes / 1048576)} MB limit` };
+  if (file.size > maxBytes)
+    return { ok: false, reason: `exceeds ${Math.round(maxBytes / 1048576)} MB limit` };
   return { ok: true };
 };

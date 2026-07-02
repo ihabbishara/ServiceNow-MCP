@@ -14,12 +14,20 @@ describe("loadConfig", () => {
     expect(cfg.serviceNow.baseUrl).toBe("https://example.service-now.com");
     expect(cfg.azureDevOps.enabled).toBe(false);
     expect(cfg.features.createAdoBug).toBe(true);
-    expect(cfg.thresholds.staleByPriorityMinutes).toEqual({ "1": 30, "2": 120, "3": 1440, "4": 4320 });
+    expect(cfg.thresholds.staleByPriorityMinutes).toEqual({
+      "1": 30,
+      "2": 120,
+      "3": 1440,
+      "4": 4320
+    });
     expect(cfg.thresholds.relatedChangeWindow).toEqual({ beforeHours: 24, afterHours: 4 });
   });
 
   it("strips trailing slash from base URL", () => {
-    const cfg = loadConfig({ ...validEnv, SERVICENOW_BASE_URL: "https://example.service-now.com/" });
+    const cfg = loadConfig({
+      ...validEnv,
+      SERVICENOW_BASE_URL: "https://example.service-now.com/"
+    });
     expect(cfg.serviceNow.baseUrl).toBe("https://example.service-now.com");
   });
 
@@ -28,8 +36,20 @@ describe("loadConfig", () => {
     expect(() => loadConfig({})).toThrow(/SERVICENOW_USERNAME/);
   });
 
+  it("includes the custom 'is required' message for each missing ServiceNow var", () => {
+    expect(() => loadConfig({})).toThrow(/SERVICENOW_BASE_URL is required/);
+    expect(() => loadConfig({ SERVICENOW_BASE_URL: "https://sn.example.com" })).toThrow(
+      /SERVICENOW_USERNAME is required/
+    );
+    expect(() =>
+      loadConfig({ SERVICENOW_BASE_URL: "https://sn.example.com", SERVICENOW_USERNAME: "u" })
+    ).toThrow(/SERVICENOW_PASSWORD is required/);
+  });
+
   it("requires ADO vars when ADO_ENABLED=true", () => {
-    expect(() => loadConfig({ ...validEnv, ADO_ENABLED: "true" })).toThrow(/ADO_ORG_URL and ADO_PROJECT/);
+    expect(() => loadConfig({ ...validEnv, ADO_ENABLED: "true" })).toThrow(
+      /ADO_ORG_URL and ADO_PROJECT/
+    );
   });
 
   it("accepts full ADO config, defaults paths to project name", () => {
@@ -92,11 +112,15 @@ describe("loadConfig", () => {
   });
 
   it("rejects a malformed proxy URL", () => {
-    expect(() => loadConfig({ ...validEnv, SERVICENOW_PROXY: "not a url" })).toThrow(/SERVICENOW_PROXY/);
+    expect(() => loadConfig({ ...validEnv, SERVICENOW_PROXY: "not a url" })).toThrow(
+      /SERVICENOW_PROXY/
+    );
   });
 
   it("rejects a non-http(s) proxy scheme", () => {
-    expect(() => loadConfig({ ...validEnv, ADO_PROXY: "ftp://proxy.example:21" })).toThrow(/ADO_PROXY/);
+    expect(() => loadConfig({ ...validEnv, ADO_PROXY: "ftp://proxy.example:21" })).toThrow(
+      /ADO_PROXY/
+    );
   });
 
   it("applies threshold overrides from env", () => {
@@ -174,7 +198,12 @@ describe("loadConfig ADO_CSV_DIR", () => {
 });
 
 describe("loadConfig ADO auth-mode validation", () => {
-  const adoBase = { ...base, ADO_ENABLED: "true", ADO_ORG_URL: "https://dev.azure.com/org", ADO_PROJECT: "Proj" };
+  const adoBase = {
+    ...base,
+    ADO_ENABLED: "true",
+    ADO_ORG_URL: "https://dev.azure.com/org",
+    ADO_PROJECT: "Proj"
+  };
   it("allows azcli mode without a PAT", () => {
     const c = loadConfig({ ...adoBase, ADO_AUTH_MODE: "azcli" });
     expect(c.azureDevOps.enabled).toBe(true);
@@ -184,6 +213,8 @@ describe("loadConfig ADO auth-mode validation", () => {
     expect(() => loadConfig({ ...adoBase, ADO_AUTH_MODE: "pat" })).toThrow(/ADO_PAT/);
   });
   it("requires org and project when enabled", () => {
-    expect(() => loadConfig({ ...base, ADO_ENABLED: "true", ADO_AUTH_MODE: "azcli" })).toThrow(/ADO_ORG_URL and ADO_PROJECT/);
+    expect(() => loadConfig({ ...base, ADO_ENABLED: "true", ADO_AUTH_MODE: "azcli" })).toThrow(
+      /ADO_ORG_URL and ADO_PROJECT/
+    );
   });
 });

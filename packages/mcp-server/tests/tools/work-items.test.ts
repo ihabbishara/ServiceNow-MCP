@@ -7,11 +7,22 @@ import { registerWorkItemCsvTools } from "../../src/tools/workItemCsv.js";
 import { McpRuntime } from "@sre/core";
 
 const makeRuntime = (over: { enabled?: boolean; csvDir?: string; boardKnown?: boolean } = {}) => {
-  const create = vi.fn().mockResolvedValue({ id: 100, title: "T", state: "New", workItemType: "User Story", areaPath: "Platform\\Alpha" });
-  const clone = vi.fn().mockResolvedValue({ cloneId: 900, sourceId: 1, childrenCopied: 0, linked: false });
+  const create = vi.fn().mockResolvedValue({
+    id: 100,
+    title: "T",
+    state: "New",
+    workItemType: "User Story",
+    areaPath: "Platform\\Alpha"
+  });
+  const clone = vi
+    .fn()
+    .mockResolvedValue({ cloneId: 900, sourceId: 1, childrenCopied: 0, linked: false });
   const isBoardKnown = vi.fn().mockReturnValue(over.boardKnown ?? true);
   const runtime = {
-    config: { azureDevOps: { enabled: over.enabled ?? true, csvDir: over.csvDir, csvMaxBytes: 1000000 }, features: { createAdoBug: true } },
+    config: {
+      azureDevOps: { enabled: over.enabled ?? true, csvDir: over.csvDir, csvMaxBytes: 1000000 },
+      features: { createAdoBug: true }
+    },
     workItemService: { create, clone, isBoardKnown },
     azureDevOpsClient: { searchWorkItems: vi.fn(), getWorkItem: vi.fn() },
     incidentService: { summarizeIncident: vi.fn() }
@@ -30,7 +41,10 @@ const connect = async (runtime: McpRuntime) => {
 };
 
 const callJson = async (client: Client, name: string, args: Record<string, unknown>) => {
-  const res = (await client.callTool({ name, arguments: args })) as { isError?: boolean; content: Array<{ type: string; text: string }> };
+  const res = (await client.callTool({ name, arguments: args })) as {
+    isError?: boolean;
+    content: Array<{ type: string; text: string }>;
+  };
   return { isError: res.isError ?? false, text: res.content[0].text };
 };
 
@@ -46,26 +60,52 @@ describe("create_work_item tool", () => {
     const { runtime, create } = makeRuntime();
     const client = await connect(runtime);
     await callJson(client, "create_work_item", {
-      type: "User Story", title: "SSO", description: "body", area_path: "P\\A", iteration_path: "P\\S1",
-      tags: ["auth"], assigned_to: "jane@x.com", priority: "2", story_points: 5, parent_id: 42
+      type: "User Story",
+      title: "SSO",
+      description: "body",
+      area_path: "P\\A",
+      iteration_path: "P\\S1",
+      tags: ["auth"],
+      assigned_to: "jane@x.com",
+      priority: "2",
+      story_points: 5,
+      parent_id: 42
     });
-    expect(create).toHaveBeenCalledWith(expect.objectContaining({
-      type: "User Story", title: "SSO", description: "body", areaPath: "P\\A", iterationPath: "P\\S1",
-      tags: ["auth"], assignedTo: "jane@x.com", priority: "2", storyPoints: 5, parentId: 42
-    }));
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "User Story",
+        title: "SSO",
+        description: "body",
+        areaPath: "P\\A",
+        iterationPath: "P\\S1",
+        tags: ["auth"],
+        assignedTo: "jane@x.com",
+        priority: "2",
+        storyPoints: 5,
+        parentId: 42
+      })
+    );
   });
 
   it("adds a boardWarning when the board name is unknown and no area_path given", async () => {
     const { runtime } = makeRuntime({ boardKnown: false });
     const client = await connect(runtime);
-    const r = await callJson(client, "create_work_item", { type: "Task", title: "x", board: "Typo" });
+    const r = await callJson(client, "create_work_item", {
+      type: "Task",
+      title: "x",
+      board: "Typo"
+    });
     expect(JSON.parse(r.text).boardWarning).toMatch(/not found in ADO_BOARD_MAP/);
   });
 
   it("omits boardWarning for a known board", async () => {
     const { runtime } = makeRuntime({ boardKnown: true });
     const client = await connect(runtime);
-    const r = await callJson(client, "create_work_item", { type: "Task", title: "x", board: "Team Alpha" });
+    const r = await callJson(client, "create_work_item", {
+      type: "Task",
+      title: "x",
+      board: "Team Alpha"
+    });
     expect(JSON.parse(r.text).boardWarning).toBeUndefined();
   });
 });
@@ -75,13 +115,27 @@ describe("clone_work_item tool", () => {
     const { runtime, clone } = makeRuntime();
     const client = await connect(runtime);
     await callJson(client, "clone_work_item", {
-      source_id: 1234, board: "Team Beta", include_children: true, link_to_source: true, title_prefix: "[C] ",
+      source_id: 1234,
+      board: "Team Beta",
+      include_children: true,
+      link_to_source: true,
+      title_prefix: "[C] ",
       overrides: { assigned_to: "bob@x.com", story_points: 3, priority: "1" }
     });
-    expect(clone).toHaveBeenCalledWith(expect.objectContaining({
-      sourceId: 1234, board: "Team Beta", includeChildren: true, linkToSource: true, titlePrefix: "[C] ",
-      overrides: expect.objectContaining({ assignedTo: "bob@x.com", storyPoints: 3, priority: "1" })
-    }));
+    expect(clone).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sourceId: 1234,
+        board: "Team Beta",
+        includeChildren: true,
+        linkToSource: true,
+        titlePrefix: "[C] ",
+        overrides: expect.objectContaining({
+          assignedTo: "bob@x.com",
+          storyPoints: 3,
+          priority: "1"
+        })
+      })
+    );
   });
 
   it("is disabled when ADO is off", async () => {

@@ -11,7 +11,7 @@ describe("public API barrel", () => {
       "isCopilotAuthError",
       "loadDotenv",
       "resolveDotenvPath",
-      "buildWorkflowPrompt",
+      "buildWorkflowPrompt"
     ]) {
       expect(api[name], name).toBeTypeOf("function");
     }

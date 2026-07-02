@@ -14,7 +14,7 @@ const boot = async () => {
     config: { llm: { mode: "seat", model: "gpt-5" }, copilot: {} } as any,
     tools: [],
     engineFactory: (d) => new FakeEngine(d, (deps) => deps.onDelta("hello")) as any,
-    runtimeFactory: () => ({ knowledge: { close: async () => {} } }),
+    runtimeFactory: () => ({ knowledge: { close: async () => {} } })
   });
   await host.start();
   const server = await startServer({ port: 0, host });
@@ -46,7 +46,7 @@ describe("routes", () => {
     await fetch(`${base}/api/chat`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ prompt: "hi" }),
+      body: JSON.stringify({ prompt: "hi" })
     });
     const text = await textPromise;
     expect(text).toContain(`"type":"delta"`);
@@ -59,36 +59,60 @@ describe("routes", () => {
     const res = await fetch(`${base}/api/env`, {
       method: "PUT",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ vars: { LLM_MODE: "nonsense" } }),
+      body: JSON.stringify({ vars: { LLM_MODE: "nonsense" } })
     });
     expect(res.status).toBe(400);
   });
 });
 
-import { handleUpload, handleAddUrl, handleListSources, handleDeleteSource } from "../server/routes/knowledge.js";
+import {
+  handleUpload,
+  handleAddUrl,
+  handleListSources,
+  handleDeleteSource
+} from "../server/routes/knowledge.js";
 
 // Build a fake IncomingMessage that yields `body` bytes and carries headers.
 const reqOf = (headers: Record<string, string>, body = Buffer.from("")) => {
-  async function* gen() { yield body; }
+  async function* gen() {
+    yield body;
+  }
   return Object.assign(gen(), { headers });
 };
 const resOf = () => {
-  const r: any = { statusCode: 0, body: "", writeHead: (s: number) => { r.statusCode = s; }, end: (b?: string) => { r.body = b ?? ""; } };
+  const r: any = {
+    statusCode: 0,
+    body: "",
+    writeHead: (s: number) => {
+      r.statusCode = s;
+    },
+    end: (b?: string) => {
+      r.body = b ?? "";
+    }
+  };
   return r;
 };
-const hostOf = () => ({
-  uploadMaxBytes: 1000,
-  ingestFile: vi.fn(async () => {}),
-  ingestUrl: vi.fn(async () => {}),
-  listSources: vi.fn(async () => [{ url: "upload://a", title: "a", crawledAt: 1, indexed: true, chunkCount: 2 }]),
-  deleteSource: vi.fn(async () => {})
-}) as any;
+const hostOf = () =>
+  ({
+    uploadMaxBytes: 1000,
+    ingestFile: vi.fn(async () => {}),
+    ingestUrl: vi.fn(async () => {}),
+    listSources: vi.fn(async () => [
+      { url: "upload://a", title: "a", crawledAt: 1, indexed: true, chunkCount: 2 }
+    ]),
+    deleteSource: vi.fn(async () => {})
+  }) as any;
 
 describe("knowledge routes", () => {
   it("upload accepts a supported file and calls ingestFile", async () => {
     const host = hostOf();
     const res = resOf();
-    await handleUpload(reqOf({ "x-filename": "notes.txt" }, Buffer.from("hi")), res, host, host.uploadMaxBytes);
+    await handleUpload(
+      reqOf({ "x-filename": "notes.txt" }, Buffer.from("hi")),
+      res,
+      host,
+      host.uploadMaxBytes
+    );
     expect(res.statusCode).toBe(202);
     expect(host.ingestFile).toHaveBeenCalledWith("notes.txt", expect.any(Buffer));
   });
@@ -96,7 +120,12 @@ describe("knowledge routes", () => {
   it("upload rejects an unsupported format with 415", async () => {
     const host = hostOf();
     const res = resOf();
-    await handleUpload(reqOf({ "x-filename": "deck.ppt" }, Buffer.from("x")), res, host, host.uploadMaxBytes);
+    await handleUpload(
+      reqOf({ "x-filename": "deck.ppt" }, Buffer.from("x")),
+      res,
+      host,
+      host.uploadMaxBytes
+    );
     expect(res.statusCode).toBe(415);
     expect(host.ingestFile).not.toHaveBeenCalled();
   });
@@ -104,7 +133,12 @@ describe("knowledge routes", () => {
   it("upload rejects oversize with 413", async () => {
     const host = hostOf();
     const res = resOf();
-    await handleUpload(reqOf({ "x-filename": "a.txt" }, Buffer.alloc(2000)), res, host, host.uploadMaxBytes);
+    await handleUpload(
+      reqOf({ "x-filename": "a.txt" }, Buffer.alloc(2000)),
+      res,
+      host,
+      host.uploadMaxBytes
+    );
     expect(res.statusCode).toBe(413);
     expect(host.ingestFile).not.toHaveBeenCalled();
   });
@@ -136,7 +170,11 @@ describe("knowledge routes", () => {
   it("delete calls deleteSource", async () => {
     const host = hostOf();
     const res = resOf();
-    await handleDeleteSource(reqOf({}, Buffer.from(JSON.stringify({ url: "upload://a" }))), res, host);
+    await handleDeleteSource(
+      reqOf({}, Buffer.from(JSON.stringify({ url: "upload://a" }))),
+      res,
+      host
+    );
     expect(res.statusCode).toBe(200);
     expect(host.deleteSource).toHaveBeenCalledWith("upload://a");
   });
@@ -160,7 +198,12 @@ describe("knowledge routes", () => {
   it("upload rejects a malformed X-Filename with 400", async () => {
     const host = hostOf();
     const res = resOf();
-    await handleUpload(reqOf({ "x-filename": "file%GG.txt" }, Buffer.from("x")), res, host, host.uploadMaxBytes);
+    await handleUpload(
+      reqOf({ "x-filename": "file%GG.txt" }, Buffer.from("x")),
+      res,
+      host,
+      host.uploadMaxBytes
+    );
     expect(res.statusCode).toBe(400);
     expect(host.ingestFile).not.toHaveBeenCalled();
   });

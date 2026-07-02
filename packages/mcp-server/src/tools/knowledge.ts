@@ -39,10 +39,18 @@ export const registerKnowledgeTools = (server: McpServer, runtime: McpRuntime): 
     async (args) => {
       try {
         const res = await runtime.knowledge.crawl(
-          { seeds: [args.url], maxDepth: Math.min(args.depth ?? 1, 2), maxPages: Math.min(args.max_pages ?? 10, 25) },
+          {
+            seeds: [args.url],
+            maxDepth: Math.min(args.depth ?? 1, 2),
+            maxPages: Math.min(args.max_pages ?? 10, 25)
+          },
           () => {}
         );
-        return asText({ pages_crawled: res.pagesCrawled, chunks_added: res.chunksAdded, skipped: res.pagesSkipped });
+        return asText({
+          pages_crawled: res.pagesCrawled,
+          chunks_added: res.chunksAdded,
+          skipped: res.pagesSkipped
+        });
       } catch (error) {
         return asError(error);
       }

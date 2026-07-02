@@ -4,7 +4,8 @@ import { parseVerdict, buildVerdictPrompt } from "../src/services/knowledge/verd
 describe("parseVerdict", () => {
   it("parses clean json", () => {
     expect(parseVerdict('{"relevant":true,"keepLinks":["https://h/a"]}')).toEqual({
-      relevant: true, keepLinks: ["https://h/a"]
+      relevant: true,
+      keepLinks: ["https://h/a"]
     });
   });
   it("extracts json embedded in prose / fences", () => {
@@ -21,7 +22,13 @@ describe("parseVerdict", () => {
 
 describe("buildVerdictPrompt", () => {
   it("includes topic, title and capped links", () => {
-    const p = buildVerdictPrompt("incident runbooks", "T", "body text", ["https://h/a", "https://h/b"], 1);
+    const p = buildVerdictPrompt(
+      "incident runbooks",
+      "T",
+      "body text",
+      ["https://h/a", "https://h/b"],
+      1
+    );
     expect(p).toContain("incident runbooks");
     expect(p).toContain("https://h/a");
     expect(p).not.toContain("https://h/b"); // capped to 1

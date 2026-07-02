@@ -2,12 +2,22 @@ import { z } from "zod";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-const boolString = z.enum(["true", "false"]).default("false").transform((v) => v === "true");
-const trueBoolString = z.enum(["true", "false"]).default("true").transform((v) => v === "true");
+const boolString = z
+  .enum(["true", "false"])
+  .default("false")
+  .transform((v) => v === "true");
+const trueBoolString = z
+  .enum(["true", "false"])
+  .default("true")
+  .transform((v) => v === "true");
 // Empty string → undefined, then validate as an http(s) URL only when present.
 const optionalUrl = z.preprocess(
   (v) => (v === "" ? undefined : v),
-  z.string().url().refine((u) => /^https?:\/\//i.test(u), "must be an http(s) URL").optional()
+  z
+    .string()
+    .url()
+    .refine((u) => /^https?:\/\//i.test(u), "must be an http(s) URL")
+    .optional()
 );
 // Empty string → undefined before validating. Without this, a `KEY=` line in
 // .env parses to "" — which is "present but invalid" for `.min(1)`/`.url()`, so
@@ -16,9 +26,9 @@ const optional = <T extends z.ZodTypeAny>(inner: T) =>
   z.preprocess((v) => (v === "" ? undefined : v), inner.optional());
 
 const envSchema = z.object({
-  SERVICENOW_BASE_URL: z.string({ required_error: "SERVICENOW_BASE_URL is required" }).url(),
-  SERVICENOW_USERNAME: z.string({ required_error: "SERVICENOW_USERNAME is required" }).min(1),
-  SERVICENOW_PASSWORD: z.string({ required_error: "SERVICENOW_PASSWORD is required" }).min(1),
+  SERVICENOW_BASE_URL: z.string({ error: "SERVICENOW_BASE_URL is required" }).url(),
+  SERVICENOW_USERNAME: z.string({ error: "SERVICENOW_USERNAME is required" }).min(1),
+  SERVICENOW_PASSWORD: z.string({ error: "SERVICENOW_PASSWORD is required" }).min(1),
   SERVICENOW_PROXY: optionalUrl,
   ADO_ENABLED: boolString,
   ADO_AUTH_MODE: z.enum(["azcli", "pat"]).default("azcli"),
@@ -27,9 +37,18 @@ const envSchema = z.object({
   ADO_PROXY: optionalUrl,
   ADO_PROJECT: optional(z.string().min(1)),
   ADO_PAT: optional(z.string().min(1)),
-  ADO_AREA_PATH: z.string().optional().transform((v) => v || undefined),
-  ADO_ITERATION_PATH: z.string().optional().transform((v) => v || undefined),
-  ADO_ASSIGNED_TEAM: z.string().optional().transform((v) => v || undefined),
+  ADO_AREA_PATH: z
+    .string()
+    .optional()
+    .transform((v) => v || undefined),
+  ADO_ITERATION_PATH: z
+    .string()
+    .optional()
+    .transform((v) => v || undefined),
+  ADO_ASSIGNED_TEAM: z
+    .string()
+    .optional()
+    .transform((v) => v || undefined),
   ADO_BOARD_MAP: z.string().optional(),
   ADO_CSV_DIR: optional(z.string().min(1)),
   ADO_CSV_MAX_BYTES: z.coerce.number().int().positive().default(5242880),
@@ -62,7 +81,10 @@ const envSchema = z.object({
   AZURE_API_VERSION: z.string().default("2024-10-21"),
   SHAREPOINT_ENABLED: boolString,
   SHAREPOINT_SITE_URL: optional(z.string().url()),
-  SHAREPOINT_INCIDENT_ROOT: z.string().optional().transform((v) => (v ?? "").replace(/^\/+|\/+$/g, "")),
+  SHAREPOINT_INCIDENT_ROOT: z
+    .string()
+    .optional()
+    .transform((v) => (v ?? "").replace(/^\/+|\/+$/g, "")),
   SHAREPOINT_DOCS_SUBFOLDER: z.string().default("Docs"),
   SHAREPOINT_PROXY: optionalUrl,
   SHAREPOINT_MAX_DOC_TOKENS: z.coerce.number().int().positive().default(50000),
@@ -146,7 +168,10 @@ export interface AppConfig {
 }
 
 const csv = (v?: string): string[] =>
-  (v ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  (v ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
 
 const hostOf = (u: string): string | undefined => {
   try {
@@ -162,7 +187,9 @@ const parseBoardMap = (raw?: string): Record<string, string> => {
     const v = JSON.parse(raw);
     if (v && typeof v === "object" && !Array.isArray(v)) {
       return Object.fromEntries(
-        Object.entries(v as Record<string, unknown>).filter(([, val]) => typeof val === "string") as [string, string][]
+        Object.entries(v as Record<string, unknown>).filter(
+          ([, val]) => typeof val === "string"
+        ) as [string, string][]
       );
     }
   } catch {
@@ -260,8 +287,16 @@ export const loadConfig = (env: Record<string, string | undefined> = process.env
     },
     features: { createAdoBug: e.ADO_CREATE_BUG_ENABLED },
     thresholds: {
-      staleByPriorityMinutes: { "1": e.STALE_P1_MIN, "2": e.STALE_P2_MIN, "3": e.STALE_P3_MIN, "4": e.STALE_P4_MIN },
-      relatedChangeWindow: { beforeHours: e.CORRELATION_HOURS_BEFORE, afterHours: e.CORRELATION_HOURS_AFTER }
+      staleByPriorityMinutes: {
+        "1": e.STALE_P1_MIN,
+        "2": e.STALE_P2_MIN,
+        "3": e.STALE_P3_MIN,
+        "4": e.STALE_P4_MIN
+      },
+      relatedChangeWindow: {
+        beforeHours: e.CORRELATION_HOURS_BEFORE,
+        afterHours: e.CORRELATION_HOURS_AFTER
+      }
     }
   };
 };

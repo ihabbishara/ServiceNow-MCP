@@ -5,7 +5,7 @@ import { vi } from "vitest";
 export class FakeEngine {
   constructor(
     public deps: any,
-    sendImpl: (deps: any) => Promise<void> = async () => {},
+    sendImpl: (deps: any) => Promise<void> = async () => {}
   ) {
     this.send = vi.fn(async () => sendImpl(this.deps));
   }

@@ -1,6 +1,7 @@
 import type { GraphPort, GraphDriveItem, DriveFile } from "./types.js";
 
-const childrenById = (driveId: string, itemId: string) => `/drives/${driveId}/items/${itemId}/children`;
+const childrenById = (driveId: string, itemId: string) =>
+  `/drives/${driveId}/items/${itemId}/children`;
 
 /**
  * Recurse the `<docsSubfolder>` subtree of the incident folder, yielding files

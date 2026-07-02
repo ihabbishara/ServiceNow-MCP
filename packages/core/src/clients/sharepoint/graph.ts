@@ -32,7 +32,9 @@ export class GraphClient implements GraphPort {
   /** absoluteOrPath: a path beginning "/" (joined to BASE) or a full nextLink URL. */
   private async request(absoluteOrPath: string, accept = "application/json"): Promise<any> {
     const url = absoluteOrPath.startsWith("http") ? absoluteOrPath : `${BASE}${absoluteOrPath}`;
-    const label = absoluteOrPath.startsWith("http") ? new URL(absoluteOrPath).pathname : absoluteOrPath;
+    const label = absoluteOrPath.startsWith("http")
+      ? new URL(absoluteOrPath).pathname
+      : absoluteOrPath;
     for (let attempt = 0; ; attempt++) {
       const token = await this.getToken();
       const ac = new AbortController();
@@ -72,7 +74,10 @@ export class GraphClient implements GraphPort {
     while (next) {
       if (seen.has(next)) throw new Error(`Graph pagination loop detected at ${next}`);
       seen.add(next);
-      const page = (await (await this.request(next)).json()) as { value: T[]; "@odata.nextLink"?: string };
+      const page = (await (await this.request(next)).json()) as {
+        value: T[];
+        "@odata.nextLink"?: string;
+      };
       out.push(...(page.value ?? []));
       next = page["@odata.nextLink"];
     }
@@ -80,7 +85,10 @@ export class GraphClient implements GraphPort {
   }
 
   async download(driveId: string, itemId: string, maxBytes?: number): Promise<Buffer> {
-    const res = await this.request(`/drives/${driveId}/items/${itemId}/content`, "application/octet-stream");
+    const res = await this.request(
+      `/drives/${driveId}/items/${itemId}/content`,
+      "application/octet-stream"
+    );
     const cl = res.headers.get("content-length");
     if (maxBytes !== undefined && cl !== null && Number(cl) > maxBytes) {
       throw new Error(`download exceeds max bytes (${cl} > ${maxBytes})`);

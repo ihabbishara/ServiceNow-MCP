@@ -11,7 +11,7 @@ const MIME: Record<string, string> = {
   ".svg": "image/svg+xml",
   ".ico": "image/x-icon",
   ".woff2": "font/woff2",
-  ".woff": "font/woff",
+  ".woff": "font/woff"
 };
 
 /** Serve `urlPath` from `clientDist` with content-type; fall back to index.html (SPA). */

@@ -8,7 +8,7 @@ import { useId, useState, type ReactNode } from "react";
 export function CollapsibleSection({
   title,
   defaultOpen = true,
-  children,
+  children
 }: {
   title: string;
   defaultOpen?: boolean;
@@ -30,7 +30,14 @@ export function CollapsibleSection({
           aria-hidden="true"
           className={"h-3.5 w-3.5 shrink-0 transition-transform " + (open ? "rotate-90" : "")}
         >
-          <path d="M7 5l6 5-6 5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <path
+            d="M7 5l6 5-6 5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
         {title}
       </button>

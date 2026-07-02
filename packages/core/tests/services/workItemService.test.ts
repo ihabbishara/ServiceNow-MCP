@@ -2,7 +2,13 @@ import { describe, it, expect, vi } from "vitest";
 import { WorkItemService } from "../../src/services/workItemService.js";
 
 const makeClient = (over: Partial<Record<string, any>> = {}) => ({
-  createWorkItem: vi.fn(async (p: any) => ({ id: 100, title: p.title, state: "New", workItemType: p.type, areaPath: p.areaPath })),
+  createWorkItem: vi.fn(async (p: any) => ({
+    id: 100,
+    title: p.title,
+    state: "New",
+    workItemType: p.type,
+    areaPath: p.areaPath
+  })),
   addRelation: vi.fn(async () => {}),
   getWorkItemFields: vi.fn(async () => null),
   listChildren: vi.fn(async () => []),
@@ -12,7 +18,11 @@ const makeClient = (over: Partial<Record<string, any>> = {}) => ({
   ...over
 });
 
-const cfg = { boardMap: { "Team Alpha": "Platform\\Alpha" }, defaultAreaPath: "Platform", defaultIterationPath: "Platform\\S1" };
+const cfg = {
+  boardMap: { "Team Alpha": "Platform\\Alpha" },
+  defaultAreaPath: "Platform",
+  defaultIterationPath: "Platform\\S1"
+};
 
 describe("WorkItemService.resolveAreaPath", () => {
   it("prefers explicit areaPath over board and default", () => {
@@ -35,12 +45,19 @@ describe("WorkItemService.create", () => {
     const svc = new WorkItemService(client as any, cfg);
     await svc.create({ type: "User Story", title: "S", board: "Team Alpha" });
     expect(client.createWorkItem).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "User Story", title: "S", areaPath: "Platform\\Alpha", iterationPath: "Platform\\S1" })
+      expect.objectContaining({
+        type: "User Story",
+        title: "S",
+        areaPath: "Platform\\Alpha",
+        iterationPath: "Platform\\S1"
+      })
     );
   });
 
   it("links the new item to a parent when parentId is set", async () => {
-    const client = makeClient({ createWorkItem: vi.fn(async () => ({ id: 200, title: "T", state: "New" })) });
+    const client = makeClient({
+      createWorkItem: vi.fn(async () => ({ id: 200, title: "T", state: "New" }))
+    });
     const svc = new WorkItemService(client as any, cfg);
     await svc.create({ type: "Task", title: "T", parentId: 42 });
     expect(client.addRelation).toHaveBeenCalledWith(200, 42, "parent");
@@ -89,7 +106,12 @@ describe("WorkItemService.clone", () => {
   it("applies a title prefix and overrides", async () => {
     const client = makeClient({ getWorkItemFields: vi.fn(async () => sourceFields) });
     const svc = new WorkItemService(client as any, cfg);
-    await svc.clone({ sourceId: 1, board: "Team Alpha", titlePrefix: "[CLONE] ", overrides: { priority: "1", tags: ["x"] } });
+    await svc.clone({
+      sourceId: 1,
+      board: "Team Alpha",
+      titlePrefix: "[CLONE] ",
+      overrides: { priority: "1", tags: ["x"] }
+    });
     const payload = (client.createWorkItem as any).mock.calls[0][0];
     expect(payload.title).toBe("[CLONE] Add SSO");
     expect(payload.priority).toBe("1");
@@ -97,11 +119,19 @@ describe("WorkItemService.clone", () => {
   });
 
   it("copies children and links them to the clone when includeChildren is set", async () => {
-    const childFields = { "System.Title": "Subtask", "System.WorkItemType": "Task", "System.Description": "do it" };
+    const childFields = {
+      "System.Title": "Subtask",
+      "System.WorkItemType": "Task",
+      "System.Description": "do it"
+    };
     const client = makeClient({
       getWorkItemFields: vi.fn(async (id: number) => (id === 1 ? sourceFields : childFields)),
       listChildren: vi.fn(async () => [55]),
-      createWorkItem: vi.fn(async (p: any) => ({ id: p.type === "Task" ? 901 : 900, title: p.title, state: "New" }))
+      createWorkItem: vi.fn(async (p: any) => ({
+        id: p.type === "Task" ? 901 : 900,
+        title: p.title,
+        state: "New"
+      }))
     });
     const svc = new WorkItemService(client as any, cfg);
     const res = await svc.clone({ sourceId: 1, board: "Team Alpha", includeChildren: true });
@@ -130,10 +160,18 @@ describe("WorkItemService.clone", () => {
   it("skips a child whose fields cannot be read and counts only copied ones", async () => {
     const client = makeClient({
       getWorkItemFields: vi.fn(async (id: number) =>
-        id === 1 ? sourceFields : id === 55 ? { "System.Title": "ok", "System.WorkItemType": "Task" } : null
+        id === 1
+          ? sourceFields
+          : id === 55
+            ? { "System.Title": "ok", "System.WorkItemType": "Task" }
+            : null
       ),
       listChildren: vi.fn(async () => [55, 66]),
-      createWorkItem: vi.fn(async (p: any) => ({ id: p.type === "Task" ? 901 : 900, title: p.title, state: "New" }))
+      createWorkItem: vi.fn(async (p: any) => ({
+        id: p.type === "Task" ? 901 : 900,
+        title: p.title,
+        state: "New"
+      }))
     });
     const svc = new WorkItemService(client as any, cfg);
     const res = await svc.clone({ sourceId: 1, board: "Team Alpha", includeChildren: true });

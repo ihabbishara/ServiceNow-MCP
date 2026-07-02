@@ -11,17 +11,38 @@ const pages: Record<string, { html: string }> = {
 const makeDeps = (over: Partial<CrawlDeps> = {}): CrawlDeps => {
   const upserts: string[] = [];
   return {
-    fetcher: { get: vi.fn(async (url: string) => ({ ok: !!pages[url], status: pages[url] ? 200 : 404, contentType: "text/html", body: pages[url]?.html ?? "" })) },
+    fetcher: {
+      get: vi.fn(async (url: string) => ({
+        ok: !!pages[url],
+        status: pages[url] ? 200 : 404,
+        contentType: "text/html",
+        body: pages[url]?.html ?? ""
+      }))
+    },
     extract: (_html: string, url: string) => ({
       title: url,
       mainText: `text of ${url}`,
-      links: url === "https://h/seed" ? ["https://h/a", "https://other/x"] : url === "https://h/a" ? ["https://h/b", "https://h/a"] : []
+      links:
+        url === "https://h/seed"
+          ? ["https://h/a", "https://other/x"]
+          : url === "https://h/a"
+            ? ["https://h/b", "https://h/a"]
+            : []
     }),
     embedder: { embed: vi.fn(async () => [1, 0, 0]) },
-    chat: { chat: vi.fn(async () => JSON.stringify({ relevant: true, keepLinks: ["https://h/a", "https://h/b", "https://other/x"] })) },
+    chat: {
+      chat: vi.fn(async () =>
+        JSON.stringify({
+          relevant: true,
+          keepLinks: ["https://h/a", "https://h/b", "https://other/x"]
+        })
+      )
+    },
     store: {
       getPageHash: vi.fn(() => undefined),
-      upsertPage: vi.fn((p: any) => { upserts.push(p.url); }),
+      upsertPage: vi.fn((p: any) => {
+        upserts.push(p.url);
+      }),
       stats: () => ({ pages: upserts.length, chunks: upserts.length })
     } as any,
     robots: { fetchAndCheck: vi.fn(async () => true) },
@@ -35,8 +56,13 @@ describe("crawl", () => {
   it("stays within allowed domains and respects max pages", async () => {
     const deps = makeDeps();
     const res = await crawl(deps, {
-      seeds: ["https://h/seed"], allowDomains: ["h"], maxPages: 10, maxDepth: 3,
-      concurrency: 1, rateMs: 0, maxLinksPerPage: 50
+      seeds: ["https://h/seed"],
+      allowDomains: ["h"],
+      maxPages: 10,
+      maxDepth: 3,
+      concurrency: 1,
+      rateMs: 0,
+      maxLinksPerPage: 50
     });
     const fetched = (deps.fetcher.get as any).mock.calls.map((c: any[]) => c[0]);
     expect(fetched).toContain("https://h/seed");
@@ -48,7 +74,15 @@ describe("crawl", () => {
 
   it("dedupes already-seen urls", async () => {
     const deps = makeDeps();
-    await crawl(deps, { seeds: ["https://h/seed"], allowDomains: ["h"], maxPages: 10, maxDepth: 3, concurrency: 1, rateMs: 0, maxLinksPerPage: 50 });
+    await crawl(deps, {
+      seeds: ["https://h/seed"],
+      allowDomains: ["h"],
+      maxPages: 10,
+      maxDepth: 3,
+      concurrency: 1,
+      rateMs: 0,
+      maxLinksPerPage: 50
+    });
     const fetched = (deps.fetcher.get as any).mock.calls.map((c: any[]) => c[0]);
     expect(fetched.filter((u: string) => u === "https://h/a")).toHaveLength(1);
   });
@@ -66,13 +100,29 @@ describe("crawl", () => {
     // hashOf is sha256; pre-seed store to return that exact hash:
     const { sha256 } = await import("../src/services/knowledge/crawl.js");
     (deps.store.getPageHash as any).mockReturnValue(sha256("SAME"));
-    await crawl(deps, { seeds: ["https://h/seed"], allowDomains: ["h"], maxPages: 10, maxDepth: 0, concurrency: 1, rateMs: 0, maxLinksPerPage: 50 });
+    await crawl(deps, {
+      seeds: ["https://h/seed"],
+      allowDomains: ["h"],
+      maxPages: 10,
+      maxDepth: 0,
+      concurrency: 1,
+      rateMs: 0,
+      maxLinksPerPage: 50
+    });
     expect(deps.store.upsertPage).not.toHaveBeenCalled();
   });
 
   it("respects maxDepth (depth 0 fetches only seeds)", async () => {
     const deps = makeDeps();
-    await crawl(deps, { seeds: ["https://h/seed"], allowDomains: ["h"], maxPages: 10, maxDepth: 0, concurrency: 1, rateMs: 0, maxLinksPerPage: 50 });
+    await crawl(deps, {
+      seeds: ["https://h/seed"],
+      allowDomains: ["h"],
+      maxPages: 10,
+      maxDepth: 0,
+      concurrency: 1,
+      rateMs: 0,
+      maxLinksPerPage: 50
+    });
     const fetched = (deps.fetcher.get as any).mock.calls.map((c: any[]) => c[0]);
     expect(fetched).toEqual(["https://h/seed"]);
   });
@@ -80,8 +130,13 @@ describe("crawl", () => {
   it("drops seeds outside allowDomains (SSRF guard)", async () => {
     const deps = makeDeps();
     const res = await crawl(deps, {
-      seeds: ["https://evil.example.com/x"], allowDomains: ["h"], maxPages: 10, maxDepth: 3,
-      concurrency: 1, rateMs: 0, maxLinksPerPage: 50
+      seeds: ["https://evil.example.com/x"],
+      allowDomains: ["h"],
+      maxPages: 10,
+      maxDepth: 3,
+      concurrency: 1,
+      rateMs: 0,
+      maxLinksPerPage: 50
     });
     expect(deps.fetcher.get).not.toHaveBeenCalled();
     expect(res.pagesCrawled).toBe(0);
@@ -90,8 +145,13 @@ describe("crawl", () => {
   it("reports chunksAdded as a number", async () => {
     const deps = makeDeps();
     const res = await crawl(deps, {
-      seeds: ["https://h/seed"], allowDomains: ["h"], maxPages: 10, maxDepth: 0,
-      concurrency: 1, rateMs: 0, maxLinksPerPage: 50
+      seeds: ["https://h/seed"],
+      allowDomains: ["h"],
+      maxPages: 10,
+      maxDepth: 0,
+      concurrency: 1,
+      rateMs: 0,
+      maxLinksPerPage: 50
     });
     expect(typeof res.chunksAdded).toBe("number");
     expect(res.chunksAdded).toBeGreaterThan(0);
@@ -101,11 +161,18 @@ describe("crawl", () => {
     const deps = makeDeps();
     delete (deps as any).chat; // seat mode → no verdict LLM
     const res = await crawl(deps, {
-      seeds: ["https://h/seed"], allowDomains: ["h"], maxPages: 10, maxDepth: 3,
-      concurrency: 1, rateMs: 0, maxLinksPerPage: 50
+      seeds: ["https://h/seed"],
+      allowDomains: ["h"],
+      maxPages: 10,
+      maxDepth: 3,
+      concurrency: 1,
+      rateMs: 0,
+      maxLinksPerPage: 50
     });
     const fetched = (deps.fetcher.get as any).mock.calls.map((c: any[]) => c[0]);
-    expect(fetched).toEqual(expect.arrayContaining(["https://h/seed", "https://h/a", "https://h/b"]));
+    expect(fetched).toEqual(
+      expect.arrayContaining(["https://h/seed", "https://h/a", "https://h/b"])
+    );
     expect(fetched).not.toContain("https://other/x"); // out of scope still excluded
     expect(res.pagesIndexed).toBe(3); // all in-scope pages indexed
     expect(res.chunksAdded).toBeGreaterThan(0);
