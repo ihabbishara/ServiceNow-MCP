@@ -2,7 +2,10 @@ import { z } from "zod";
 import { envSchema, buildAppConfig, optional, type AppConfig } from "@sre/core";
 
 const bool = (def: boolean) =>
-  z.enum(["true", "false"]).default(def ? "true" : "false").transform((v) => v === "true");
+  z
+    .enum(["true", "false"])
+    .default(def ? "true" : "false")
+    .transform((v) => v === "true");
 
 // Core owns the shared vars; the agent adds only its own.
 const agentSchema = envSchema.extend({
@@ -16,7 +19,16 @@ const agentSchema = envSchema.extend({
 });
 
 export interface AgentConfig {
-  llm: { mode: "seat" | "byok"; model: string; provider?: { type: "azure" | "anthropic" | "openai"; baseUrl: string; apiKey?: string; apiVersion?: string } };
+  llm: {
+    mode: "seat" | "byok";
+    model: string;
+    provider?: {
+      type: "azure" | "anthropic" | "openai";
+      baseUrl: string;
+      apiKey?: string;
+      apiVersion?: string;
+    };
+  };
   adoAuthMode: "azcli" | "pat";
   confirmWrites: boolean;
   turnTimeoutMs: number;
@@ -29,7 +41,9 @@ export interface AgentConfig {
   app: AppConfig;
 }
 
-export const loadAgentConfig = (env: Record<string, string | undefined> = process.env): AgentConfig => {
+export const loadAgentConfig = (
+  env: Record<string, string | undefined> = process.env
+): AgentConfig => {
   const parsed = agentSchema.safeParse(env);
   if (!parsed.success) {
     const issues = parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("\n  ");
@@ -47,7 +61,12 @@ export const loadAgentConfig = (env: Record<string, string | undefined> = proces
       mode: e.LLM_MODE,
       model: e.LLM_MODEL,
       provider: e.LLM_PROVIDER
-        ? { type: e.LLM_PROVIDER, baseUrl: e.LLM_BASE_URL!, apiKey: e.LLM_API_KEY, apiVersion: e.AZURE_API_VERSION }
+        ? {
+            type: e.LLM_PROVIDER,
+            baseUrl: e.LLM_BASE_URL!,
+            apiKey: e.LLM_API_KEY,
+            apiVersion: e.AZURE_API_VERSION
+          }
         : undefined
     },
     adoAuthMode: e.ADO_AUTH_MODE,
@@ -57,7 +76,11 @@ export const loadAgentConfig = (env: Record<string, string | undefined> = proces
     crawlTtlHours: e.CRAWL_TTL_HOURS,
     uploadMaxBytes: e.UPLOAD_MAX_BYTES,
     sharePointEnabled: e.SHAREPOINT_ENABLED,
-    copilot: { githubToken: e.COPILOT_GITHUB_TOKEN, home: e.COPILOT_HOME, ignoreEnvToken: e.COPILOT_IGNORE_ENV_TOKEN },
+    copilot: {
+      githubToken: e.COPILOT_GITHUB_TOKEN,
+      home: e.COPILOT_HOME,
+      ignoreEnvToken: e.COPILOT_IGNORE_ENV_TOKEN
+    },
     app: buildAppConfig(e)
   };
 };

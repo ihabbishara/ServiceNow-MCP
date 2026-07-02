@@ -199,7 +199,12 @@ describe("loadConfig ADO_CSV_DIR", () => {
 
 describe("parity: buildAppConfig + envSchema", () => {
   it("buildAppConfig(envSchema.parse(env)) equals loadConfig(env)", () => {
-    const env = { ...validEnv, ADO_ENABLED: "true", ADO_ORG_URL: "https://dev.azure.com/x", ADO_PROJECT: "P" };
+    const env = {
+      ...validEnv,
+      ADO_ENABLED: "true",
+      ADO_ORG_URL: "https://dev.azure.com/x",
+      ADO_PROJECT: "P"
+    };
     const viaLoad = loadConfig(env);
     const viaBuild = buildAppConfig(envSchema.parse(env));
     expect(viaBuild).toEqual(viaLoad);

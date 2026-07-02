@@ -372,10 +372,24 @@ describe("engine-host config-status", () => {
         project: "proj",
         pat: "my-pat"
       },
-      sharePoint: { enabled: false, siteUrl: "", incidentRoot: "", docsSubfolder: "", authMode: "azcli", azPath: "az", maxDocTokens: 0, maxFiles: 0, maxFileBytes: 0, timeoutMs: 0 },
+      sharePoint: {
+        enabled: false,
+        siteUrl: "",
+        incidentRoot: "",
+        docsSubfolder: "",
+        authMode: "azcli",
+        azPath: "az",
+        maxDocTokens: 0,
+        maxFiles: 0,
+        maxFileBytes: 0,
+        timeoutMs: 0
+      },
       knowledge: {} as any,
       features: { createAdoBug: false },
-      thresholds: { staleByPriorityMinutes: {}, relatedChangeWindow: { beforeHours: 0, afterHours: 0 } }
+      thresholds: {
+        staleByPriorityMinutes: {},
+        relatedChangeWindow: { beforeHours: 0, afterHours: 0 }
+      }
     }
   } as any;
 
@@ -400,7 +414,7 @@ describe("engine-host config-status", () => {
       model: "gpt-5",
       servicenow: true,
       ado: true, // pat mode + app.azureDevOps.pat present
-      rag: true  // runtimeFactory provided
+      rag: true // runtimeFactory provided
     });
   });
 
@@ -438,8 +452,8 @@ describe("engine-host config-status", () => {
     await host.start();
     const cs = events.find((e) => e.type === "config-status");
     expect(cs).toMatchObject({
-      servicenow: true,  // from config.app.serviceNow.baseUrl
-      ado: true          // from config.app.azureDevOps.orgUrl && .project (azcli mode)
+      servicenow: true, // from config.app.serviceNow.baseUrl
+      ado: true // from config.app.azureDevOps.orgUrl && .project (azcli mode)
     });
   });
 });
