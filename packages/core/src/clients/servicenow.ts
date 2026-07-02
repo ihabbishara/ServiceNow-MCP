@@ -187,7 +187,7 @@ export class ServiceNowClient {
   async listIncidentsWithFilters(f: IncidentListFilters): Promise<Incident[]> {
     const parts: string[] = [];
     if (f.stateNot) parts.push(`state!=${snSafe(stateCode(f.stateNot))}`);
-    if (f.priority) parts.push(`priority=${f.priority}`);
+    if (f.priority) parts.push(`priority=${snSafe(f.priority)}`);
     if (f.assignmentGroup) parts.push(`assignment_group.name=${snSafe(f.assignmentGroup)}`);
     if (f.assignedTo === "") parts.push("assigned_toISEMPTY");
     else if (f.assignedTo) parts.push(`assigned_to.name=${snSafe(f.assignedTo)}`);
@@ -213,7 +213,7 @@ export class ServiceNowClient {
   }
 
   async getIncidentByNumber(number: string): Promise<Incident | null> {
-    const rows = await this.request("incident", `number=${number}`, 1, INCIDENT_FIELDS);
+    const rows = await this.request("incident", `number=${snSafe(number)}`, 1, INCIDENT_FIELDS);
     return rows.length ? mapIncident(rows[0]) : null;
   }
 
@@ -235,7 +235,7 @@ export class ServiceNowClient {
   }
 
   async getChangeByNumber(number: string): Promise<ChangeRecord | null> {
-    const rows = await this.request("change_request", `number=${number}`, 1, CHANGE_FIELDS);
+    const rows = await this.request("change_request", `number=${snSafe(number)}`, 1, CHANGE_FIELDS);
     return rows.length ? mapChange(rows[0]) : null;
   }
 }

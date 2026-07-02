@@ -204,6 +204,33 @@ describe("ServiceNowClient", () => {
     expect((fetchMock.mock.calls[0][1] as { dispatcher?: unknown }).dispatcher).toBeUndefined();
   });
 
+  it("strips ^ from number in getIncidentByNumber to prevent query injection", async () => {
+    fetchMock.mockResolvedValue(okResponse([]));
+    await new ServiceNowClient(cfg).getIncidentByNumber("INC001^state=6");
+    const url = new URL(fetchMock.mock.calls[0][0] as string);
+    const query = url.searchParams.get("sysparm_query")!;
+    expect(query).not.toContain("^state=6");
+    expect(query).toContain("INC001state=6");
+  });
+
+  it("strips ^ from number in getChangeByNumber to prevent query injection", async () => {
+    fetchMock.mockResolvedValue(okResponse([]));
+    await new ServiceNowClient(cfg).getChangeByNumber("CHG001^state=3");
+    const url = new URL(fetchMock.mock.calls[0][0] as string);
+    const query = url.searchParams.get("sysparm_query")!;
+    expect(query).not.toContain("^state=3");
+    expect(query).toContain("CHG001state=3");
+  });
+
+  it("strips ^ from priority in listIncidentsWithFilters to prevent query injection", async () => {
+    fetchMock.mockResolvedValue(okResponse([]));
+    await new ServiceNowClient(cfg).listIncidentsWithFilters({ priority: "1^state=6" });
+    const url = new URL(fetchMock.mock.calls[0][0] as string);
+    const query = url.searchParams.get("sysparm_query")!;
+    expect(query).not.toContain("^state=6");
+    expect(query).toContain("priority=1state=6");
+  });
+
   it("throws with status and body snippet on non-2xx", async () => {
     fetchMock.mockResolvedValue({
       ok: false,

@@ -18,7 +18,7 @@ export const toCopilotTool = (spec: ToolSpec, runtime: McpRuntime) =>
     handler: async (args: unknown) => {
       try {
         const disabled = spec.enabledWhen?.(runtime.config);
-        if (disabled) return { error: disabled };
+        if (disabled != null) return { error: disabled };
         return await spec.run(runtime, args as never);
       } catch (err) {
         return { error: err instanceof ToolError ? err.message : String(err) };

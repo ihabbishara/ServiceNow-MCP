@@ -23,14 +23,26 @@ describe("loadAgentConfig", () => {
     expect(() => loadAgentConfig({ ...base, LLM_MODE: "byok" })).toThrow(/byok/i);
   });
 
-  it("azcli requires ADO_ORG_URL and ADO_PROJECT", () => {
+  it("azcli requires ADO_ORG_URL and ADO_PROJECT when ADO_ENABLED=true", () => {
     expect(() =>
       loadAgentConfig({
         SERVICENOW_BASE_URL: base.SERVICENOW_BASE_URL,
         SERVICENOW_USERNAME: "u",
-        SERVICENOW_PASSWORD: "p"
+        SERVICENOW_PASSWORD: "p",
+        ADO_ENABLED: "true"
       })
     ).toThrow(/ADO_ORG_URL/);
+  });
+
+  it("does not throw when ADO_ENABLED=false even if ADO_ORG_URL and ADO_PROJECT are absent", () => {
+    expect(() =>
+      loadAgentConfig({
+        SERVICENOW_BASE_URL: base.SERVICENOW_BASE_URL,
+        SERVICENOW_USERNAME: "u",
+        SERVICENOW_PASSWORD: "p",
+        ADO_ENABLED: "false"
+      })
+    ).not.toThrow();
   });
 
   it("valid byok config returns the provider block including azure apiVersion", () => {

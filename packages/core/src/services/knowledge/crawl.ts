@@ -162,7 +162,7 @@ export const crawl = async (deps: CrawlDeps, bounds: CrawlBounds): Promise<Crawl
         deps.store.upsertPage({
           url,
           title: doc.title,
-          hash,
+          hash: "",
           crawledAt: deps.now(),
           indexed: false,
           chunks: []
@@ -178,7 +178,7 @@ export const crawl = async (deps: CrawlDeps, bounds: CrawlBounds): Promise<Crawl
       for (const link of verdict.keepLinks) {
         const c = canonical(link);
         if (seen.has(c) || !inScope(c, bounds.allowDomains)) continue;
-        if (seen.size >= bounds.maxPages) {
+        if (result.pagesCrawled + queue.length >= bounds.maxPages) {
           result.dropped++;
           continue;
         }

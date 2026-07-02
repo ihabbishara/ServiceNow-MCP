@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import type { Tool } from "@github/copilot-sdk";
-import { buildTools } from "../src/tools/index.js";
+import { buildTools, toCopilotTool } from "../src/tools/index.js";
 import { TOOL_SPECS } from "@sre/core";
 
 /**
@@ -51,6 +51,21 @@ const byName = (rt: any, n: string): Tool<any> => {
 };
 
 const call = (t: Tool<any>, args: unknown) => t.handler!(args as never, {} as never);
+
+describe("enabledWhen empty-string is treated as disabled (fix #7)", () => {
+  it("returns { error: '' } when enabledWhen returns empty string", async () => {
+    const spec = {
+      name: "test_empty_disabled",
+      description: "test",
+      schema: {},
+      enabledWhen: () => "",
+      run: async () => ({ ok: true })
+    } as any;
+    const tool = toCopilotTool(spec, {} as any);
+    const result = await tool.handler!({} as never, {} as never);
+    expect(result).toEqual({ error: "" });
+  });
+});
 
 describe("buildTools", () => {
   it("registers exactly the 19 expected tools", () => {

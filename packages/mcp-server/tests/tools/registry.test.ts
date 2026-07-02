@@ -3,7 +3,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { TOOL_SPECS, McpRuntime } from "@sre/core";
-import { registerRegistryTools } from "../../src/tools/registry.js";
+import { registerRegistryTools, toMcpHandler } from "../../src/tools/registry.js";
 
 describe("registerRegistryTools parity", () => {
   it("registers every registry spec with its exact name, description, and schema", () => {
@@ -17,6 +17,22 @@ describe("registerRegistryTools parity", () => {
     expect(seen).toEqual(
       TOOL_SPECS.map((s) => ({ name: s.name, description: s.description, schema: s.schema }))
     );
+  });
+});
+
+describe("enabledWhen empty-string is treated as disabled (fix #7)", () => {
+  it("returns isError when enabledWhen returns empty string", async () => {
+    const spec = {
+      name: "test_empty_disabled",
+      description: "test",
+      schema: {},
+      enabledWhen: () => "",
+      run: async () => ({ ok: true })
+    } as any;
+    const handler = toMcpHandler(spec, {} as McpRuntime);
+    const result = await handler({});
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toBe("");
   });
 });
 

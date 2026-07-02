@@ -84,6 +84,8 @@ export const registerIncidentResources = (server: McpServer, runtime: McpRuntime
   );
 };
 
+const cell = (s: string) => s.replace(/\|/g, "\\|");
+
 export const registerTeamResources = (server: McpServer, runtime: McpRuntime): void => {
   // Resource template for team://{name}/incidents
   server.resource(
@@ -132,7 +134,7 @@ export const registerTeamResources = (server: McpServer, runtime: McpRuntime): v
 |--------|-------------|----------|---------|
 `;
         for (const inc of priorityIncidents.slice(0, 10)) {
-          markdown += `| ${inc.number} | ${inc.shortDescription.slice(0, 50)} | ${inc.assignedTo ?? "Unassigned"} | ${inc.updatedAt} |\n`;
+          markdown += `| ${inc.number} | ${cell(inc.shortDescription.slice(0, 50))} | ${cell(inc.assignedTo ?? "Unassigned")} | ${inc.updatedAt} |\n`;
         }
         markdown += "\n";
       }

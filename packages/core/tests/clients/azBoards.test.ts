@@ -74,6 +74,32 @@ describe("AzBoardsClient", () => {
     expect(items).toHaveLength(10);
   });
 
+  it("searchWorkItems includes TOP in WIQL using default limit 50", async () => {
+    const runner = makeRunner(() => []);
+    const client = new AzBoardsClient(cfg as any, runner as any);
+    await client.searchWorkItems({});
+    const wiql = (runner.json as any).mock.calls[0][0][3] as string;
+    expect(wiql).toMatch(/^SELECT TOP 50 /);
+  });
+
+  it("searchWorkItems clamps limit to 200 max in WIQL when limit: 500", async () => {
+    const runner = makeRunner(() => []);
+    const client = new AzBoardsClient(cfg as any, runner as any);
+    await client.searchWorkItems({ limit: 500 });
+    const wiql = (runner.json as any).mock.calls[0][0][3] as string;
+    expect(wiql).toMatch(/^SELECT TOP 200 /);
+  });
+
+  it("listChildren includes TOP 500 in WIQL", async () => {
+    const runner = makeRunner(() => [{ id: 5 }]);
+    const client = new AzBoardsClient(cfg as any, runner as any);
+    await client.listChildren(3);
+    const callArgs = (runner.json as any).mock.calls[0][0] as string[];
+    const wiql = callArgs[callArgs.indexOf("--wiql") + 1];
+    expect(wiql).toContain("TOP 500");
+    expect(wiql).toContain("[System.Parent] = 3");
+  });
+
   it("getWorkItem calls show --id --expand fields and maps", async () => {
     const runner = makeRunner(() => ({
       id: 42,

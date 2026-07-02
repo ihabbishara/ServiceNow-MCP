@@ -157,6 +157,77 @@ describe("crawl", () => {
     expect(res.chunksAdded).toBeGreaterThan(0);
   });
 
+  it("seeds do not consume the page budget — linked pages still get crawled up to maxPages", async () => {
+    // 2 seeds + 1 linked page; maxPages=3 must allow the linked page to be crawled
+    const extraPages: Record<string, { html: string }> = {
+      "https://h/s1": { html: "s1" },
+      "https://h/s2": { html: "s2" },
+      "https://h/linked": { html: "linked" }
+    };
+    const deps = makeDeps({
+      fetcher: {
+        get: vi.fn(async (url: string) => ({
+          ok: !!extraPages[url],
+          status: extraPages[url] ? 200 : 404,
+          contentType: "text/html",
+          body: extraPages[url]?.html ?? ""
+        }))
+      },
+      extract: (_html: string, url: string) => ({
+        title: url,
+        mainText: `text of ${url}`,
+        links: url === "https://h/s1" ? ["https://h/linked"] : []
+      }),
+      chat: undefined // heuristic mode: uses doc.links directly
+    });
+    const res = await crawl(deps, {
+      seeds: ["https://h/s1", "https://h/s2"],
+      allowDomains: ["h"],
+      maxPages: 3,
+      maxDepth: 2,
+      concurrency: 1,
+      rateMs: 0,
+      maxLinksPerPage: 50
+    });
+    const fetched = (deps.fetcher.get as any).mock.calls.map((c: any[]) => c[0]);
+    expect(fetched).toContain("https://h/linked");
+    expect(res.pagesCrawled).toBe(3);
+  });
+
+  it("embed failure stores sentinel hash so the page is retried on the next crawl", async () => {
+    let callCount = 0;
+    const upsertCalls: Array<{ url: string; hash: string; indexed: boolean }> = [];
+    const deps = makeDeps({
+      embedder: {
+        embed: vi.fn(async () => {
+          callCount++;
+          if (callCount === 1) throw new Error("embed failed");
+          return [1, 0, 0];
+        })
+      },
+      store: {
+        getPageHash: vi.fn(() => undefined),
+        upsertPage: vi.fn((p: any) => {
+          upsertCalls.push({ url: p.url, hash: p.hash, indexed: p.indexed });
+        }),
+        stats: () => ({ pages: 0, chunks: 0 })
+      } as any
+    });
+    // First crawl — embed throws, sentinel hash "" stored
+    await crawl(deps, {
+      seeds: ["https://h/seed"],
+      allowDomains: ["h"],
+      maxPages: 1,
+      maxDepth: 0,
+      concurrency: 1,
+      rateMs: 0,
+      maxLinksPerPage: 50
+    });
+    expect(upsertCalls).toHaveLength(1);
+    expect(upsertCalls[0].hash).toBe(""); // sentinel — not the real content hash
+    expect(upsertCalls[0].indexed).toBe(false);
+  });
+
   it("heuristic crawl when no chat model: indexes every in-scope page, follows all in-scope links", async () => {
     const deps = makeDeps();
     delete (deps as any).chat; // seat mode → no verdict LLM

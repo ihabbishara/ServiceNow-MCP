@@ -13,6 +13,12 @@ export const handleAuthStatus = async (
 };
 
 export const handleLogin = async (_req: IncomingMessage, res: ServerResponse, host: EngineHost) => {
-  void host.login(); // device-code + restart stream over SSE
+  void host.login().catch((e: unknown) =>
+    host.emit({
+      type: "turn-error",
+      message: e instanceof Error ? e.message : String(e),
+      isAuthError: true
+    })
+  ); // device-code + restart stream over SSE; errors surface as turn-error
   sendJson(res, 202, { accepted: true });
 };

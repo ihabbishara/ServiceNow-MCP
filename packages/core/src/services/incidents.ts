@@ -66,7 +66,12 @@ export class IncidentService {
     const openedMs = Date.parse(incident.openedAt);
     if (!Number.isFinite(openedMs)) return []; // blank/invalid openedAt → no change correlation, don't crash
     const startedAfter = new Date(openedMs - window.beforeHours * HOUR_MS).toISOString();
-    const changes = await this.serviceNow.listChangesWithFilters({ startedAfter, limit: 200 });
+    const startedBefore = new Date(openedMs + window.afterHours * HOUR_MS).toISOString();
+    const changes = await this.serviceNow.listChangesWithFilters({
+      startedAfter,
+      startedBefore,
+      limit: 200
+    });
     return this.correlation.correlate(incident, changes, window);
   }
 
