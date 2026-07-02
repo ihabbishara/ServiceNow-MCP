@@ -18,7 +18,7 @@ export const toMcpHandler =
   async (args: Record<string, unknown>): Promise<McpToolResult> => {
     try {
       const disabled = spec.enabledWhen?.(runtime.config);
-      if (disabled) return errorResult(disabled);
+      if (disabled != null) return errorResult(disabled);
       const result = await spec.run(runtime, args as never);
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     } catch (err) {

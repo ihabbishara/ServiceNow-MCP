@@ -95,6 +95,21 @@ describe("MCP resource surface", () => {
     expect(res.contents[0].text).toContain("SLA Risk Dashboard");
   });
 
+  it("escapes pipe characters in shortDescription to prevent table corruption", async () => {
+    const made = makeRuntime();
+    const pipeIncident: Incident = {
+      ...incident,
+      priority: "2",
+      shortDescription: "DB|down|again"
+    };
+    (made.runtime.serviceNowClient.listIncidents as ReturnType<typeof vi.fn>).mockResolvedValue([
+      pipeIncident
+    ]);
+    const c = await connect(made.runtime);
+    const res = await c.readResource({ uri: "team://Platform%20SRE/incidents" });
+    expect(res.contents[0].text).toContain("DB\\|down\\|again");
+  });
+
   it("returns a graceful error instead of rejecting when the backend throws", async () => {
     const made = makeRuntime();
     (
