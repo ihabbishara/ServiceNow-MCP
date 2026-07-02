@@ -134,7 +134,7 @@ export const registerTeamResources = (server: McpServer, runtime: McpRuntime): v
 |--------|-------------|----------|---------|
 `;
         for (const inc of priorityIncidents.slice(0, 10)) {
-          markdown += `| ${inc.number} | ${cell(inc.shortDescription.slice(0, 50))} | ${inc.assignedTo ?? "Unassigned"} | ${inc.updatedAt} |\n`;
+          markdown += `| ${inc.number} | ${cell(inc.shortDescription.slice(0, 50))} | ${cell(inc.assignedTo ?? "Unassigned")} | ${inc.updatedAt} |\n`;
         }
         markdown += "\n";
       }
