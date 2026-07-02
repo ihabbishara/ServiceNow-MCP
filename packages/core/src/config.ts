@@ -2,11 +2,11 @@ import { z } from "zod";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-const boolString = z
+export const boolString = z
   .enum(["true", "false"])
   .default("false")
   .transform((v) => v === "true");
-const trueBoolString = z
+export const trueBoolString = z
   .enum(["true", "false"])
   .default("true")
   .transform((v) => v === "true");
@@ -22,10 +22,10 @@ const optionalUrl = z.preprocess(
 // Empty string → undefined before validating. Without this, a `KEY=` line in
 // .env parses to "" — which is "present but invalid" for `.min(1)`/`.url()`, so
 // the optional field wrongly rejects (e.g. `ADO_PAT=` failed on startup).
-const optional = <T extends z.ZodTypeAny>(inner: T) =>
+export const optional = <T extends z.ZodTypeAny>(inner: T) =>
   z.preprocess((v) => (v === "" ? undefined : v), inner.optional());
 
-const envSchema = z.object({
+export const envSchema = z.object({
   SERVICENOW_BASE_URL: z.string({ error: "SERVICENOW_BASE_URL is required" }).url(),
   SERVICENOW_USERNAME: z.string({ error: "SERVICENOW_USERNAME is required" }).min(1),
   SERVICENOW_PASSWORD: z.string({ error: "SERVICENOW_PASSWORD is required" }).min(1),
@@ -198,13 +198,7 @@ const parseBoardMap = (raw?: string): Record<string, string> => {
   return {};
 };
 
-export const loadConfig = (env: Record<string, string | undefined> = process.env): AppConfig => {
-  const parsed = envSchema.safeParse(env);
-  if (!parsed.success) {
-    const issues = parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("\n  ");
-    throw new Error(`Invalid configuration:\n  ${issues}`);
-  }
-  const e = parsed.data;
+export const buildAppConfig = (e: z.infer<typeof envSchema>): AppConfig => {
   if (e.ADO_ENABLED) {
     if (!e.ADO_ORG_URL || !e.ADO_PROJECT) {
       throw new Error("ADO_ENABLED=true requires ADO_ORG_URL and ADO_PROJECT");
@@ -299,4 +293,13 @@ export const loadConfig = (env: Record<string, string | undefined> = process.env
       }
     }
   };
+};
+
+export const loadConfig = (env: Record<string, string | undefined> = process.env): AppConfig => {
+  const parsed = envSchema.safeParse(env);
+  if (!parsed.success) {
+    const issues = parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("\n  ");
+    throw new Error(`Invalid configuration:\n  ${issues}`);
+  }
+  return buildAppConfig(parsed.data);
 };
