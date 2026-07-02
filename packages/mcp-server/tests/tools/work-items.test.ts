@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { registerAdoTools } from "../../src/tools/ado.js";
+import { registerRegistryTools } from "../../src/tools/registry.js";
 import { registerWorkItemCsvTools } from "../../src/tools/workItemCsv.js";
 import { McpRuntime } from "@sre/core";
 
@@ -32,7 +32,7 @@ const makeRuntime = (over: { enabled?: boolean; csvDir?: string; boardKnown?: bo
 
 const connect = async (runtime: McpRuntime) => {
   const server = new McpServer({ name: "test", version: "0.0.0" });
-  registerAdoTools(server, runtime);
+  registerRegistryTools(server, runtime);
   registerWorkItemCsvTools(server, runtime);
   const [ct, st] = InMemoryTransport.createLinkedPair();
   const client = new Client({ name: "c", version: "0.0.0" });

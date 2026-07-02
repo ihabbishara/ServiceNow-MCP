@@ -12,6 +12,7 @@ const fakeRuntime = (overrides: Record<string, unknown> = {}) =>
     config: {
       features: { createAdoBug: true },
       azureDevOps: {
+        enabled: true,
         defaultAreaPath: "IngOne",
         defaultIterationPath: "IngOne",
         defaultAssignedTeam: undefined
@@ -52,14 +53,16 @@ const byName = (rt: any, n: string): Tool<any> => {
 const call = (t: Tool<any>, args: unknown) => t.handler!(args as never, {} as never);
 
 describe("buildTools", () => {
-  it("registers exactly the 15 expected tools", () => {
+  it("registers exactly the 17 expected tools", () => {
     const names = buildTools(fakeRuntime())
       .map((t) => t.name)
       .sort();
     expect(names).toEqual(
       [
+        "clone_work_item",
         "correlate_changes",
         "create_bug_from_incident",
+        "create_work_item",
         "find_sla_risks",
         "find_stale_tickets",
         "generate_ops_summary",
@@ -77,12 +80,17 @@ describe("buildTools", () => {
     );
   });
 
-  it("read tools set skipPermission, the write tool does not", () => {
+  it("read tools set skipPermission, write tools do not", () => {
+    const writeToolNames = new Set([
+      "create_bug_from_incident",
+      "create_work_item",
+      "clone_work_item"
+    ]);
     const tools = buildTools(fakeRuntime());
-    const write = tools.find((t) => t.name === "create_bug_from_incident")!;
-    expect(write.skipPermission).toBeFalsy();
     for (const t of tools) {
-      if (t.name !== "create_bug_from_incident") {
+      if (writeToolNames.has(t.name)) {
+        expect(t.skipPermission).toBeFalsy();
+      } else {
         expect(t.skipPermission).toBe(true);
       }
     }
@@ -167,6 +175,33 @@ describe("buildTools", () => {
     expect(await call(t, { number: "INC1" })).toEqual({
       error: expect.stringMatching(/boom/)
     });
+  });
+
+  it("create_bug_from_incident errors when ADO is disabled (drift fix)", async () => {
+    const rt = fakeRuntime();
+    rt.config.azureDevOps.enabled = false;
+    const t = byName(rt, "create_bug_from_incident");
+    expect(await call(t, { incident_number: "INC1" })).toEqual({
+      error: "ADO integration is disabled. Enable it to create bugs."
+    });
+    expect(rt.azureDevOpsClient.createBug).not.toHaveBeenCalled();
+  });
+
+  it("search_work_items errors when ADO is disabled (drift fix)", async () => {
+    const rt = fakeRuntime();
+    rt.config.azureDevOps.enabled = false;
+    const t = byName(rt, "search_work_items");
+    expect(await call(t, {})).toEqual({ error: expect.stringMatching(/disabled/) });
+  });
+
+  it("search_work_items projects tags (drift fix)", async () => {
+    const rt = fakeRuntime();
+    rt.azureDevOpsClient.searchWorkItems = vi.fn(async () => [
+      { id: 1, title: "t", state: "New", tags: ["a"] }
+    ]);
+    const t = byName(rt, "search_work_items");
+    const out = (await call(t, {})) as any;
+    expect(out.workItems[0].tags).toEqual(["a"]);
   });
 });
 

@@ -3,6 +3,7 @@ import { changeSpecs } from "./specs/changes.js";
 import { analysisSpecs } from "./specs/analysis.js";
 import { knowledgeSpecs } from "./specs/knowledge.js";
 import { sharePointSpecs } from "./specs/sharepoint.js";
+import { adoSpecs } from "./specs/ado.js";
 import type { ToolSpec } from "./spec.js";
 
 export { ToolError, defineSpec } from "./spec.js";
@@ -14,7 +15,8 @@ export const TOOL_SPECS: ToolSpec[] = [
   ...changeSpecs,
   ...analysisSpecs,
   ...knowledgeSpecs,
-  ...sharePointSpecs
+  ...sharePointSpecs,
+  ...adoSpecs
 ];
 
 /** Names of tools that mutate external state; derived, never hand-maintained. */
