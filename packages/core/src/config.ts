@@ -16,9 +16,9 @@ const optional = <T extends z.ZodTypeAny>(inner: T) =>
   z.preprocess((v) => (v === "" ? undefined : v), inner.optional());
 
 const envSchema = z.object({
-  SERVICENOW_BASE_URL: z.string({ required_error: "SERVICENOW_BASE_URL is required" }).url(),
-  SERVICENOW_USERNAME: z.string({ required_error: "SERVICENOW_USERNAME is required" }).min(1),
-  SERVICENOW_PASSWORD: z.string({ required_error: "SERVICENOW_PASSWORD is required" }).min(1),
+  SERVICENOW_BASE_URL: z.string({ error: "SERVICENOW_BASE_URL is required" }).url(),
+  SERVICENOW_USERNAME: z.string({ error: "SERVICENOW_USERNAME is required" }).min(1),
+  SERVICENOW_PASSWORD: z.string({ error: "SERVICENOW_PASSWORD is required" }).min(1),
   SERVICENOW_PROXY: optionalUrl,
   ADO_ENABLED: boolString,
   ADO_AUTH_MODE: z.enum(["azcli", "pat"]).default("azcli"),

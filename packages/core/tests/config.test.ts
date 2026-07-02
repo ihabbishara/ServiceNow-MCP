@@ -28,6 +28,14 @@ describe("loadConfig", () => {
     expect(() => loadConfig({})).toThrow(/SERVICENOW_USERNAME/);
   });
 
+  it("includes the custom 'is required' message for each missing ServiceNow var", () => {
+    expect(() => loadConfig({})).toThrow(/SERVICENOW_BASE_URL is required/);
+    expect(() => loadConfig({ SERVICENOW_BASE_URL: "https://sn.example.com" })).toThrow(/SERVICENOW_USERNAME is required/);
+    expect(() =>
+      loadConfig({ SERVICENOW_BASE_URL: "https://sn.example.com", SERVICENOW_USERNAME: "u" })
+    ).toThrow(/SERVICENOW_PASSWORD is required/);
+  });
+
   it("requires ADO vars when ADO_ENABLED=true", () => {
     expect(() => loadConfig({ ...validEnv, ADO_ENABLED: "true" })).toThrow(/ADO_ORG_URL and ADO_PROJECT/);
   });
