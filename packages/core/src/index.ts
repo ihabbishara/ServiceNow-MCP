@@ -21,3 +21,4 @@ export type { IncidentDocsResult, IncidentDocument } from "./clients/sharepoint/
 export * from "./services/workItemService.js";
 export * from "./services/csvReader.js";
 export * from "./tools/registry.js";
+export * from "./prompts/registry.js";
