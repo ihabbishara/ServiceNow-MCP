@@ -35,6 +35,12 @@ describe("searchConditions", () => {
 });
 
 describe("workItemFieldOps", () => {
+  it("routes non-Bug descriptions to System.Description as HTML", () => {
+    expect(workItemFieldOps({ type: "Task", title: "t", description: "l1\nl2" })).toEqual([
+      { referenceName: "System.Description", value: "l1<br>l2" }
+    ]);
+  });
+
   it("routes Bug descriptions to ReproSteps as HTML", () => {
     expect(workItemFieldOps({ type: "Bug", title: "t", description: "l1\nl2" })).toEqual([
       { referenceName: "Microsoft.VSTS.TCM.ReproSteps", value: "l1<br>l2" }
