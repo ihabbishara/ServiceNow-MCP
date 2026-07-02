@@ -159,11 +159,11 @@ const main = async () => {
   // mid-conversation. PAT mode skips this preflight.
   if (config.adoAuthMode === "azcli") {
     process.stderr.write("[sre-agent] checking Azure CLI login (az account show)…\n");
-    await runDoctor(config.raw.AZ_PATH);
+    await runDoctor(config.app.azureDevOps.azPath ?? "az");
     process.stderr.write("[sre-agent] az login ok\n");
   }
 
-  const runtime = createMcpRuntime(); // reuses core config from process.env
+  const runtime = createMcpRuntime(config.app); // single parse: agent config feeds the runtime
 
   // Auto-crawl-on-boot (background, freshness-gated). No-op unless CRAWL_SEEDS set.
   bootCrawl(runtime, { enabled: config.knowledgeEnabled, ttlHours: config.crawlTtlHours });

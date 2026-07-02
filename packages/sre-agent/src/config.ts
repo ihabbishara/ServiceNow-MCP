@@ -27,13 +27,6 @@ export interface AgentConfig {
   copilot: { githubToken?: string; home?: string; ignoreEnvToken: boolean };
   /** The core AppConfig built from the SAME single parse — pass to createMcpRuntime. */
   app: AppConfig;
-  /**
-   * @deprecated Task 4 will remove this shim.
-   * Use app.azureDevOps.azPath and app.sharePoint.enabled instead.
-   * Kept only because packages/sre-agent/src/doctor.ts and src/cli/index.ts
-   * still reference config.raw.AZ_PATH and config.raw.SHAREPOINT_ENABLED.
-   */
-  raw: { AZ_PATH: string; SHAREPOINT_ENABLED: boolean };
 }
 
 export const loadAgentConfig = (env: Record<string, string | undefined> = process.env): AgentConfig => {
@@ -65,8 +58,6 @@ export const loadAgentConfig = (env: Record<string, string | undefined> = proces
     uploadMaxBytes: e.UPLOAD_MAX_BYTES,
     sharePointEnabled: e.SHAREPOINT_ENABLED,
     copilot: { githubToken: e.COPILOT_GITHUB_TOKEN, home: e.COPILOT_HOME, ignoreEnvToken: e.COPILOT_IGNORE_ENV_TOKEN },
-    app: buildAppConfig(e),
-    // Task 4 shim: doctor.ts + cli/index.ts still use config.raw.{AZ_PATH,SHAREPOINT_ENABLED}
-    raw: { AZ_PATH: e.AZ_PATH, SHAREPOINT_ENABLED: e.SHAREPOINT_ENABLED }
+    app: buildAppConfig(e)
   };
 };

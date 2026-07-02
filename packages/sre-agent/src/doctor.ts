@@ -209,14 +209,15 @@ export const runChecks = async (): Promise<{ text: string; allOk: boolean }> => 
 
   if (config) {
     if (config.adoAuthMode === "azcli") {
-      results.push(await checkAzLogin(config.raw.AZ_PATH));
-      results.push(await checkAzBoardsExtension(config.raw.AZ_PATH));
+      const azPath = config.app.azureDevOps.azPath ?? "az";
+      results.push(await checkAzLogin(azPath));
+      results.push(await checkAzBoardsExtension(azPath));
     }
     if (config.llm.mode === "seat") {
       results.push(await checkCopilotAuth(config));
     }
     results.push(await checkKnowledge());
-    if (config.raw.SHAREPOINT_ENABLED) {
+    if (config.app.sharePoint.enabled) {
       results.push(await checkSharePoint());
     }
   }
