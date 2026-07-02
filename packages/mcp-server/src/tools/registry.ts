@@ -5,6 +5,7 @@ import type { McpRuntime, ToolSpec } from "@sre/core";
 interface McpToolResult {
   content: Array<{ type: "text"; text: string }>;
   isError?: boolean;
+  [key: string]: unknown;
 }
 
 const errorResult = (text: string): McpToolResult => ({

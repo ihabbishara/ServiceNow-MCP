@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { registerChangeTools } from "../../src/tools/changes.js";
+import { registerRegistryTools } from "../../src/tools/registry.js";
 import { registerAdoTools } from "../../src/tools/ado.js";
 import { registerAnalysisTools } from "../../src/tools/analysis.js";
 import { McpRuntime } from "@sre/core";
@@ -43,7 +43,7 @@ const makeRuntime = (over: Record<string, unknown> = {}) => {
 
 const connect = async (runtime: McpRuntime) => {
   const server = new McpServer({ name: "test", version: "0.0.0" });
-  registerChangeTools(server, runtime);
+  registerRegistryTools(server, runtime);
   registerAdoTools(server, runtime);
   registerAnalysisTools(server, runtime);
   const [ct, st] = InMemoryTransport.createLinkedPair();

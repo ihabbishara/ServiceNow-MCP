@@ -70,3 +70,42 @@ describe("incidents specs", () => {
     );
   });
 });
+
+describe("changes specs", () => {
+  const spec = (n: string) => TOOL_SPECS.find((s) => s.name === n)!;
+
+  it("registers the changes group", () => {
+    const names = TOOL_SPECS.map((s) => s.name);
+    expect(names).toEqual(
+      expect.arrayContaining(["search_changes", "get_change", "correlate_changes"])
+    );
+  });
+
+  it("search_changes filters risk client-side", async () => {
+    const rows = [
+      { number: "C1", state: "New", shortDescription: "a", risk: "High" },
+      { number: "C2", state: "New", shortDescription: "b", risk: "Low" }
+    ];
+    const rt: any = { serviceNowClient: { listChangesWithFilters: vi.fn(async () => rows) } };
+    const out = (await spec("search_changes").run(rt, { risk: "High" })) as any;
+    expect(out.count).toBe(1);
+    expect(out.changes[0].number).toBe("C1");
+  });
+
+  it("get_change throws ToolError when not found", async () => {
+    const rt: any = { serviceNowClient: { getChangeByNumber: vi.fn(async () => null) } };
+    await expect(spec("get_change").run(rt, { number: "CHG0" })).rejects.toThrow(
+      "Change CHG0 not found"
+    );
+  });
+
+  it("correlate_changes passes undefined window when neither bound is set", async () => {
+    const findRelatedChanges = vi.fn(async () => []);
+    const rt: any = {
+      config: { thresholds: { relatedChangeWindow: { beforeHours: 24, afterHours: 4 } } },
+      incidentService: { findRelatedChanges }
+    };
+    await spec("correlate_changes").run(rt, { incident_number: "INC1" });
+    expect(findRelatedChanges).toHaveBeenCalledWith("INC1", undefined);
+  });
+});
