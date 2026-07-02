@@ -100,6 +100,37 @@ describe("analysis specs", () => {
   });
 });
 
+describe("knowledge + sharepoint specs", () => {
+  const spec = (n: string) => TOOL_SPECS.find((s) => s.name === n)!;
+
+  it("registers the groups", () => {
+    const names = TOOL_SPECS.map((s) => s.name);
+    expect(names).toEqual(
+      expect.arrayContaining(["search_knowledge", "index_url", "get_incident_documents"])
+    );
+  });
+
+  it("index_url clamps depth to 2 and pages to 25", async () => {
+    const crawl = vi.fn(async () => ({ pagesCrawled: 1, chunksAdded: 2, pagesSkipped: 0 }));
+    const rt: any = { knowledge: { crawl } };
+    const out = await spec("index_url").run(rt, { url: "https://w", depth: 9, max_pages: 999 });
+    expect(crawl).toHaveBeenCalledWith(
+      { seeds: ["https://w"], maxDepth: 2, maxPages: 25 },
+      expect.any(Function)
+    );
+    expect(out).toEqual({ pages_crawled: 1, chunks_added: 2, skipped: 0 });
+  });
+
+  it("get_incident_documents is disabled by config and guarded at runtime", async () => {
+    const sp = spec("get_incident_documents");
+    expect(sp.enabledWhen!({ sharePoint: { enabled: false } } as any)).toMatch(/disabled/);
+    expect(sp.enabledWhen!({ sharePoint: { enabled: true } } as any)).toBeNull();
+    await expect(sp.run({ sharePoint: undefined } as any, { incident: "INC1" })).rejects.toThrow(
+      "SharePoint integration is disabled (set SHAREPOINT_ENABLED=true)."
+    );
+  });
+});
+
 describe("changes specs", () => {
   const spec = (n: string) => TOOL_SPECS.find((s) => s.name === n)!;
 
