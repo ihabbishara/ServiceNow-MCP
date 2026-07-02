@@ -3,9 +3,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 // The canonical .env.example ships in the sre-agent package.
-const envExamplePath = fileURLToPath(
-  new URL("../../sre-agent/.env.example", import.meta.url)
-);
+const envExamplePath = fileURLToPath(new URL("../../sre-agent/.env.example", import.meta.url));
 
 // Vars read by the app that MUST be documented in .env.example.
 // (Audit found these 5 missing as of 2026-07-02.)
