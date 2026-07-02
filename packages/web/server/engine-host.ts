@@ -155,14 +155,16 @@ export const createEngineHost = (opts: EngineHostOptions): EngineHost => {
   };
 
   const emitConfigStatus = () => {
-    const raw = config.raw as unknown as Record<string, string | undefined> | undefined;
     emit({
       type: "config-status",
       llmMode: config.llm.mode,
       model: config.llm.model,
       provider: config.llm.provider?.type,
-      servicenow: !!raw?.SERVICENOW_BASE_URL,
-      ado: config.adoAuthMode === "pat" ? !!raw?.ADO_PAT : !!(raw?.ADO_ORG_URL && raw?.ADO_PROJECT),
+      servicenow: !!config.app?.serviceNow?.baseUrl,
+      ado:
+        config.adoAuthMode === "pat"
+          ? !!config.app?.azureDevOps?.pat
+          : !!(config.app?.azureDevOps?.orgUrl && config.app?.azureDevOps?.project),
       rag: !!runtime,
       uploadMaxBytes: config.uploadMaxBytes
     });

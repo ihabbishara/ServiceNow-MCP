@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { loadConfig } from "../src/config.js";
+import { loadConfig, buildAppConfig, envSchema } from "../src/config.js";
 
 const validEnv = {
   SERVICENOW_BASE_URL: "https://example.service-now.com",
@@ -194,6 +194,20 @@ describe("loadConfig ADO_CSV_DIR", () => {
   it("leaves csvDir undefined when unset", () => {
     const c = loadConfig({ ...base });
     expect(c.azureDevOps.csvDir).toBeUndefined();
+  });
+});
+
+describe("parity: buildAppConfig + envSchema", () => {
+  it("buildAppConfig(envSchema.parse(env)) equals loadConfig(env)", () => {
+    const env = {
+      ...validEnv,
+      ADO_ENABLED: "true",
+      ADO_ORG_URL: "https://dev.azure.com/x",
+      ADO_PROJECT: "P"
+    };
+    const viaLoad = loadConfig(env);
+    const viaBuild = buildAppConfig(envSchema.parse(env));
+    expect(viaBuild).toEqual(viaLoad);
   });
 });
 

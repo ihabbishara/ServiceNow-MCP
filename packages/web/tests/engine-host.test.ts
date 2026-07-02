@@ -355,12 +355,42 @@ describe("EngineHost ingest", () => {
 });
 
 describe("engine-host config-status", () => {
+  // Uses config.app.* (not the removed .raw shim) — regression guard for P1a Task 4.
   const fullConfig = {
     llm: { mode: "seat", model: "gpt-5" },
     adoAuthMode: "pat",
     confirmWrites: true,
     copilot: { ignoreEnvToken: true },
-    raw: { SERVICENOW_BASE_URL: "https://x.service-now.com", ADO_PAT: "p" }
+    uploadMaxBytes: 10485760,
+    app: {
+      serviceNow: { baseUrl: "https://x.service-now.com", username: "u", password: "p" },
+      azureDevOps: {
+        enabled: true,
+        authMode: "pat",
+        azPath: "az",
+        orgUrl: "https://dev.azure.com/org",
+        project: "proj",
+        pat: "my-pat"
+      },
+      sharePoint: {
+        enabled: false,
+        siteUrl: "",
+        incidentRoot: "",
+        docsSubfolder: "",
+        authMode: "azcli",
+        azPath: "az",
+        maxDocTokens: 0,
+        maxFiles: 0,
+        maxFileBytes: 0,
+        timeoutMs: 0
+      },
+      knowledge: {} as any,
+      features: { createAdoBug: false },
+      thresholds: {
+        staleByPriorityMinutes: {},
+        relatedChangeWindow: { beforeHours: 0, afterHours: 0 }
+      }
+    }
   } as any;
 
   const makeFullHost = (events: ServerEvent[]) =>
@@ -383,7 +413,7 @@ describe("engine-host config-status", () => {
       llmMode: "seat",
       model: "gpt-5",
       servicenow: true,
-      ado: true, // pat mode + ADO_PAT present
+      ado: true, // pat mode + app.azureDevOps.pat present
       rag: true // runtimeFactory provided
     });
   });
@@ -393,5 +423,37 @@ describe("engine-host config-status", () => {
     const host = makeFullHost(events);
     await host.start();
     expect(host.snapshot().some((e) => e.type === "config-status")).toBe(true);
+  });
+
+  // Regression: before P1a Task 4 the shim read config.raw.* which was always
+  // undefined in web config objects → servicenow/ado were silently forced false.
+  it("servicenow and ado flags derive from config.app (regression: not from removed .raw shim)", async () => {
+    // azcli mode: ado = orgUrl && project present (no PAT needed)
+    const azcliConfig = {
+      ...fullConfig,
+      adoAuthMode: "azcli",
+      app: {
+        ...fullConfig.app,
+        azureDevOps: {
+          ...fullConfig.app.azureDevOps,
+          authMode: "azcli",
+          pat: undefined
+        }
+      }
+    } as any;
+    const events: ServerEvent[] = [];
+    const host = createEngineHost({
+      config: azcliConfig,
+      tools: [],
+      engineFactory: (deps) => new FakeEngine(deps) as any,
+      emit: (e) => events.push(e),
+      idFactory: () => "fixed-id"
+    });
+    await host.start();
+    const cs = events.find((e) => e.type === "config-status");
+    expect(cs).toMatchObject({
+      servicenow: true, // from config.app.serviceNow.baseUrl
+      ado: true // from config.app.azureDevOps.orgUrl && .project (azcli mode)
+    });
   });
 });

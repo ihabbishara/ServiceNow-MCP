@@ -25,10 +25,13 @@ export interface McpRuntime {
   workItemService: WorkItemService;
 }
 
+const isAppConfig = (v: unknown): v is AppConfig =>
+  !!v && typeof v === "object" && "serviceNow" in v && "azureDevOps" in v && "knowledge" in v;
+
 export const createMcpRuntime = (
-  env: Record<string, string | undefined> = process.env
+  configOrEnv: AppConfig | Record<string, string | undefined> = process.env
 ): McpRuntime => {
-  const config = loadConfig(env);
+  const config = isAppConfig(configOrEnv) ? configOrEnv : loadConfig(configOrEnv);
 
   const serviceNowClient = new ServiceNowClient(config.serviceNow);
   const azureDevOpsClient = createAdoClient(config.azureDevOps);

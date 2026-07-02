@@ -52,8 +52,8 @@ export const startServer = async (opts: { port: number; host?: EngineHost }): Pr
       const { loadAgentConfig, loadDotenv, buildTools, bootCrawl } = await import("@sre/sre-agent");
       const { createMcpRuntime } = await import("@sre/core");
       loadDotenv();
-      const runtime = createMcpRuntime();
       const config = loadAgentConfig();
+      const runtime = createMcpRuntime(config.app);
       const tools = buildTools(runtime) as import("@github/copilot-sdk").Tool<unknown>[];
       const h = createEngineHost({ config, tools, runtimeFactory: () => runtime });
       await h.start();
