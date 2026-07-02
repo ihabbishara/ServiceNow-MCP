@@ -7,6 +7,8 @@ import type {
 import type { WorkItem } from "../../types.js";
 import { AzRunner } from "./az.js";
 import { mapAzWorkItem, AzWorkItemRaw } from "./map.js";
+import { searchConditions } from "./wiql.js";
+import { workItemFieldOps } from "./fields.js";
 
 export interface AzBoardsConfig {
   orgUrl: string;
@@ -31,8 +33,6 @@ const SELECT = [
   "[Microsoft.VSTS.Scheduling.StoryPoints]"
 ].join(", ");
 
-const esc = (s: string): string => s.replace(/'/g, "''");
-
 export class AzBoardsClient implements AzureDevOpsClient {
   private readonly runner: AzRunner;
 
@@ -44,13 +44,7 @@ export class AzBoardsClient implements AzureDevOpsClient {
   }
 
   async searchWorkItems(f: WorkItemSearchFilters): Promise<WorkItem[]> {
-    const where: string[] = ["[System.TeamProject] = @project"];
-    if (f.text) where.push(`[System.Title] CONTAINS '${esc(f.text)}'`);
-    if (f.workItemType) where.push(`[System.WorkItemType] = '${esc(f.workItemType)}'`);
-    if (f.state) where.push(`[System.State] = '${esc(f.state)}'`);
-    if (f.areaPath) where.push(`[System.AreaPath] UNDER '${esc(f.areaPath)}'`);
-    if (f.assignedTo === "@Me") where.push("[System.AssignedTo] = @Me");
-    else if (f.assignedTo) where.push(`[System.AssignedTo] = '${esc(f.assignedTo)}'`);
+    const where = ["[System.TeamProject] = @project", ...searchConditions(f)];
 
     const wiql = `SELECT ${SELECT} FROM workitems WHERE ${where.join(" AND ")} ORDER BY [System.ChangedDate] DESC`;
     const rows = await this.runner.json<AzWorkItemRaw[]>([
@@ -88,20 +82,7 @@ export class AzBoardsClient implements AzureDevOpsClient {
   async createWorkItem(p: CreateWorkItemPayload): Promise<WorkItem> {
     const area = p.areaPath ?? this.cfg.defaultAreaPath;
     const iter = p.iterationPath ?? this.cfg.defaultIterationPath;
-    const fields: string[] = [];
-    if (p.description != null) {
-      const html = p.description.replace(/\n/g, "<br>");
-      fields.push(
-        p.type === "Bug" ? `Microsoft.VSTS.TCM.ReproSteps=${html}` : `System.Description=${html}`
-      );
-    }
-    if (p.tags?.length) fields.push(`System.Tags=${p.tags.join("; ")}`);
-    const prio = p.priority ? Number(p.priority) : NaN;
-    if (Number.isInteger(prio) && prio >= 1 && prio <= 4)
-      fields.push(`Microsoft.VSTS.Common.Priority=${prio}`);
-    if (typeof p.storyPoints === "number")
-      fields.push(`Microsoft.VSTS.Scheduling.StoryPoints=${p.storyPoints}`);
-    for (const [k, v] of Object.entries(p.fields ?? {})) fields.push(`${k}=${v}`);
+    const fields = workItemFieldOps(p).map((op) => `${op.referenceName}=${op.value}`);
 
     const args = [
       "boards",

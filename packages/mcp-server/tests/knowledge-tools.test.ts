@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { registerKnowledgeTools } from "../src/tools/knowledge.js";
+import { registerRegistryTools } from "../src/tools/registry.js";
 
 /** Fake McpServer that captures `server.tool(name, desc, shape, handler)`. */
 const fakeServer = () => {
@@ -29,7 +29,7 @@ const rt = () =>
 describe("mcp knowledge tools", () => {
   it("registers search_knowledge + index_url", () => {
     const { server, handlers } = fakeServer();
-    registerKnowledgeTools(server, rt());
+    registerRegistryTools(server, rt());
     expect(Object.keys(handlers)).toEqual(
       expect.arrayContaining(["search_knowledge", "index_url"])
     );
@@ -38,7 +38,7 @@ describe("mcp knowledge tools", () => {
   it("search handler delegates to runtime and returns text content", async () => {
     const { server, handlers } = fakeServer();
     const runtime = rt();
-    registerKnowledgeTools(server, runtime);
+    registerRegistryTools(server, runtime);
     const out = await handlers.search_knowledge({ query: "x" });
     expect(runtime.knowledge.search).toHaveBeenCalledWith("x", undefined, undefined);
     expect(out.content[0].type).toBe("text");

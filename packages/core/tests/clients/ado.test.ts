@@ -67,6 +67,9 @@ describe("AdoPatClient", () => {
 
     const detailsUrl = fetchMock.mock.calls[1][0] as string;
     expect(detailsUrl).toContain("/_apis/wit/workitems?ids=42,43");
+    expect(detailsUrl).toContain(
+      "fields=System.Title,System.State,System.WorkItemType,System.AssignedTo,System.AreaPath,System.IterationPath,System.Tags,System.Parent,Microsoft.VSTS.Common.Priority,Microsoft.VSTS.Scheduling.StoryPoints"
+    );
 
     expect(items[0]).toEqual({
       id: 42,
@@ -84,6 +87,20 @@ describe("AdoPatClient", () => {
     await new AdoPatClient(cfg).searchWorkItems({ text: "user's incident" });
     const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
     expect(body.query).toContain("CONTAINS 'user''s incident'");
+  });
+
+  it("clamps $top to 200 when limit exceeds the maximum", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ workItems: [] }));
+    await new AdoPatClient(cfg).searchWorkItems({ limit: 500 });
+    const url = fetchMock.mock.calls[0][0] as string;
+    expect(url).toContain("$top=200");
+  });
+
+  it("defaults $top to 50 when no limit is supplied", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ workItems: [] }));
+    await new AdoPatClient(cfg).searchWorkItems({});
+    const url = fetchMock.mock.calls[0][0] as string;
+    expect(url).toContain("$top=50");
   });
 
   it("returns [] without fetching details when WIQL matches nothing", async () => {
