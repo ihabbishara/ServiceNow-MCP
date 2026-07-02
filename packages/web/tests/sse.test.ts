@@ -21,4 +21,23 @@ describe("SseHub", () => {
     hub.broadcast({ type: "turn-end" });
     expect(writes.length).toBe(1);
   });
+
+  it("isolates a failing client: healthy client still receives the frame and the thrower is removed", () => {
+    const hub = new SseHub();
+    const healthyWrites: string[] = [];
+    const badClient = {
+      write: () => {
+        throw new Error("write failed");
+      }
+    } as never;
+    const goodClient = { write: (s: string) => healthyWrites.push(s) } as never;
+    hub.add(badClient);
+    hub.add(goodClient);
+    expect(hub.count()).toBe(2);
+    hub.broadcast({ type: "turn-end" });
+    // Bad client should have been removed
+    expect(hub.count()).toBe(1);
+    // Good client received the frame
+    expect(healthyWrites).toEqual([`data: {"type":"turn-end"}\n\n`]);
+  });
 });

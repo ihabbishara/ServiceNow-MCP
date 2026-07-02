@@ -5,6 +5,8 @@ import { AddressInfo } from "node:net";
 import { startServer } from "../server/index.js";
 import { createEngineHost } from "../server/engine-host.js";
 import { FakeEngine } from "./fake-engine.js";
+import { handleLogin } from "../server/routes/auth.js";
+import type { EngineHost } from "../server/engine-host.js";
 
 const servers: Server[] = [];
 afterAll(() => servers.forEach((s) => s.close()));
@@ -62,6 +64,26 @@ describe("routes", () => {
       body: JSON.stringify({ vars: { LLM_MODE: "nonsense" } })
     });
     expect(res.status).toBe(400);
+  });
+});
+
+describe("handleLogin error propagation (fix #11)", () => {
+  it("emits turn-error when host.login() rejects", async () => {
+    const emitted: unknown[] = [];
+    const fakeHost: Partial<EngineHost> = {
+      login: vi.fn().mockRejectedValue(new Error("device flow failed")),
+      emit: vi.fn((e) => emitted.push(e))
+    };
+    const req = {} as never;
+    const res = { writeHead: vi.fn(), end: vi.fn(), setHeader: vi.fn() } as never;
+    await handleLogin(req, res, fakeHost as EngineHost);
+    // login() rejection is async; flush the microtask queue
+    await new Promise((r) => setTimeout(r, 0));
+    expect(emitted).toContainEqual({
+      type: "turn-error",
+      message: "device flow failed",
+      isAuthError: true
+    });
   });
 });
 

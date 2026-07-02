@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import type { PermissionRequest } from "@github/copilot-sdk";
 import { makePermissionHandler } from "../src/engine/permissions.js";
+import { WRITE_TOOL_NAMES } from "@sre/core";
 
 const inv = {} as never;
 
@@ -48,10 +49,10 @@ describe("permission gate", () => {
   it("gates every registry write tool, not just create_bug_from_incident", async () => {
     const confirm = vi.fn(async () => true);
     const h = makePermissionHandler({ confirmWrites: true }, confirm);
-    for (const toolName of ["create_work_item", "clone_work_item"]) {
+    for (const toolName of [...WRITE_TOOL_NAMES]) {
       const res = await h({ kind: "custom-tool", toolName, toolDescription: "" } as never);
       expect(res).toEqual({ kind: "approve-once" });
     }
-    expect(confirm).toHaveBeenCalledTimes(2);
+    expect(confirm).toHaveBeenCalledTimes(WRITE_TOOL_NAMES.size);
   });
 });

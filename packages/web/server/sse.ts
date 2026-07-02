@@ -14,7 +14,13 @@ export class SseHub {
 
   broadcast(event: ServerEvent): void {
     const frame = formatSse(event);
-    for (const res of this.clients) res.write(frame);
+    for (const res of this.clients) {
+      try {
+        res.write(frame);
+      } catch {
+        this.clients.delete(res);
+      }
+    }
   }
 
   count(): number {
