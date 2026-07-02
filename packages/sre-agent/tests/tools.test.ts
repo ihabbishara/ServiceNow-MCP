@@ -48,12 +48,13 @@ const byName = (rt: any, n: string): Tool<any> => {
   return t;
 };
 
-const call = (t: Tool<any>, args: unknown) =>
-  t.handler!(args as never, {} as never);
+const call = (t: Tool<any>, args: unknown) => t.handler!(args as never, {} as never);
 
 describe("buildTools", () => {
   it("registers exactly the 15 expected tools", () => {
-    const names = buildTools(fakeRuntime()).map((t) => t.name).sort();
+    const names = buildTools(fakeRuntime())
+      .map((t) => t.name)
+      .sort();
     expect(names).toEqual(
       [
         "correlate_changes",

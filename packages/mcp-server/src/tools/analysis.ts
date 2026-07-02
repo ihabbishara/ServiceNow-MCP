@@ -9,8 +9,14 @@ export const registerAnalysisTools = (server: McpServer, runtime: McpRuntime): v
     "Find open incidents at risk of SLA breach. Risk levels: Critical (<10% time), High (<25%), Medium (<50%)",
     {
       assignment_group: z.string().optional().describe("Filter to specific team"),
-      priorities: z.array(z.enum(["1", "2", "3", "4"])).optional().describe("Filter to specific priorities (e.g., ['1', '2'])"),
-      risk_level: z.enum(["Critical", "High", "Medium"]).optional().describe("Minimum risk level to include")
+      priorities: z
+        .array(z.enum(["1", "2", "3", "4"]))
+        .optional()
+        .describe("Filter to specific priorities (e.g., ['1', '2'])"),
+      risk_level: z
+        .enum(["Critical", "High", "Medium"])
+        .optional()
+        .describe("Minimum risk level to include")
     },
     async (args) => {
       try {
@@ -59,7 +65,10 @@ export const registerAnalysisTools = (server: McpServer, runtime: McpRuntime): v
     "Find tickets not updated within expected thresholds. Thresholds: P1=30min, P2=2h, P3=24h, P4=72h",
     {
       assignment_group: z.string().optional().describe("Filter to specific team"),
-      priorities: z.array(z.enum(["1", "2", "3", "4"])).optional().describe("Filter to specific priorities")
+      priorities: z
+        .array(z.enum(["1", "2", "3", "4"]))
+        .optional()
+        .describe("Filter to specific priorities")
     },
     async (args) => {
       try {
@@ -108,7 +117,9 @@ export const registerAnalysisTools = (server: McpServer, runtime: McpRuntime): v
           const parsed = new Date(args.date);
           if (Number.isNaN(parsed.getTime())) {
             return {
-              content: [{ type: "text", text: `Invalid date: ${args.date}. Use ISO 8601, e.g. 2026-06-11.` }],
+              content: [
+                { type: "text", text: `Invalid date: ${args.date}. Use ISO 8601, e.g. 2026-06-11.` }
+              ],
               isError: true
             };
           }

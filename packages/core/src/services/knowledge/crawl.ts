@@ -66,11 +66,23 @@ export const crawl = async (deps: CrawlDeps, bounds: CrawlBounds): Promise<Crawl
   const queue: { url: string; depth: number }[] = [];
   for (const s of bounds.seeds) {
     const c = canonical(s);
-    if (!inScope(c, bounds.allowDomains)) { deps.log(`[crawl] seed out of scope, skipped: ${c}`); continue; }
-    if (!seen.has(c)) { seen.add(c); queue.push({ url: c, depth: 0 }); }
+    if (!inScope(c, bounds.allowDomains)) {
+      deps.log(`[crawl] seed out of scope, skipped: ${c}`);
+      continue;
+    }
+    if (!seen.has(c)) {
+      seen.add(c);
+      queue.push({ url: c, depth: 0 });
+    }
   }
 
-  const result: CrawlResult = { pagesCrawled: 0, pagesIndexed: 0, pagesSkipped: 0, chunksAdded: 0, dropped: 0 };
+  const result: CrawlResult = {
+    pagesCrawled: 0,
+    pagesIndexed: 0,
+    pagesSkipped: 0,
+    chunksAdded: 0,
+    dropped: 0
+  };
 
   while (queue.length > 0) {
     if (result.pagesCrawled >= bounds.maxPages) {
@@ -80,14 +92,23 @@ export const crawl = async (deps: CrawlDeps, bounds: CrawlBounds): Promise<Crawl
     }
     const { url, depth } = queue.shift()!;
 
-    if (!(await deps.robots.fetchAndCheck(url))) { deps.log(`[crawl] robots disallow ${url}`); continue; }
+    if (!(await deps.robots.fetchAndCheck(url))) {
+      deps.log(`[crawl] robots disallow ${url}`);
+      continue;
+    }
 
     const res = await deps.fetcher.get(url);
-    if (!res.ok) { deps.log(`[crawl] skip ${url} (status ${res.status})`); continue; }
+    if (!res.ok) {
+      deps.log(`[crawl] skip ${url} (status ${res.status})`);
+      continue;
+    }
     result.pagesCrawled++;
 
     const doc = deps.extract(res.body, url);
-    if (!doc.mainText) { result.pagesSkipped++; continue; }
+    if (!doc.mainText) {
+      result.pagesSkipped++;
+      continue;
+    }
 
     const hash = sha256(doc.mainText);
     const unchanged = deps.store.getPageHash(url) === hash;
@@ -97,7 +118,13 @@ export const crawl = async (deps: CrawlDeps, bounds: CrawlBounds): Promise<Crawl
     // gates below still bound it).
     let verdict: { relevant: boolean; keepLinks: string[] };
     if (deps.chat) {
-      const prompt = buildVerdictPrompt(bounds.topic, doc.title, doc.mainText.slice(0, 2000), doc.links, bounds.maxLinksPerPage);
+      const prompt = buildVerdictPrompt(
+        bounds.topic,
+        doc.title,
+        doc.mainText.slice(0, 2000),
+        doc.links,
+        bounds.maxLinksPerPage
+      );
       try {
         verdict = parseVerdict(await deps.chat.chat(prompt));
       } catch (e) {
@@ -114,14 +141,32 @@ export const crawl = async (deps: CrawlDeps, bounds: CrawlBounds): Promise<Crawl
         const chunks = chunkText(doc.mainText);
         const embedded = [];
         for (let i = 0; i < chunks.length; i++) {
-          embedded.push({ ord: i, text: chunks[i], embedding: await deps.embedder.embed(chunks[i]) });
+          embedded.push({
+            ord: i,
+            text: chunks[i],
+            embedding: await deps.embedder.embed(chunks[i])
+          });
         }
-        deps.store.upsertPage({ url, title: doc.title, hash, crawledAt: deps.now(), indexed: true, chunks: embedded });
+        deps.store.upsertPage({
+          url,
+          title: doc.title,
+          hash,
+          crawledAt: deps.now(),
+          indexed: true,
+          chunks: embedded
+        });
         result.pagesIndexed++;
         result.chunksAdded += embedded.length;
       } catch (e) {
         deps.log(`[crawl] embed/store failed for ${url}: ${String(e)}`);
-        deps.store.upsertPage({ url, title: doc.title, hash, crawledAt: deps.now(), indexed: false, chunks: [] });
+        deps.store.upsertPage({
+          url,
+          title: doc.title,
+          hash,
+          crawledAt: deps.now(),
+          indexed: false,
+          chunks: []
+        });
         result.pagesSkipped++;
       }
     } else {
@@ -133,7 +178,10 @@ export const crawl = async (deps: CrawlDeps, bounds: CrawlBounds): Promise<Crawl
       for (const link of verdict.keepLinks) {
         const c = canonical(link);
         if (seen.has(c) || !inScope(c, bounds.allowDomains)) continue;
-        if (seen.size >= bounds.maxPages) { result.dropped++; continue; }
+        if (seen.size >= bounds.maxPages) {
+          result.dropped++;
+          continue;
+        }
         seen.add(c);
         queue.push({ url: c, depth: depth + 1 });
       }

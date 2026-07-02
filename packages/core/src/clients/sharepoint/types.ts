@@ -3,16 +3,16 @@ export type { DocFormat, Parsers, ExtractResult };
 
 export interface SharePointConfig {
   enabled: boolean;
-  siteUrl: string;          // https://acme.sharepoint.com/sites/SRE
-  incidentRoot: string;     // "" = drive root; else server-relative folder path
-  docsSubfolder: string;    // "Docs"
+  siteUrl: string; // https://acme.sharepoint.com/sites/SRE
+  incidentRoot: string; // "" = drive root; else server-relative folder path
+  docsSubfolder: string; // "Docs"
   authMode: "azcli";
-  azPath: string;           // "az"
+  azPath: string; // "az"
   proxyUrl?: string;
-  maxDocTokens: number;     // 50000
-  maxFiles: number;         // 50
-  maxFileBytes: number;     // 10485760
-  timeoutMs: number;        // 30000
+  maxDocTokens: number; // 50000
+  maxFiles: number; // 50
+  maxFileBytes: number; // 10485760
+  timeoutMs: number; // 30000
 }
 
 export interface GraphDriveItem {
@@ -24,14 +24,18 @@ export interface GraphDriveItem {
   file?: { mimeType?: string };
 }
 
-export interface DriveItemRef { id: string; name: string; webUrl?: string; }
+export interface DriveItemRef {
+  id: string;
+  name: string;
+  webUrl?: string;
+}
 
 export interface DriveFile {
   id: string;
   name: string;
   webUrl?: string;
   size: number;
-  path: string;             // e.g. "Docs/sub/runbook.docx"
+  path: string; // e.g. "Docs/sub/runbook.docx"
 }
 
 export interface IncidentDocument {
@@ -61,4 +65,3 @@ export interface GraphPort {
   getAllPages<T>(path: string): Promise<T[]>;
   download(driveId: string, itemId: string, maxBytes?: number): Promise<Buffer>;
 }
-

@@ -120,7 +120,12 @@ export const registerTeamResources = (server: McpServer, runtime: McpRuntime): v
         const priorityIncidents = byPriority[priority] || [];
         if (priorityIncidents.length === 0) continue;
 
-        const label = { "1": "Critical (P1)", "2": "High (P2)", "3": "Medium (P3)", "4": "Low (P4)" }[priority];
+        const label = {
+          "1": "Critical (P1)",
+          "2": "High (P2)",
+          "3": "Medium (P3)",
+          "4": "Low (P4)"
+        }[priority];
         markdown += `## ${label} - ${priorityIncidents.length} incidents
 
 | Number | Description | Assigned | Updated |
@@ -138,7 +143,8 @@ export const registerTeamResources = (server: McpServer, runtime: McpRuntime): v
 
 `;
         for (const risk of slaRisks.slice(0, 5)) {
-          const emoji = risk.riskLevel === "Critical" ? "🔴" : risk.riskLevel === "High" ? "🟠" : "🟡";
+          const emoji =
+            risk.riskLevel === "Critical" ? "🔴" : risk.riskLevel === "High" ? "🟠" : "🟡";
           markdown += `- ${emoji} ${risk.incidentNumber}: ${risk.remainingMinutes} minutes remaining\n`;
         }
         markdown += "\n";

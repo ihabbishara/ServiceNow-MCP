@@ -37,7 +37,12 @@ export const mapAzWorkItem = (raw: AzWorkItemRaw): WorkItem => {
     storyPoints: f["Microsoft.VSTS.Scheduling.StoryPoints"],
     parentId: f["System.Parent"],
     assignedTo: assignee?.uniqueName ?? assignee?.displayName,
-    tags: tags ? tags.split(/;\s*/).map((t) => t.trim()).filter(Boolean) : undefined,
+    tags: tags
+      ? tags
+          .split(/;\s*/)
+          .map((t) => t.trim())
+          .filter(Boolean)
+      : undefined,
     url: raw.url
   };
 };

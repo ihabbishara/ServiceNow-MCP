@@ -2,15 +2,23 @@
 import { startLogin } from "../api.js";
 import { Button } from "./ui/Button.js";
 import { Card } from "./ui/Card.js";
-export function Login({ deviceCode }: { deviceCode?: { verificationUri: string; userCode: string } }) {
+export function Login({
+  deviceCode
+}: {
+  deviceCode?: { verificationUri: string; userCode: string };
+}) {
   return (
     <div className="h-full grid place-items-center p-6">
       <Card className="p-10 max-w-md w-full text-center">
         <h1 className="text-headline-lg mb-2">SRE Agent</h1>
-        <p className="text-body-md text-on-surface-variant mb-8">Sign in with your GitHub Copilot account to start.</p>
+        <p className="text-body-md text-on-surface-variant mb-8">
+          Sign in with your GitHub Copilot account to start.
+        </p>
         {deviceCode ? (
           <div>
-            <p className="text-label-md text-on-surface-variant mb-3">Enter this code at the verification page:</p>
+            <p className="text-label-md text-on-surface-variant mb-3">
+              Enter this code at the verification page:
+            </p>
             <div className="font-mono tabular-nums text-display-lg tracking-[0.15em] text-primary-container mb-6">
               {deviceCode.userCode}
             </div>
@@ -23,7 +31,9 @@ export function Login({ deviceCode }: { deviceCode?: { verificationUri: string; 
             >
               Open verification page
             </a>
-            <p className="text-label-sm text-on-surface-variant mt-4 break-all">{deviceCode.verificationUri}</p>
+            <p className="text-label-sm text-on-surface-variant mt-4 break-all">
+              {deviceCode.verificationUri}
+            </p>
           </div>
         ) : (
           <Button onClick={() => startLogin()}>Sign in with GitHub Copilot</Button>

@@ -2,11 +2,21 @@ import { fetch, RequestInit } from "undici";
 import { WorkItem } from "../../types.js";
 import { AdoConfig } from "../../config.js";
 import { proxyDispatcher, FetchDispatcher } from "../proxy.js";
-import type { AzureDevOpsClient, WorkItemSearchFilters, CreateBugPayload, CreateWorkItemPayload } from "./types.js";
+import type {
+  AzureDevOpsClient,
+  WorkItemSearchFilters,
+  CreateBugPayload,
+  CreateWorkItemPayload
+} from "./types.js";
 import { mapAzWorkItem, AzWorkItemRaw } from "./map.js";
 import { AzBoardsClient } from "./azBoards.js";
 
-export type { AzureDevOpsClient, WorkItemSearchFilters, CreateBugPayload, CreateWorkItemPayload } from "./types.js";
+export type {
+  AzureDevOpsClient,
+  WorkItemSearchFilters,
+  CreateBugPayload,
+  CreateWorkItemPayload
+} from "./types.js";
 
 interface AdoWorkItemRow {
   id: number;
@@ -27,7 +37,10 @@ const mapWorkItem = (row: AdoWorkItemRow): WorkItem => ({
   state: row.fields["System.State"] ?? "",
   assignedTo: row.fields["System.AssignedTo"]?.displayName,
   areaPath: row.fields["System.AreaPath"],
-  tags: row.fields["System.Tags"]?.split(";").map((t) => t.trim()).filter(Boolean)
+  tags: row.fields["System.Tags"]
+    ?.split(";")
+    .map((t) => t.trim())
+    .filter(Boolean)
 });
 
 export class AdoPatClient implements AzureDevOpsClient {
@@ -75,14 +88,24 @@ export class AdoPatClient implements AzureDevOpsClient {
       this.apiUrl("wit/wiql?api-version=7.1&$top=50"),
       {
         method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json", Authorization: this.authHeader },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: this.authHeader
+        },
         body: JSON.stringify({ query })
       }
     );
     const ids = (wiql.workItems ?? []).map((w) => w.id);
     if (!ids.length) return [];
 
-    const fields = ["System.Title", "System.State", "System.AssignedTo", "System.AreaPath", "System.Tags"].join(",");
+    const fields = [
+      "System.Title",
+      "System.State",
+      "System.AssignedTo",
+      "System.AreaPath",
+      "System.Tags"
+    ].join(",");
     const details = await this.requestJson<{ value?: AdoWorkItemRow[] }>(
       this.apiUrl(`wit/workitems?ids=${ids.join(",")}&fields=${fields}&api-version=7.1`),
       { headers: { Accept: "application/json", Authorization: this.authHeader } }
@@ -103,29 +126,40 @@ export class AdoPatClient implements AzureDevOpsClient {
     return row ? mapAzWorkItem(row) : null;
   }
 
-  private buildCreateOps(p: CreateWorkItemPayload): Array<{ op: "add"; path: string; value: string | number }> {
+  private buildCreateOps(
+    p: CreateWorkItemPayload
+  ): Array<{ op: "add"; path: string; value: string | number }> {
     const ops: Array<{ op: "add"; path: string; value: string | number }> = [
       { op: "add", path: "/fields/System.Title", value: p.title }
     ];
     if (p.description != null) {
       const html = p.description.replace(/\n/g, "<br>");
-      const path = p.type === "Bug" ? "/fields/Microsoft.VSTS.TCM.ReproSteps" : "/fields/System.Description";
+      const path =
+        p.type === "Bug" ? "/fields/Microsoft.VSTS.TCM.ReproSteps" : "/fields/System.Description";
       ops.push({ op: "add", path, value: html });
     }
     const areaPath = p.areaPath ?? this.cfg.defaultAreaPath;
     const iterationPath = p.iterationPath ?? this.cfg.defaultIterationPath;
     if (areaPath) ops.push({ op: "add", path: "/fields/System.AreaPath", value: areaPath });
-    if (iterationPath) ops.push({ op: "add", path: "/fields/System.IterationPath", value: iterationPath });
-    if (p.tags?.length) ops.push({ op: "add", path: "/fields/System.Tags", value: p.tags.join("; ") });
-    if (p.assignedTo) ops.push({ op: "add", path: "/fields/System.AssignedTo", value: p.assignedTo });
+    if (iterationPath)
+      ops.push({ op: "add", path: "/fields/System.IterationPath", value: iterationPath });
+    if (p.tags?.length)
+      ops.push({ op: "add", path: "/fields/System.Tags", value: p.tags.join("; ") });
+    if (p.assignedTo)
+      ops.push({ op: "add", path: "/fields/System.AssignedTo", value: p.assignedTo });
     const prio = p.priority ? Number(p.priority) : NaN;
     if (Number.isInteger(prio) && prio >= 1 && prio <= 4) {
       ops.push({ op: "add", path: "/fields/Microsoft.VSTS.Common.Priority", value: prio });
     }
     if (typeof p.storyPoints === "number") {
-      ops.push({ op: "add", path: "/fields/Microsoft.VSTS.Scheduling.StoryPoints", value: p.storyPoints });
+      ops.push({
+        op: "add",
+        path: "/fields/Microsoft.VSTS.Scheduling.StoryPoints",
+        value: p.storyPoints
+      });
     }
-    for (const [k, v] of Object.entries(p.fields ?? {})) ops.push({ op: "add", path: `/fields/${k}`, value: v });
+    for (const [k, v] of Object.entries(p.fields ?? {}))
+      ops.push({ op: "add", path: `/fields/${k}`, value: v });
     return ops;
   }
 
@@ -167,7 +201,11 @@ export class AdoPatClient implements AzureDevOpsClient {
       this.apiUrl("wit/wiql?api-version=7.1"),
       {
         method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json", Authorization: this.authHeader },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: this.authHeader
+        },
         body: JSON.stringify({ query })
       }
     );
@@ -175,10 +213,12 @@ export class AdoPatClient implements AzureDevOpsClient {
   }
 
   async addRelation(fromId: number, toId: number, relType: "parent" | "related"): Promise<void> {
-    if (!Number.isInteger(fromId) || !Number.isInteger(toId)) throw new Error("work item ids must be integers");
+    if (!Number.isInteger(fromId) || !Number.isInteger(toId))
+      throw new Error("work item ids must be integers");
     if (!this.cfg.enabled) throw new Error("ADO integration is disabled");
     this.assertConfigured();
-    const rel = relType === "parent" ? "System.LinkTypes.Hierarchy-Reverse" : "System.LinkTypes.Related";
+    const rel =
+      relType === "parent" ? "System.LinkTypes.Hierarchy-Reverse" : "System.LinkTypes.Related";
     const targetUrl = `${this.cfg.orgUrl}/_apis/wit/workitems/${toId}`;
     const ops = [{ op: "add", path: "/relations/-", value: { rel, url: targetUrl } }];
     await this.requestJson<AzWorkItemRaw>(this.apiUrl(`wit/workitems/${fromId}?api-version=7.1`), {

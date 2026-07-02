@@ -10,7 +10,13 @@ describe("bootCrawl", () => {
       knowledge: {
         stats: vi.fn(async () => ({ pages: 1, chunks: 1, lastCrawl, model: "m", dim: 384 })),
         unindexedSeeds: vi.fn(async () => missingSeeds),
-        crawl: vi.fn(async () => ({ pagesCrawled: 1, pagesIndexed: 1, pagesSkipped: 0, chunksAdded: 1, dropped: 0 }))
+        crawl: vi.fn(async () => ({
+          pagesCrawled: 1,
+          pagesIndexed: 1,
+          pagesSkipped: 0,
+          chunksAdded: 1,
+          dropped: 0
+        }))
       }
     }) as any;
 
@@ -54,7 +60,10 @@ describe("bootCrawl", () => {
     const rt = makeRt(Date.now() - 1 * HOUR, ["https://h/new"]); // fresh, 1 seed missing
     bootCrawl(rt, { enabled: true, ttlHours: 24 }, vi.fn());
     await flush();
-    expect(rt.knowledge.crawl).toHaveBeenCalledWith({ seeds: ["https://h/new"] }, expect.any(Function));
+    expect(rt.knowledge.crawl).toHaveBeenCalledWith(
+      { seeds: ["https://h/new"] },
+      expect.any(Function)
+    );
   });
 });
 
@@ -63,18 +72,26 @@ describe("runCrawl", () => {
     const log = vi.fn();
     const rt = {
       knowledge: {
-        crawl: vi.fn(async (_o: any, l: (m: string) => void) => { l("progress"); return { pagesCrawled: 3, pagesIndexed: 2, pagesSkipped: 1, chunksAdded: 5, dropped: 0 }; }),
+        crawl: vi.fn(async (_o: any, l: (m: string) => void) => {
+          l("progress");
+          return { pagesCrawled: 3, pagesIndexed: 2, pagesSkipped: 1, chunksAdded: 5, dropped: 0 };
+        }),
         stats: () => ({ pages: 2, chunks: 5, model: "Xenova/bge-small-en-v1.5", dim: 384 }),
         close: vi.fn()
       }
     } as any;
     const code = await runCrawl(rt, ["--seed", "https://h/a"], log);
     expect(code).toBe(0);
-    expect(rt.knowledge.crawl).toHaveBeenCalledWith({ seeds: ["https://h/a"] }, expect.any(Function));
+    expect(rt.knowledge.crawl).toHaveBeenCalledWith(
+      { seeds: ["https://h/a"] },
+      expect.any(Function)
+    );
   });
 
   it("--status prints stats without crawling", async () => {
-    const rt = { knowledge: { crawl: vi.fn(), stats: () => ({ pages: 1, chunks: 2 }), close: vi.fn() } } as any;
+    const rt = {
+      knowledge: { crawl: vi.fn(), stats: () => ({ pages: 1, chunks: 2 }), close: vi.fn() }
+    } as any;
     const code = await runCrawl(rt, ["--status"], vi.fn());
     expect(code).toBe(0);
     expect(rt.knowledge.crawl).not.toHaveBeenCalled();

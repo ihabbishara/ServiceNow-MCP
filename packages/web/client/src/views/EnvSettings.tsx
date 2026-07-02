@@ -15,7 +15,16 @@ function SecretEye({ revealed, onToggle }: { revealed: boolean; onToggle: () => 
       aria-label={revealed ? "Hide value" : "Show value"}
       className="absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary-container"
     >
-      <svg viewBox="0 0 20 20" className="h-4 w-4" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+      <svg
+        viewBox="0 0 20 20"
+        className="h-4 w-4"
+        aria-hidden="true"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.6}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         {revealed ? (
           <>
             <path d="M2 10s3-5 8-5 8 5 8 5-3 5-8 5-8-5-8-5Z" />
@@ -36,7 +45,7 @@ function FieldRow({
   k,
   value,
   comment,
-  onChange,
+  onChange
 }: {
   k: string;
   value: string;
@@ -50,7 +59,9 @@ function FieldRow({
       <div className="flex items-center gap-1.5 min-w-0">
         <label htmlFor={`env-${k}`} className="min-w-0">
           <span className="block text-body-md text-on-surface truncate">{labelOf(k)}</span>
-          <span className="block font-mono text-label-sm text-on-surface-variant truncate">{k}</span>
+          <span className="block font-mono text-label-sm text-on-surface-variant truncate">
+            {k}
+          </span>
         </label>
         <Tooltip text={describe(k, comment)} />
       </div>
@@ -103,7 +114,9 @@ export function EnvSettings() {
       <div className="shrink-0 flex items-center justify-between gap-4 px-6 py-4 border-b border-surface-gray">
         <div>
           <h2 className="text-headline-md text-on-surface">Settings</h2>
-          <p className="text-label-md text-on-surface-variant">Environment (.env) — saving restarts the agent.</p>
+          <p className="text-label-md text-on-surface-variant">
+            Environment (.env) — saving restarts the agent.
+          </p>
         </div>
         <Button onClick={save} disabled={saving}>
           {saving ? "Saving…" : "Save & restart"}
@@ -112,7 +125,10 @@ export function EnvSettings() {
 
       <div className="flex-1 overflow-auto p-6 space-y-4">
         {issues && (
-          <pre role="alert" className="text-label-md text-error whitespace-pre-wrap bg-error-container rounded p-3">
+          <pre
+            role="alert"
+            className="text-label-md text-error whitespace-pre-wrap bg-error-container rounded p-3"
+          >
             {issues}
           </pre>
         )}

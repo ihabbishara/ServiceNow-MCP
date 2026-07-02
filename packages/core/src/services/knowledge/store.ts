@@ -49,7 +49,8 @@ export class KnowledgeStore {
       CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
     `);
     // Pin / verify embedding dim.
-    const existing = this.db.prepare("SELECT value FROM meta WHERE key = 'dim'").get() as { value: string } | undefined;
+    const existing = this.db.prepare("SELECT value FROM meta WHERE key = 'dim'").get() as
+      { value: string } | undefined;
     if (existing) {
       const storedDim = Number(existing.value);
       if (storedDim !== meta.dim) {
@@ -59,7 +60,9 @@ export class KnowledgeStore {
         );
       }
       this.dim = storedDim;
-      this.model = (this.db.prepare("SELECT value FROM meta WHERE key = 'model'").get() as { value: string }).value;
+      this.model = (
+        this.db.prepare("SELECT value FROM meta WHERE key = 'model'").get() as { value: string }
+      ).value;
       if (this.model !== meta.model) {
         throw new Error(
           `embed model mismatch: store has ${this.model}, config wants ${meta.model}. ` +
@@ -69,19 +72,26 @@ export class KnowledgeStore {
     } else {
       this.dim = meta.dim;
       this.model = meta.model;
-      this.db.prepare("INSERT INTO meta(key, value) VALUES ('dim', ?), ('model', ?)").run(String(meta.dim), meta.model);
+      this.db
+        .prepare("INSERT INTO meta(key, value) VALUES ('dim', ?), ('model', ?)")
+        .run(String(meta.dim), meta.model);
     }
-    this.db.exec(`CREATE VIRTUAL TABLE IF NOT EXISTS vec_chunks USING vec0(embedding float[${this.dim}]);`);
+    this.db.exec(
+      `CREATE VIRTUAL TABLE IF NOT EXISTS vec_chunks USING vec0(embedding float[${this.dim}]);`
+    );
   }
 
   getPageHash(url: string): string | undefined {
-    const row = this.db.prepare("SELECT hash FROM pages WHERE url = ?").get(url) as { hash: string } | undefined;
+    const row = this.db.prepare("SELECT hash FROM pages WHERE url = ?").get(url) as
+      { hash: string } | undefined;
     return row?.hash;
   }
 
   upsertPage(page: UpsertPage): void {
     const tx = this.db.transaction((p: UpsertPage) => {
-      const oldIds = this.db.prepare("SELECT id FROM chunks WHERE url = ?").all(p.url) as { id: number }[];
+      const oldIds = this.db.prepare("SELECT id FROM chunks WHERE url = ?").all(p.url) as {
+        id: number;
+      }[];
       const delVec = this.db.prepare("DELETE FROM vec_chunks WHERE rowid = ?");
       for (const { id } of oldIds) delVec.run(id);
       this.db.prepare("DELETE FROM chunks WHERE url = ?").run(p.url);
@@ -91,7 +101,8 @@ export class KnowledgeStore {
       );
       const insVec = this.db.prepare("INSERT INTO vec_chunks(rowid, embedding) VALUES (?, ?)");
       for (const c of p.chunks) {
-        if (c.embedding.length !== this.dim) throw new Error(`chunk dim ${c.embedding.length} != ${this.dim}`);
+        if (c.embedding.length !== this.dim)
+          throw new Error(`chunk dim ${c.embedding.length} != ${this.dim}`);
         const info = insChunk.run(p.url, p.title ?? null, c.ord, c.text, p.crawledAt);
         insVec.run(BigInt(info.lastInsertRowid as number), f32(c.embedding));
       }
@@ -107,7 +118,8 @@ export class KnowledgeStore {
   }
 
   knn(query: number[], k: number, domain?: string): (SearchHit & { text: string })[] {
-    if (query.length !== this.dim) throw new Error(`query dim ${query.length} != stored dim ${this.dim}`);
+    if (query.length !== this.dim)
+      throw new Error(`query dim ${query.length} != stored dim ${this.dim}`);
     const rows = this.db
       .prepare(
         `SELECT c.url AS url, c.title AS title, c.text AS text, v.distance AS distance
@@ -115,9 +127,24 @@ export class KnowledgeStore {
          WHERE v.embedding MATCH ? AND k = ?
          ORDER BY v.distance`
       )
-      .all(f32(query), k) as { url: string; title: string | null; text: string; distance: number }[];
+      .all(f32(query), k) as {
+      url: string;
+      title: string | null;
+      text: string;
+      distance: number;
+    }[];
     return rows
-      .filter((r) => !domain || (() => { try { return new URL(r.url).host === domain; } catch { return false; } })())
+      .filter(
+        (r) =>
+          !domain ||
+          (() => {
+            try {
+              return new URL(r.url).host === domain;
+            } catch {
+              return false;
+            }
+          })()
+      )
       .map((r) => ({
         url: r.url,
         title: r.title ?? undefined,
@@ -146,7 +173,13 @@ export class KnowledgeStore {
            (SELECT COUNT(*) FROM chunks c WHERE c.url = p.url) AS chunkCount
          FROM pages p ORDER BY p.crawled_at DESC`
       )
-      .all() as { url: string; title: string | null; crawledAt: number; indexed: number; chunkCount: number }[];
+      .all() as {
+      url: string;
+      title: string | null;
+      crawledAt: number;
+      indexed: number;
+      chunkCount: number;
+    }[];
     return rows.map((r) => ({
       url: r.url,
       title: r.title ?? undefined,

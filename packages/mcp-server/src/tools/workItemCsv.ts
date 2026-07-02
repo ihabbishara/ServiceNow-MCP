@@ -6,8 +6,13 @@ export const registerWorkItemCsvTools = (server: McpServer, runtime: McpRuntime)
   const csvDir = () => runtime.config.azureDevOps.csvDir;
 
   const guard = (): { type: "text"; text: string } | null => {
-    if (!runtime.config.azureDevOps.enabled) return { type: "text", text: "Azure DevOps integration is disabled. Set ADO_ENABLED=true." };
-    if (!csvDir()) return { type: "text", text: "CSV folder not configured. Set ADO_CSV_DIR to a folder of .csv files." };
+    if (!runtime.config.azureDevOps.enabled)
+      return { type: "text", text: "Azure DevOps integration is disabled. Set ADO_ENABLED=true." };
+    if (!csvDir())
+      return {
+        type: "text",
+        text: "CSV folder not configured. Set ADO_CSV_DIR to a folder of .csv files."
+      };
     return null;
   };
 
@@ -22,7 +27,10 @@ export const registerWorkItemCsvTools = (server: McpServer, runtime: McpRuntime)
         const files = await listCsvFiles(csvDir() as string);
         return { content: [{ type: "text", text: JSON.stringify({ files }, null, 2) }] };
       } catch (error) {
-        return { content: [{ type: "text", text: `Error listing CSV files: ${error}` }], isError: true };
+        return {
+          content: [{ type: "text", text: `Error listing CSV files: ${error}` }],
+          isError: true
+        };
       }
     }
   );
@@ -35,7 +43,11 @@ export const registerWorkItemCsvTools = (server: McpServer, runtime: McpRuntime)
       const g = guard();
       if (g) return { content: [g], isError: true };
       try {
-        const table = await readCsvFile(csvDir() as string, args.filename, runtime.config.azureDevOps.csvMaxBytes);
+        const table = await readCsvFile(
+          csvDir() as string,
+          args.filename,
+          runtime.config.azureDevOps.csvMaxBytes
+        );
         return { content: [{ type: "text", text: JSON.stringify(table, null, 2) }] };
       } catch (error) {
         return { content: [{ type: "text", text: `Error reading CSV: ${error}` }], isError: true };

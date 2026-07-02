@@ -7,7 +7,10 @@ const home = "/home/me";
 const cwd = "/work";
 
 // A fake existsSync that only "sees" the given set of paths.
-const onlyExists = (...present: string[]) => (p: string) => present.includes(p);
+const onlyExists =
+  (...present: string[]) =>
+  (p: string) =>
+    present.includes(p);
 
 describe("resolveDotenvPath", () => {
   it("prefers $SRE_AGENT_ENV when that file exists", () => {
@@ -84,7 +87,14 @@ describe("loadDotenv", () => {
 
   it("does not load anything when no file is found", () => {
     const load = vi.fn();
-    const path = loadDotenv({ env: {}, exists: () => false, home, cwd, packageEnvPath: pkgEnv, load });
+    const path = loadDotenv({
+      env: {},
+      exists: () => false,
+      home,
+      cwd,
+      packageEnvPath: pkgEnv,
+      load
+    });
     expect(load).not.toHaveBeenCalled();
     expect(path).toBeUndefined();
   });

@@ -17,7 +17,14 @@ const makeRunner = (impl: (args: string[]) => any) => ({
 describe("AzBoardsClient", () => {
   it("searchWorkItems builds WIQL with filters and maps results", async () => {
     const runner = makeRunner(() => [
-      { id: 1, fields: { "System.Title": "Story A", "System.State": "Active", "System.WorkItemType": "User Story" } }
+      {
+        id: 1,
+        fields: {
+          "System.Title": "Story A",
+          "System.State": "Active",
+          "System.WorkItemType": "User Story"
+        }
+      }
     ]);
     const client = new AzBoardsClient(cfg as any, runner as any);
     const items = await client.searchWorkItems({
@@ -57,7 +64,10 @@ describe("AzBoardsClient", () => {
   });
 
   it("caps results at the limit (default 50, max 200)", async () => {
-    const rows = Array.from({ length: 120 }, (_, i) => ({ id: i, fields: { "System.Title": `t${i}`, "System.State": "New" } }));
+    const rows = Array.from({ length: 120 }, (_, i) => ({
+      id: i,
+      fields: { "System.Title": `t${i}`, "System.State": "New" }
+    }));
     const runner = makeRunner(() => rows);
     const client = new AzBoardsClient(cfg as any, runner as any);
     const items = await client.searchWorkItems({ limit: 10 });
@@ -65,12 +75,23 @@ describe("AzBoardsClient", () => {
   });
 
   it("getWorkItem calls show --id --expand fields and maps", async () => {
-    const runner = makeRunner(() => ({ id: 42, fields: { "System.Title": "X", "System.State": "Active" } }));
+    const runner = makeRunner(() => ({
+      id: 42,
+      fields: { "System.Title": "X", "System.State": "Active" }
+    }));
     const client = new AzBoardsClient(cfg as any, runner as any);
     const wi = await client.getWorkItem(42);
     const args = (runner.json as any).mock.calls[0][0] as string[];
     expect(args).toEqual([
-      "boards", "work-item", "show", "--id", "42", "--expand", "fields", "--org", cfg.orgUrl
+      "boards",
+      "work-item",
+      "show",
+      "--id",
+      "42",
+      "--expand",
+      "fields",
+      "--org",
+      cfg.orgUrl
     ]);
     expect(wi?.id).toBe(42);
   });
@@ -115,11 +136,20 @@ describe("AzBoardsClient", () => {
   });
 
   it("createWorkItem shells az create with type, area, and mapped fields", async () => {
-    const runner = makeRunner(() => ({ id: 7, fields: { "System.Title": "Add SSO", "System.WorkItemType": "User Story" } }));
+    const runner = makeRunner(() => ({
+      id: 7,
+      fields: { "System.Title": "Add SSO", "System.WorkItemType": "User Story" }
+    }));
     const client = new AzBoardsClient(cfg as any, runner as any);
     const wi = await client.createWorkItem({
-      type: "User Story", title: "Add SSO", description: "a\nb",
-      areaPath: "IngOne\\Alpha", assignedTo: "jane@x.com", priority: "2", storyPoints: 5, tags: ["auth"]
+      type: "User Story",
+      title: "Add SSO",
+      description: "a\nb",
+      areaPath: "IngOne\\Alpha",
+      assignedTo: "jane@x.com",
+      priority: "2",
+      storyPoints: 5,
+      tags: ["auth"]
     });
     const args = (runner.json as any).mock.calls[0][0] as string[];
     expect(args.slice(0, 3)).toEqual(["boards", "work-item", "create"]);
@@ -139,10 +169,23 @@ describe("AzBoardsClient", () => {
   });
 
   it("getWorkItemFields shows the item and returns its fields", async () => {
-    const runner = makeRunner(() => ({ id: 5, fields: { "System.Title": "S", "System.WorkItemType": "User Story" } }));
+    const runner = makeRunner(() => ({
+      id: 5,
+      fields: { "System.Title": "S", "System.WorkItemType": "User Story" }
+    }));
     const f = await new AzBoardsClient(cfg as any, runner as any).getWorkItemFields(5);
     const args = (runner.json as any).mock.calls[0][0] as string[];
-    expect(args).toEqual(["boards", "work-item", "show", "--id", "5", "--expand", "fields", "--org", cfg.orgUrl]);
+    expect(args).toEqual([
+      "boards",
+      "work-item",
+      "show",
+      "--id",
+      "5",
+      "--expand",
+      "fields",
+      "--org",
+      cfg.orgUrl
+    ]);
     expect(f).toEqual({ "System.Title": "S", "System.WorkItemType": "User Story" });
   });
 
@@ -160,13 +203,26 @@ describe("AzBoardsClient", () => {
     await new AzBoardsClient(cfg as any, runner as any).addRelation(3, 2, "parent");
     const args = (runner.json as any).mock.calls[0][0] as string[];
     expect(args).toEqual([
-      "boards", "work-item", "relation", "add", "--id", "3", "--relation-type", "parent", "--target-id", "2", "--org", cfg.orgUrl
+      "boards",
+      "work-item",
+      "relation",
+      "add",
+      "--id",
+      "3",
+      "--relation-type",
+      "parent",
+      "--target-id",
+      "2",
+      "--org",
+      cfg.orgUrl
     ]);
   });
 
   it("addRelation rejects a non-integer id without calling az", async () => {
     const runner = makeRunner(() => ({}));
-    await expect(new AzBoardsClient(cfg as any, runner as any).addRelation(1.5, 2, "parent")).rejects.toThrow(/integer/);
+    await expect(
+      new AzBoardsClient(cfg as any, runner as any).addRelation(1.5, 2, "parent")
+    ).rejects.toThrow(/integer/);
     expect((runner.json as any).mock.calls).toHaveLength(0);
   });
 });

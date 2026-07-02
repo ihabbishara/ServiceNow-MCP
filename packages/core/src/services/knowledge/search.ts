@@ -18,7 +18,10 @@ export const search = async (
   return {
     count: results.length,
     // Drop the full chunk `text` the store returns; tool output exposes only the snippet.
-    results: results.map(({ text, ...hit }) => hit),
-    hint: results.length === 0 ? "index empty or no match — run `sre-agent crawl` to populate it" : undefined
+    results: results.map(({ text: _text, ...hit }) => hit),
+    hint:
+      results.length === 0
+        ? "index empty or no match — run `sre-agent crawl` to populate it"
+        : undefined
   };
 };

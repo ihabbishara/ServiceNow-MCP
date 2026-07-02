@@ -60,7 +60,9 @@ const main = async () => {
   if (config.llm.mode === "seat") {
     const status = await engine.getAuthStatus();
     if (!status.isAuthenticated) {
-      console.error("[repro] Copilot not authenticated — run `sre-agent` once and /login, then retry.");
+      console.error(
+        "[repro] Copilot not authenticated — run `sre-agent` once and /login, then retry."
+      );
       await engine.stop();
       await closeRuntime(runtime);
       process.exit(2);
@@ -93,6 +95,6 @@ const main = async () => {
 };
 
 main().catch((e) => {
-  console.error("[repro] fatal:", e instanceof Error ? e.stack ?? e.message : e);
+  console.error("[repro] fatal:", e instanceof Error ? (e.stack ?? e.message) : e);
   process.exit(3);
 });

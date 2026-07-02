@@ -25,10 +25,19 @@ export const listCsvFiles = async (dir: string): Promise<CsvFileInfo[]> => {
   return out.sort((a, b) => a.name.localeCompare(b.name));
 };
 
-export const readCsvFile = async (dir: string, filename: string, maxBytes: number): Promise<CsvTable> => {
+export const readCsvFile = async (
+  dir: string,
+  filename: string,
+  maxBytes: number
+): Promise<CsvTable> => {
   // Trust boundary: `filename` comes from a tool caller.
   // Layer 1 — must be a bare basename with no traversal tokens.
-  if (filename !== basename(filename) || filename.includes("..") || filename.includes("/") || filename.includes("\\")) {
+  if (
+    filename !== basename(filename) ||
+    filename.includes("..") ||
+    filename.includes("/") ||
+    filename.includes("\\")
+  ) {
     throw new Error(`invalid filename: ${filename}`);
   }
   if (extname(filename).toLowerCase() !== ".csv") throw new Error("only .csv files are allowed");
@@ -53,6 +62,8 @@ export const readCsvFile = async (dir: string, filename: string, maxBytes: numbe
   const matrix = parse(text, { skip_empty_lines: true, trim: true }) as string[][];
   if (!matrix.length) return { headers: [], rows: [], rowCount: 0 };
   const headers = matrix[0];
-  const rows = matrix.slice(1).map((r) => Object.fromEntries(headers.map((h, i) => [h, r[i] ?? ""])));
+  const rows = matrix
+    .slice(1)
+    .map((r) => Object.fromEntries(headers.map((h, i) => [h, r[i] ?? ""])));
   return { headers, rows, rowCount: rows.length };
 };

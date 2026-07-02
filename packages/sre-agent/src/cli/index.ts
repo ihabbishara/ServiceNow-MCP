@@ -64,14 +64,16 @@ const reloginCopilot = async (engine: ChatEngine, config: AgentConfig): Promise<
   await copilotLogin({
     home: config.copilot.home,
     onDeviceCode: ({ verificationUri, userCode }) =>
-      process.stdout.write(`\nTo log in, open ${verificationUri} and enter code: ${userCode}\n`),
+      process.stdout.write(`\nTo log in, open ${verificationUri} and enter code: ${userCode}\n`)
   });
   await engine.stop();
   await engine.start();
   try {
     const status = await engine.getAuthStatus();
     if (!status.isAuthenticated) {
-      process.stderr.write("[sre-agent] Still NOT authenticated after login — see /login guidance.\n");
+      process.stderr.write(
+        "[sre-agent] Still NOT authenticated after login — see /login guidance.\n"
+      );
       return;
     }
     logCopilotAuthStatus(status, config, "after login");

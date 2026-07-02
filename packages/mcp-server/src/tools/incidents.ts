@@ -8,19 +8,41 @@ export const registerIncidentTools = (server: McpServer, runtime: McpRuntime): v
     "search_incidents",
     "Search ServiceNow incidents with filters. Use to find incidents by state, priority, assignment group, or description.",
     {
-      state_not: z.string().optional().describe("Exclude incidents with this single state name (e.g., 'Resolved' excludes only Resolved, not Closed or Canceled)"),
-      priority: z.enum(["1", "2", "3", "4"]).optional().describe("Filter by priority: 1=Critical, 2=High, 3=Medium, 4=Low"),
+      state_not: z
+        .string()
+        .optional()
+        .describe(
+          "Exclude incidents with this single state name (e.g., 'Resolved' excludes only Resolved, not Closed or Canceled)"
+        ),
+      priority: z
+        .enum(["1", "2", "3", "4"])
+        .optional()
+        .describe("Filter by priority: 1=Critical, 2=High, 3=Medium, 4=Low"),
       assignment_group: z.string().optional().describe("Filter by assignment group name"),
-      assigned_to: z.string().optional().describe("Filter by assigned user name (mutually exclusive with unassigned_only)"),
-      short_description_contains: z.string().optional().describe("Search text in short description"),
-      unassigned_only: z.boolean().optional().describe("Only show incidents with no assignee (mutually exclusive with assigned_to)"),
+      assigned_to: z
+        .string()
+        .optional()
+        .describe("Filter by assigned user name (mutually exclusive with unassigned_only)"),
+      short_description_contains: z
+        .string()
+        .optional()
+        .describe("Search text in short description"),
+      unassigned_only: z
+        .boolean()
+        .optional()
+        .describe("Only show incidents with no assignee (mutually exclusive with assigned_to)"),
       limit: z.number().optional().describe("Maximum results (default: 50, max: 200)")
     },
     async (args) => {
       try {
         if (args.unassigned_only && args.assigned_to) {
           return {
-            content: [{ type: "text", text: "unassigned_only and assigned_to are mutually exclusive — pass only one." }],
+            content: [
+              {
+                type: "text",
+                text: "unassigned_only and assigned_to are mutually exclusive — pass only one."
+              }
+            ],
             isError: true
           };
         }

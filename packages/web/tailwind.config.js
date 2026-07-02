@@ -29,12 +29,17 @@ export default {
         success: "#386a20",
         "on-success": "#ffffff",
         "success-container": "#b7f397",
-        "on-success-container": "#042100",
+        "on-success-container": "#042100"
       },
       fontFamily: {
         sans: ['"Hanken Grotesk Variable"', '"Hanken Grotesk"', "system-ui", "sans-serif"],
-        display: ['"Bricolage Grotesque Variable"', '"Bricolage Grotesque"', "system-ui", "sans-serif"],
-        mono: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+        display: [
+          '"Bricolage Grotesque Variable"',
+          '"Bricolage Grotesque"',
+          "system-ui",
+          "sans-serif"
+        ],
+        mono: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"]
       },
       fontSize: {
         "display-lg": ["48px", { lineHeight: "56px", letterSpacing: "-0.02em", fontWeight: "700" }],
@@ -43,12 +48,18 @@ export default {
         "body-lg": ["18px", { lineHeight: "28px" }],
         "body-md": ["16px", { lineHeight: "24px" }],
         "label-md": ["14px", { lineHeight: "20px", letterSpacing: "0.01em", fontWeight: "600" }],
-        "label-sm": ["12px", { lineHeight: "16px", fontWeight: "500" }],
+        "label-sm": ["12px", { lineHeight: "16px", fontWeight: "500" }]
       },
-      borderRadius: { DEFAULT: "0.25rem", sm: "0.125rem", md: "0.375rem", lg: "0.5rem", xl: "0.75rem" },
+      borderRadius: {
+        DEFAULT: "0.25rem",
+        sm: "0.125rem",
+        md: "0.375rem",
+        lg: "0.5rem",
+        xl: "0.75rem"
+      },
       maxWidth: { container: "1200px" },
-      boxShadow: { ambient: "0 8px 30px rgba(0,0,0,0.08)" }, // DESIGN.md: soft diffuse, floating only
-    },
+      boxShadow: { ambient: "0 8px 30px rgba(0,0,0,0.08)" } // DESIGN.md: soft diffuse, floating only
+    }
   },
-  plugins: [],
+  plugins: []
 };

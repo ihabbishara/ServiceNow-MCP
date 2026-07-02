@@ -8,7 +8,12 @@ export const registerChangeTools = (server: McpServer, runtime: McpRuntime): voi
     "search_changes",
     "Search ServiceNow change records with filters",
     {
-      state_not: z.string().optional().describe("Exclude changes with this state. Numeric change_request state code (e.g. '3'=Implement, '4'=Review), not a state name"),
+      state_not: z
+        .string()
+        .optional()
+        .describe(
+          "Exclude changes with this state. Numeric change_request state code (e.g. '3'=Implement, '4'=Review), not a state name"
+        ),
       assignment_group: z.string().optional().describe("Filter by assignment group"),
       configuration_item: z.string().optional().describe("Filter by configuration item"),
       started_after: z.string().optional().describe("Changes started after this date (ISO 8601)"),
@@ -31,7 +36,9 @@ export const registerChangeTools = (server: McpServer, runtime: McpRuntime): voi
         // started_before is now applied server-side (above) so the row limit sees the filtered set.
         let filteredChanges = changes;
         if (args.risk) {
-          filteredChanges = changes.filter((c) => c.risk?.toLowerCase() === args.risk?.toLowerCase());
+          filteredChanges = changes.filter(
+            (c) => c.risk?.toLowerCase() === args.risk?.toLowerCase()
+          );
         }
 
         const result = {
@@ -96,8 +103,14 @@ export const registerChangeTools = (server: McpServer, runtime: McpRuntime): voi
     "Find changes that may be related to an incident by configuration item, business service, assignment group, or time window",
     {
       incident_number: z.string().describe("Incident to find related changes for"),
-      window_hours_before: z.number().optional().describe("Hours before incident to search (default: 24)"),
-      window_hours_after: z.number().optional().describe("Hours after incident to search (default: 4)")
+      window_hours_before: z
+        .number()
+        .optional()
+        .describe("Hours before incident to search (default: 24)"),
+      window_hours_after: z
+        .number()
+        .optional()
+        .describe("Hours after incident to search (default: 4)")
     },
     async (args) => {
       try {
@@ -111,7 +124,10 @@ export const registerChangeTools = (server: McpServer, runtime: McpRuntime): voi
                 afterHours: args.window_hours_after ?? defaults.afterHours
               }
             : undefined;
-        const relatedChanges = await runtime.incidentService.findRelatedChanges(args.incident_number, window);
+        const relatedChanges = await runtime.incidentService.findRelatedChanges(
+          args.incident_number,
+          window
+        );
 
         const result = {
           incidentNumber: args.incident_number,

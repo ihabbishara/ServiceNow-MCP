@@ -16,13 +16,17 @@ const cfg: SharePointConfig = {
 };
 
 const folder = (name: string, id: string) => ({ id, name, folder: {} });
-const file = (name: string, id: string, size = 10) => ({ id, name, file: {}, size, webUrl: `http://x/${name}` });
+const file = (name: string, id: string, size = 10) => ({
+  id,
+  name,
+  file: {},
+  size,
+  webUrl: `http://x/${name}`
+});
 
 // Fake GraphPort: site/drive via get(), children via getAllPages(), bytes via download().
 const makeGraph = (children: Record<string, any[]>, bytes: Record<string, Buffer>) => ({
-  get: vi.fn(async (p: string) =>
-    p.endsWith("/drive") ? { id: "drive1" } : { id: "site1" }
-  ),
+  get: vi.fn(async (p: string) => (p.endsWith("/drive") ? { id: "drive1" } : { id: "site1" })),
   getAllPages: vi.fn(async (p: string) => children[p] ?? []),
   download: vi.fn(async (_d: string, itemId: string) => bytes[itemId] ?? Buffer.from(""))
 });
@@ -51,7 +55,12 @@ describe("SharePointService.getIncidentDocuments", () => {
     expect(out.incident).toBe("INC123456");
     expect(out.folder.name).toBe("INC123456 iDeal");
     expect(out.count).toBe(1);
-    expect(out.documents[0]).toMatchObject({ name: "a.docx", format: "docx", text: "hello", truncated: false });
+    expect(out.documents[0]).toMatchObject({
+      name: "a.docx",
+      format: "docx",
+      text: "hello",
+      truncated: false
+    });
   });
 
   it("throws a clear error when the folder is not found", async () => {
@@ -84,7 +93,10 @@ describe("SharePointService.getIncidentDocuments", () => {
       {
         "/drives/drive1/root/children": [folder("INC1 a", "incF")],
         "/drives/drive1/items/incF/children": [folder("Docs", "docs")],
-        "/drives/drive1/items/docs/children": [file("huge.docx", "huge", 5_000_000), file("notes.one", "n")]
+        "/drives/drive1/items/docs/children": [
+          file("huge.docx", "huge", 5_000_000),
+          file("notes.one", "n")
+        ]
       },
       {}
     );
@@ -134,7 +146,10 @@ describe("SharePointService.getIncidentDocuments", () => {
       {
         "/drives/drive1/root/children": [folder("INC1 a", "incF")],
         "/drives/drive1/items/incF/children": [folder("Docs", "docs")],
-        "/drives/drive1/items/docs/children": [file("first.docx", "first"), file("second.docx", "second")]
+        "/drives/drive1/items/docs/children": [
+          file("first.docx", "first"),
+          file("second.docx", "second")
+        ]
       },
       {
         first: Buffer.from(firstText),

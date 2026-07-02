@@ -9,7 +9,10 @@ export const chunkText = (text: string, size = 1200, overlap = 200): string[] =>
   if (!clean) return [];
   if (clean.length <= size) return [clean];
 
-  const paras = clean.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
+  const paras = clean
+    .split(/\n{2,}/)
+    .map((p) => p.trim())
+    .filter(Boolean);
   const chunks: string[] = [];
   let buf = "";
   const flush = () => {

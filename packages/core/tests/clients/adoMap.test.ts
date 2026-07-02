@@ -50,7 +50,11 @@ describe("mapAzWorkItem", () => {
   it("falls back to displayName when uniqueName is absent", () => {
     const raw = {
       id: 2,
-      fields: { "System.Title": "t", "System.State": "New", "System.AssignedTo": { displayName: "Jane Doe" } }
+      fields: {
+        "System.Title": "t",
+        "System.State": "New",
+        "System.AssignedTo": { displayName: "Jane Doe" }
+      }
     };
     expect(mapAzWorkItem(raw).assignedTo).toBe("Jane Doe");
   });

@@ -27,13 +27,20 @@ export function App() {
       <Sidebar state={state} tab={tab} onTab={setTab} onInsert={setInput} />
       <div className="flex-1 flex flex-col overflow-hidden">
         {!connected && (
-          <div role="status" className="bg-surface-container text-on-surface-variant text-label-sm px-6 py-1">
+          <div
+            role="status"
+            className="bg-surface-container text-on-surface-variant text-label-sm px-6 py-1"
+          >
             Reconnecting…
           </div>
         )}
         {state.auth.ambientEnvWarning && (
-          <div role="alert" className="bg-error-container text-on-error-container text-label-md px-6 py-2">
-            Warning: an ambient env token resolved — if turns 403, unset GH_TOKEN/GITHUB_TOKEN or set COPILOT_GITHUB_TOKEN.
+          <div
+            role="alert"
+            className="bg-error-container text-on-error-container text-label-md px-6 py-2"
+          >
+            Warning: an ambient env token resolved — if turns 403, unset GH_TOKEN/GITHUB_TOKEN or
+            set COPILOT_GITHUB_TOKEN.
           </div>
         )}
         <main className="flex-1 overflow-hidden">

@@ -115,7 +115,9 @@ describe("loadAgentConfig", () => {
   });
 
   it("knowledgeEnabled is true when CRAWL_SEEDS is set", () => {
-    expect(loadAgentConfig({ ...base, CRAWL_SEEDS: "https://wiki.acme.io/a" }).knowledgeEnabled).toBe(true);
+    expect(
+      loadAgentConfig({ ...base, CRAWL_SEEDS: "https://wiki.acme.io/a" }).knowledgeEnabled
+    ).toBe(true);
   });
 
   describe("uploadMaxBytes", () => {

@@ -28,7 +28,11 @@ export const buildEnvFile = (template: string, answers: Record<string, string>):
   });
   const missing = [...keys].filter((k) => !seen.has(k));
   if (missing.length > 0) {
-    lines.push("", "# Added by `sre-agent init`:", ...missing.map((k) => `${k}=${quote(answers[k])}`));
+    lines.push(
+      "",
+      "# Added by `sre-agent init`:",
+      ...missing.map((k) => `${k}=${quote(answers[k])}`)
+    );
   }
   return lines.join("\n");
 };
@@ -51,7 +55,8 @@ const PROMPTS: Prompt[] = [
 ];
 
 /** The committed `.env.example` shipped at the package root (dist/init.js → up one dir). */
-const examplePath = (): string => join(dirname(fileURLToPath(import.meta.url)), "..", ".env.example");
+const examplePath = (): string =>
+  join(dirname(fileURLToPath(import.meta.url)), "..", ".env.example");
 
 /**
  * Interactive first-run config: prompt for the required vars and write a
@@ -63,7 +68,9 @@ export const runInit = async (): Promise<void> => {
   const rl = readline.createInterface({ input: stdin, output: stdout });
   try {
     if (existsSync(target)) {
-      const ans = (await rl.question(`${target} already exists. Overwrite? [y/N] `)).trim().toLowerCase();
+      const ans = (await rl.question(`${target} already exists. Overwrite? [y/N] `))
+        .trim()
+        .toLowerCase();
       if (ans !== "y" && ans !== "yes") {
         stdout.write("Keeping the existing .env. Nothing changed.\n");
         return;

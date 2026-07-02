@@ -15,7 +15,10 @@ describe("GraphTokenProvider", () => {
     expect(await p.getToken()).toBe("tok-1");
     expect(az.json).toHaveBeenCalledTimes(1);
     expect(az.json).toHaveBeenCalledWith([
-      "account", "get-access-token", "--resource", "https://graph.microsoft.com"
+      "account",
+      "get-access-token",
+      "--resource",
+      "https://graph.microsoft.com"
     ]);
   });
 
@@ -23,8 +26,16 @@ describe("GraphTokenProvider", () => {
     const az = {
       json: vi
         .fn()
-        .mockResolvedValueOnce({ accessToken: "tok-1", expiresOn: "2999-01-01 00:00:00.000000", expires_on: 2000 })
-        .mockResolvedValueOnce({ accessToken: "tok-2", expiresOn: "2999-01-01 00:00:00.000000", expires_on: 9_999_999_999 })
+        .mockResolvedValueOnce({
+          accessToken: "tok-1",
+          expiresOn: "2999-01-01 00:00:00.000000",
+          expires_on: 2000
+        })
+        .mockResolvedValueOnce({
+          accessToken: "tok-2",
+          expiresOn: "2999-01-01 00:00:00.000000",
+          expires_on: 9_999_999_999
+        })
     };
     let now = 1_000_000; // ms
     const p = new GraphTokenProvider({ az: az as any, now: () => now });

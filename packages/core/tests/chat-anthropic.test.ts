@@ -8,8 +8,15 @@ afterEach(() => fetchMock.mockReset());
 
 describe("AnthropicChat", () => {
   it("posts to /v1/messages with x-api-key + anthropic-version and parses content[0].text", async () => {
-    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ content: [{ text: "hey" }] }) } as any);
-    const c = new AnthropicChat({ baseUrl: "https://api.anthropic.com", model: "claude-x", apiKey: "k" });
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ content: [{ text: "hey" }] })
+    } as any);
+    const c = new AnthropicChat({
+      baseUrl: "https://api.anthropic.com",
+      model: "claude-x",
+      apiKey: "k"
+    });
     expect(await c.chat("p")).toBe("hey");
     const [url, opts] = fetchMock.mock.calls[0];
     expect(url).toBe("https://api.anthropic.com/v1/messages");

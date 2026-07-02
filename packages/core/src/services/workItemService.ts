@@ -31,7 +31,10 @@ export interface CloneWorkItemInput {
   titlePrefix?: string;
   // Board/area targeting and parent linking are controlled by the top-level
   // clone input, not overrides — narrow them out to avoid a no-op API surface.
-  overrides?: Omit<Partial<CreateWorkItemInput>, "parentId" | "board" | "areaPath" | "iterationPath">;
+  overrides?: Omit<
+    Partial<CreateWorkItemInput>,
+    "parentId" | "board" | "areaPath" | "iterationPath"
+  >;
 }
 
 export interface CloneResult {
@@ -60,7 +63,10 @@ export class WorkItemService {
 
   private parseTags(raw: unknown): string[] | undefined {
     if (typeof raw !== "string" || !raw.trim()) return undefined;
-    return raw.split(/;\s*/).map((t) => t.trim()).filter(Boolean);
+    return raw
+      .split(/;\s*/)
+      .map((t) => t.trim())
+      .filter(Boolean);
   }
 
   // Build a CreateWorkItemPayload from a source item's raw fields. Description and
@@ -143,7 +149,12 @@ export class WorkItemService {
 
     if (input.linkToSource) await this.client.addRelation(clone.id, input.sourceId, "related");
 
-    return { cloneId: clone.id, sourceId: input.sourceId, childrenCopied, linked: !!input.linkToSource };
+    return {
+      cloneId: clone.id,
+      sourceId: input.sourceId,
+      childrenCopied,
+      linked: !!input.linkToSource
+    };
   }
 
   async create(input: CreateWorkItemInput): Promise<WorkItem> {

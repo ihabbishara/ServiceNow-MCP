@@ -36,7 +36,10 @@ export const extractPage = (html: string, baseUrl: string): PageDoc => {
     const parsed = new Readability(document as any).parse();
     if (parsed) {
       title = parsed.title?.trim() || title;
-      mainText = (parsed.textContent ?? "").replace(/\s+\n/g, "\n").replace(/[ \t]{2,}/g, " ").trim();
+      mainText = (parsed.textContent ?? "")
+        .replace(/\s+\n/g, "\n")
+        .replace(/[ \t]{2,}/g, " ")
+        .trim();
     }
   } catch {
     // Readability can throw on malformed DOM; fall back to body text.

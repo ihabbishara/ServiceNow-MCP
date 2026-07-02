@@ -14,9 +14,16 @@ const makeRuntime = (over: Record<string, unknown> = {}) => {
     findRelatedChanges: vi.fn().mockResolvedValue([]),
     searchWorkItems: vi.fn().mockResolvedValue([]),
     generateDailyOpsReport: vi.fn().mockResolvedValue({
-      generatedAt: "2026-06-11T12:00:00Z", generatedForDate: "2026-06-11", executiveSummary: "x",
-      openIncidentsByPriority: {}, slaRisks: [], staleIncidents: [], majorIncidents: [],
-      failedOrHighRiskChanges: [], upcomingChanges: [], recommendedActions: []
+      generatedAt: "2026-06-11T12:00:00Z",
+      generatedForDate: "2026-06-11",
+      executiveSummary: "x",
+      openIncidentsByPriority: {},
+      slaRisks: [],
+      staleIncidents: [],
+      majorIncidents: [],
+      failedOrHighRiskChanges: [],
+      upcomingChanges: [],
+      recommendedActions: []
     }),
     ...over
   };
@@ -56,9 +63,13 @@ const callJson = async (client: Client, name: string, args: Record<string, unkno
 describe("search_changes tool", () => {
   it("pushes started_before to the server and does not drop no-start changes client-side", async () => {
     const noStart = { number: "CHG-NOSTART", state: "New", shortDescription: "t", risk: "Low" };
-    const { runtime, fns } = makeRuntime({ listChangesWithFilters: vi.fn().mockResolvedValue([noStart]) });
+    const { runtime, fns } = makeRuntime({
+      listChangesWithFilters: vi.fn().mockResolvedValue([noStart])
+    });
     const client = await connect(runtime);
-    const { text } = await callJson(client, "search_changes", { started_before: "2026-06-10T00:00:00Z" });
+    const { text } = await callJson(client, "search_changes", {
+      started_before: "2026-06-10T00:00:00Z"
+    });
     expect(fns.listChangesWithFilters).toHaveBeenCalledWith(
       expect.objectContaining({ startedBefore: "2026-06-10T00:00:00Z" })
     );
@@ -76,14 +87,23 @@ describe("correlate_changes tool", () => {
       window_hours_before: 12,
       window_hours_after: 1
     });
-    expect(fns.findRelatedChanges).toHaveBeenCalledWith("INC0001", { beforeHours: 12, afterHours: 1 });
+    expect(fns.findRelatedChanges).toHaveBeenCalledWith("INC0001", {
+      beforeHours: 12,
+      afterHours: 1
+    });
   });
 
   it("fills the unspecified bound from config defaults", async () => {
     const { runtime, fns } = makeRuntime();
     const client = await connect(runtime);
-    await callJson(client, "correlate_changes", { incident_number: "INC0001", window_hours_before: 6 });
-    expect(fns.findRelatedChanges).toHaveBeenCalledWith("INC0001", { beforeHours: 6, afterHours: 4 });
+    await callJson(client, "correlate_changes", {
+      incident_number: "INC0001",
+      window_hours_before: 6
+    });
+    expect(fns.findRelatedChanges).toHaveBeenCalledWith("INC0001", {
+      beforeHours: 6,
+      afterHours: 4
+    });
   });
 
   it("passes undefined window when no override is given", async () => {
@@ -99,7 +119,9 @@ describe("search_work_items tool", () => {
     const { runtime, fns } = makeRuntime();
     (runtime.config.azureDevOps as { enabled: boolean }).enabled = false;
     const client = await connect(runtime);
-    const { isError, text } = await callJson(client, "search_work_items", { query_text: "INC0001" });
+    const { isError, text } = await callJson(client, "search_work_items", {
+      query_text: "INC0001"
+    });
     expect(isError).toBe(true);
     expect(text).toMatch(/disabled/i);
     expect(fns.searchWorkItems).not.toHaveBeenCalled();
@@ -110,7 +132,9 @@ describe("search_work_items tool", () => {
       searchWorkItems: vi.fn().mockResolvedValue([{ id: 7, title: "t", state: "Active" }])
     });
     const client = await connect(runtime);
-    const { isError, text } = await callJson(client, "search_work_items", { query_text: "INC0001" });
+    const { isError, text } = await callJson(client, "search_work_items", {
+      query_text: "INC0001"
+    });
     expect(isError).toBe(false);
     expect(JSON.parse(text).count).toBe(1);
   });
@@ -120,7 +144,10 @@ describe("generate_ops_summary tool", () => {
   it("passes parsed date and assignment_group to the report service", async () => {
     const { runtime, fns } = makeRuntime();
     const client = await connect(runtime);
-    await callJson(client, "generate_ops_summary", { date: "2026-06-11", assignment_group: "Platform SRE" });
+    await callJson(client, "generate_ops_summary", {
+      date: "2026-06-11",
+      assignment_group: "Platform SRE"
+    });
     const arg = (fns.generateDailyOpsReport as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(arg.assignmentGroup).toBe("Platform SRE");
     expect(arg.now.toISOString().slice(0, 10)).toBe("2026-06-11");
@@ -129,7 +156,9 @@ describe("generate_ops_summary tool", () => {
   it("rejects an unparseable date without calling the report service", async () => {
     const { runtime, fns } = makeRuntime();
     const client = await connect(runtime);
-    const { isError, text } = await callJson(client, "generate_ops_summary", { date: "not-a-date" });
+    const { isError, text } = await callJson(client, "generate_ops_summary", {
+      date: "not-a-date"
+    });
     expect(isError).toBe(true);
     expect(text).toMatch(/Invalid date/);
     expect(fns.generateDailyOpsReport).not.toHaveBeenCalled();

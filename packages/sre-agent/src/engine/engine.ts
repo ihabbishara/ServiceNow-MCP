@@ -154,14 +154,10 @@ export class ChatEngine {
       this.session = await this.client.createSession(sessionConfig);
 
       this.unsubscribe.push(
-        this.session.on("assistant.message_delta", (e) =>
-          this.deps.onDelta(e.data.deltaContent)
-        )
+        this.session.on("assistant.message_delta", (e) => this.deps.onDelta(e.data.deltaContent))
       );
       this.unsubscribe.push(
-        this.session.on("tool.execution_start", (e) =>
-          this.deps.onToolStart?.(e.data.toolName)
-        )
+        this.session.on("tool.execution_start", (e) => this.deps.onToolStart?.(e.data.toolName))
       );
     } catch (err) {
       const stopErrors = await this.client.stop().catch(() => []);

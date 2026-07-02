@@ -59,7 +59,12 @@ Be concise and actionable. Focus on what to do now.`
     "Generate comprehensive shift handover summary",
     {
       team_name: z.string().describe("Team to generate handover for"),
-      hours_back: z.coerce.number().int().positive().optional().describe("Hours to look back (default: 8)")
+      hours_back: z.coerce
+        .number()
+        .int()
+        .positive()
+        .optional()
+        .describe("Hours to look back (default: 8)")
     },
     async (args) => {
       const teamName = args.team_name;

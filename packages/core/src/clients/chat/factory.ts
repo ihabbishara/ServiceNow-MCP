@@ -15,7 +15,12 @@ export interface ChatConfig {
 export const makeChatModel = (cfg?: ChatConfig, proxyUrl?: string): ChatModel | undefined => {
   if (!cfg) return undefined;
   if (cfg.type === "anthropic") {
-    return new AnthropicChat({ baseUrl: cfg.baseUrl, model: cfg.model, apiKey: cfg.apiKey, proxyUrl });
+    return new AnthropicChat({
+      baseUrl: cfg.baseUrl,
+      model: cfg.model,
+      apiKey: cfg.apiKey,
+      proxyUrl
+    });
   }
   return new OpenAiChat({
     type: cfg.type,

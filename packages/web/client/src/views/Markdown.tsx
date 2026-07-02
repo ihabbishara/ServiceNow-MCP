@@ -13,7 +13,9 @@ const components: Components = {
   ol: ({ children }) => <ol className="list-decimal pl-5 mb-2 space-y-1">{children}</ol>,
   li: ({ children }) => <li>{children}</li>,
   a: ({ href, children }) => (
-    <a href={href} target="_blank" rel="noreferrer" className="text-primary-container underline">{children}</a>
+    <a href={href} target="_blank" rel="noreferrer" className="text-primary-container underline">
+      {children}
+    </a>
   ),
   // Destructure node to avoid passing it to the DOM element (react-markdown v9 ExtraProps).
   // Keep any language-* class react-markdown sets on fenced blocks (for a future highlighter).
@@ -34,8 +36,14 @@ const components: Components = {
     </div>
   ),
   thead: ({ children }) => <thead>{children}</thead>,
-  th: ({ children }) => <th className="border border-outline-variant px-3 py-1.5 text-left font-semibold bg-surface-container">{children}</th>,
-  td: ({ children }) => <td className="border border-outline-variant px-3 py-1.5 align-top">{children}</td>,
+  th: ({ children }) => (
+    <th className="border border-outline-variant px-3 py-1.5 text-left font-semibold bg-surface-container">
+      {children}
+    </th>
+  ),
+  td: ({ children }) => (
+    <td className="border border-outline-variant px-3 py-1.5 align-top">{children}</td>
+  )
 };
 
 export function Markdown({ children }: { children: string }) {

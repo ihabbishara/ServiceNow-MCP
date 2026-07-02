@@ -1,6 +1,10 @@
 import { describe, it, expect, vi } from "vitest";
 import type { SessionConfig } from "@github/copilot-sdk";
-import { ChatEngine, buildClientOptions, KNOWLEDGE_SYSTEM_INSTRUCTION } from "../src/engine/engine.js";
+import {
+  ChatEngine,
+  buildClientOptions,
+  KNOWLEDGE_SYSTEM_INSTRUCTION
+} from "../src/engine/engine.js";
 import { loadAgentConfig } from "../src/config.js";
 
 const base = {
@@ -94,9 +98,7 @@ describe("ChatEngine clientFactory seam", () => {
     expect(sessionConfig.model).toBe("gpt-4o");
     expect(sessionConfig.provider).toBeDefined();
     expect(sessionConfig.provider?.type).toBe("azure");
-    expect(sessionConfig.provider?.baseUrl).toBe(
-      "https://my-azure-openai.openai.azure.com"
-    );
+    expect(sessionConfig.provider?.baseUrl).toBe("https://my-azure-openai.openai.azure.com");
     expect(sessionConfig.provider?.apiKey).toBe("secret-key");
     expect(sessionConfig.provider?.azure).toEqual({ apiVersion: "2025-01-01" });
   });
@@ -111,7 +113,12 @@ describe("ChatEngine clientFactory seam", () => {
   it("appends the knowledge system message when CRAWL_SEEDS is set (seat or byok)", async () => {
     const { client, createSession } = makeFakeClient();
     const config = loadAgentConfig({ ...base, CRAWL_SEEDS: "https://wiki.acme.io/a" });
-    const engine = new ChatEngine({ config, tools: [], ...noopDeps, clientFactory: () => client as never });
+    const engine = new ChatEngine({
+      config,
+      tools: [],
+      ...noopDeps,
+      clientFactory: () => client as never
+    });
     await engine.start();
     const sessionConfig = createSession.mock.calls[0][0];
     expect(sessionConfig.systemMessage).toEqual({
@@ -124,7 +131,12 @@ describe("ChatEngine clientFactory seam", () => {
   it("omits systemMessage when the crawler is not configured", async () => {
     const { client, createSession } = makeFakeClient();
     const config = loadAgentConfig({ ...base }); // no CRAWL_SEEDS
-    const engine = new ChatEngine({ config, tools: [], ...noopDeps, clientFactory: () => client as never });
+    const engine = new ChatEngine({
+      config,
+      tools: [],
+      ...noopDeps,
+      clientFactory: () => client as never
+    });
     await engine.start();
     const sessionConfig = createSession.mock.calls[0][0];
     expect("systemMessage" in sessionConfig).toBe(false);
@@ -133,13 +145,15 @@ describe("ChatEngine clientFactory seam", () => {
   it("send() passes the configured TURN_TIMEOUT_MS to sendAndWait (not the SDK 60s default)", async () => {
     const { client, session } = makeFakeClient();
     const config = loadAgentConfig({ ...base, TURN_TIMEOUT_MS: "300000" });
-    const engine = new ChatEngine({ config, tools: [], ...noopDeps, clientFactory: () => client as never });
+    const engine = new ChatEngine({
+      config,
+      tools: [],
+      ...noopDeps,
+      clientFactory: () => client as never
+    });
     await engine.start();
     await engine.send("Provide me the latest 5 incidents");
-    expect(session.sendAndWait).toHaveBeenCalledWith(
-      "Provide me the latest 5 incidents",
-      300000
-    );
+    expect(session.sendAndWait).toHaveBeenCalledWith("Provide me the latest 5 incidents", 300000);
   });
 });
 

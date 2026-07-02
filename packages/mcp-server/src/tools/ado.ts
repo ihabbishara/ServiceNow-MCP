@@ -9,14 +9,22 @@ export const registerAdoTools = (server: McpServer, runtime: McpRuntime): void =
     "Search Azure DevOps work items by text, type, or state",
     {
       query_text: z.string().describe("Text to search for (e.g., incident number)"),
-      work_item_type: z.enum(["Bug", "Task", "User Story", "Issue"]).optional().describe("Filter by work item type"),
+      work_item_type: z
+        .enum(["Bug", "Task", "User Story", "Issue"])
+        .optional()
+        .describe("Filter by work item type"),
       state: z.string().optional().describe("Filter by state (e.g., 'Active', 'Closed')")
     },
     async (args) => {
       try {
         if (!runtime.config.azureDevOps.enabled) {
           return {
-            content: [{ type: "text", text: "Azure DevOps integration is disabled. Set ADO_ENABLED=true to search work items." }],
+            content: [
+              {
+                type: "text",
+                text: "Azure DevOps integration is disabled. Set ADO_ENABLED=true to search work items."
+              }
+            ],
             isError: true
           };
         }
@@ -57,7 +65,10 @@ export const registerAdoTools = (server: McpServer, runtime: McpRuntime): void =
     "Create an Azure DevOps bug linked to a ServiceNow incident. Includes incident details, priority mapping, and standard acceptance criteria.",
     {
       incident_number: z.string().describe("Incident to create bug from"),
-      title_override: z.string().optional().describe("Custom title (default: uses incident short description)"),
+      title_override: z
+        .string()
+        .optional()
+        .describe("Custom title (default: uses incident short description)"),
       additional_tags: z.array(z.string()).optional().describe("Extra tags to add"),
       area_path: z.string().optional().describe("ADO area path (default: from config)"),
       iteration_path: z.string().optional().describe("ADO iteration path (default: from config)")
@@ -67,7 +78,9 @@ export const registerAdoTools = (server: McpServer, runtime: McpRuntime): void =
         // Check if ADO integration is enabled
         if (!runtime.config.azureDevOps.enabled) {
           return {
-            content: [{ type: "text", text: "ADO integration is disabled. Enable it to create bugs." }],
+            content: [
+              { type: "text", text: "ADO integration is disabled. Enable it to create bugs." }
+            ],
             isError: true
           };
         }
@@ -84,7 +97,9 @@ export const registerAdoTools = (server: McpServer, runtime: McpRuntime): void =
         const summary = await runtime.incidentService.summarizeIncident(args.incident_number);
 
         // Build bug payload
-        const title = args.title_override ?? `[${summary.incident.number}] ${summary.incident.shortDescription}`;
+        const title =
+          args.title_override ??
+          `[${summary.incident.number}] ${summary.incident.shortDescription}`;
         const description = [
           `ServiceNow Incident: ${summary.incident.number}`,
           `Priority: ${summary.incident.priority}`,
@@ -145,10 +160,15 @@ export const registerAdoTools = (server: McpServer, runtime: McpRuntime): void =
     "create_work_item",
     "Create an Azure DevOps work item (User Story, Task, Bug, Feature, Epic, Issue) on a board/backlog. Target the board via `board` (friendly name, resolved to an area path) or an explicit `area_path`. Optionally link under a parent work item.",
     {
-      type: z.enum(["User Story", "Task", "Bug", "Feature", "Epic", "Issue"]).describe("Work item type"),
+      type: z
+        .enum(["User Story", "Task", "Bug", "Feature", "Epic", "Issue"])
+        .describe("Work item type"),
       title: z.string().describe("Work item title"),
       description: z.string().optional().describe("Body/description"),
-      board: z.string().optional().describe("Friendly board/team name, resolved to an area path via config"),
+      board: z
+        .string()
+        .optional()
+        .describe("Friendly board/team name, resolved to an area path via config"),
       area_path: z.string().optional().describe("Explicit ADO area path (overrides board)"),
       iteration_path: z.string().optional().describe("ADO iteration/sprint path"),
       tags: z.array(z.string()).optional().describe("Tags"),
@@ -160,7 +180,12 @@ export const registerAdoTools = (server: McpServer, runtime: McpRuntime): void =
     async (args) => {
       try {
         if (!runtime.config.azureDevOps.enabled) {
-          return { content: [{ type: "text", text: "Azure DevOps integration is disabled. Set ADO_ENABLED=true." }], isError: true };
+          return {
+            content: [
+              { type: "text", text: "Azure DevOps integration is disabled. Set ADO_ENABLED=true." }
+            ],
+            isError: true
+          };
         }
         const boardWarning =
           args.board && !args.area_path && !runtime.workItemService.isBoardKnown(args.board)
@@ -179,9 +204,31 @@ export const registerAdoTools = (server: McpServer, runtime: McpRuntime): void =
           storyPoints: args.story_points,
           parentId: args.parent_id
         });
-        return { content: [{ type: "text", text: JSON.stringify({ success: true, id: wi.id, title: wi.title, type: wi.workItemType, areaPath: wi.areaPath, parentId: args.parent_id, ...(boardWarning ? { boardWarning } : {}) }, null, 2) }] };
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(
+                {
+                  success: true,
+                  id: wi.id,
+                  title: wi.title,
+                  type: wi.workItemType,
+                  areaPath: wi.areaPath,
+                  parentId: args.parent_id,
+                  ...(boardWarning ? { boardWarning } : {})
+                },
+                null,
+                2
+              )
+            }
+          ]
+        };
       } catch (error) {
-        return { content: [{ type: "text", text: `Error creating work item: ${error}` }], isError: true };
+        return {
+          content: [{ type: "text", text: `Error creating work item: ${error}` }],
+          isError: true
+        };
       }
     }
   );
@@ -196,8 +243,14 @@ export const registerAdoTools = (server: McpServer, runtime: McpRuntime): void =
       area_path: z.string().optional().describe("Explicit target area path (overrides board)"),
       iteration_path: z.string().optional().describe("Target iteration/sprint path"),
       include_children: z.boolean().optional().describe("Copy child tasks too (default false)"),
-      link_to_source: z.boolean().optional().describe("Add a Related link back to the source (default false)"),
-      title_prefix: z.string().optional().describe("Prefix prepended to the cloned title (e.g. '[CLONE] ')"),
+      link_to_source: z
+        .boolean()
+        .optional()
+        .describe("Add a Related link back to the source (default false)"),
+      title_prefix: z
+        .string()
+        .optional()
+        .describe("Prefix prepended to the cloned title (e.g. '[CLONE] ')"),
       overrides: z
         .object({
           title: z.string().optional(),
@@ -213,7 +266,12 @@ export const registerAdoTools = (server: McpServer, runtime: McpRuntime): void =
     async (args) => {
       try {
         if (!runtime.config.azureDevOps.enabled) {
-          return { content: [{ type: "text", text: "Azure DevOps integration is disabled. Set ADO_ENABLED=true." }], isError: true };
+          return {
+            content: [
+              { type: "text", text: "Azure DevOps integration is disabled. Set ADO_ENABLED=true." }
+            ],
+            isError: true
+          };
         }
         const boardWarning =
           args.board && !args.area_path && !runtime.workItemService.isBoardKnown(args.board)
@@ -240,9 +298,23 @@ export const registerAdoTools = (server: McpServer, runtime: McpRuntime): void =
               }
             : undefined
         });
-        return { content: [{ type: "text", text: JSON.stringify({ success: true, ...res, ...(boardWarning ? { boardWarning } : {}) }, null, 2) }] };
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(
+                { success: true, ...res, ...(boardWarning ? { boardWarning } : {}) },
+                null,
+                2
+              )
+            }
+          ]
+        };
       } catch (error) {
-        return { content: [{ type: "text", text: `Error cloning work item: ${error}` }], isError: true };
+        return {
+          content: [{ type: "text", text: `Error cloning work item: ${error}` }],
+          isError: true
+        };
       }
     }
   );

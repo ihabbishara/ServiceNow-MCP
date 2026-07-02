@@ -33,7 +33,9 @@ export const bootCrawl = (
       // Fresh by TTL — but still pick up any seed that was never indexed.
       const missing = await runtime.knowledge.unindexedSeeds();
       if (missing.length === 0) {
-        log(`[crawl] index fresh (last crawl ${new Date(lastCrawl!).toISOString()}); skipping boot crawl`);
+        log(
+          `[crawl] index fresh (last crawl ${new Date(lastCrawl!).toISOString()}); skipping boot crawl`
+        );
         return;
       }
       log(`[crawl] index fresh but ${missing.length} seed(s) not yet indexed; crawling those…`);

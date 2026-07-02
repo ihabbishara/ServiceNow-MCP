@@ -4,8 +4,17 @@ import { buildTools } from "../src/tools/index.js";
 const fakeRuntime = () =>
   ({
     knowledge: {
-      search: vi.fn(async () => ({ count: 1, results: [{ url: "https://h/a", title: "A", snippet: "x", score: 0.9 }] })),
-      crawl: vi.fn(async () => ({ pagesCrawled: 2, pagesIndexed: 1, pagesSkipped: 1, chunksAdded: 3, dropped: 0 })),
+      search: vi.fn(async () => ({
+        count: 1,
+        results: [{ url: "https://h/a", title: "A", snippet: "x", score: 0.9 }]
+      })),
+      crawl: vi.fn(async () => ({
+        pagesCrawled: 2,
+        pagesIndexed: 1,
+        pagesSkipped: 1,
+        chunksAdded: 3,
+        dropped: 0
+      })),
       stats: () => ({ pages: 0, chunks: 0 })
     }
   }) as any;

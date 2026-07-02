@@ -11,8 +11,13 @@ export const buildVerdictPrompt = (
   links: string[],
   maxLinks: number
 ): string => {
-  const scope = topic ? `The crawl topic is: "${topic}".` : "The goal is to collect useful internal documentation.";
-  const linkList = links.slice(0, maxLinks).map((l, i) => `${i + 1}. ${l}`).join("\n");
+  const scope = topic
+    ? `The crawl topic is: "${topic}".`
+    : "The goal is to collect useful internal documentation.";
+  const linkList = links
+    .slice(0, maxLinks)
+    .map((l, i) => `${i + 1}. ${l}`)
+    .join("\n");
   return [
     `${scope}`,
     `Decide (1) whether THIS page is worth indexing, and (2) which of its links are worth following.`,
@@ -38,7 +43,9 @@ export const parseVerdict = (raw: string): CrawlVerdict => {
       const obj = JSON.parse(raw.slice(start, end + 1));
       return {
         relevant: typeof obj.relevant === "boolean" ? obj.relevant : true,
-        keepLinks: Array.isArray(obj.keepLinks) ? obj.keepLinks.filter((x: unknown) => typeof x === "string") : []
+        keepLinks: Array.isArray(obj.keepLinks)
+          ? obj.keepLinks.filter((x: unknown) => typeof x === "string")
+          : []
       };
     } catch {
       /* fall through */

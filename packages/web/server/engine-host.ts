@@ -9,7 +9,7 @@ import {
   resolveDotenvPath,
   loadDotenv,
   type AgentConfig,
-  type EngineDeps,
+  type EngineDeps
 } from "@sre/sre-agent";
 import { extractText, formatOf, defaultParsers } from "@sre/core";
 import type { SourceRow, IngestDoc, IngestPhase, IngestResult } from "@sre/core";
@@ -42,7 +42,15 @@ export interface EngineHostOptions {
     knowledge: {
       close(): Promise<unknown>;
       indexDocument(doc: IngestDoc, onPhase?: (p: IngestPhase) => void): Promise<IngestResult>;
-      crawl(overrides: { seeds?: string[]; allowDomains?: string[]; maxDepth?: number; maxPages?: number }, log?: (m: string) => void): Promise<{ chunksAdded: number; pagesCrawled: number }>;
+      crawl(
+        overrides: {
+          seeds?: string[];
+          allowDomains?: string[];
+          maxDepth?: number;
+          maxPages?: number;
+        },
+        log?: (m: string) => void
+      ): Promise<{ chunksAdded: number; pagesCrawled: number }>;
       listSources(): Promise<SourceRow[]>;
       deleteSource(key: string): Promise<void>;
     };
@@ -121,7 +129,7 @@ export const createEngineHost = (opts: EngineHostOptions): EngineHost => {
       tools: opts.tools,
       confirm,
       onDelta: (text) => emit({ type: "delta", text }),
-      onToolStart: (name) => emit({ type: "tool-start", name }),
+      onToolStart: (name) => emit({ type: "tool-start", name })
     });
 
   let engine = buildEngine(config);
@@ -135,10 +143,14 @@ export const createEngineHost = (opts: EngineHostOptions): EngineHost => {
         isAuthenticated: s.isAuthenticated,
         authType: s.authType,
         login: s.login,
-        ambientEnvWarning: s.authType === "env" && !config.copilot?.githubToken,
+        ambientEnvWarning: s.authType === "env" && !config.copilot?.githubToken
       });
     } catch (e) {
-      emit({ type: "engine-state", state: "error", message: e instanceof Error ? e.message : String(e) });
+      emit({
+        type: "engine-state",
+        state: "error",
+        message: e instanceof Error ? e.message : String(e)
+      });
     }
   };
 
@@ -150,12 +162,9 @@ export const createEngineHost = (opts: EngineHostOptions): EngineHost => {
       model: config.llm.model,
       provider: config.llm.provider?.type,
       servicenow: !!raw?.SERVICENOW_BASE_URL,
-      ado:
-        config.adoAuthMode === "pat"
-          ? !!raw?.ADO_PAT
-          : !!(raw?.ADO_ORG_URL && raw?.ADO_PROJECT),
+      ado: config.adoAuthMode === "pat" ? !!raw?.ADO_PAT : !!(raw?.ADO_ORG_URL && raw?.ADO_PROJECT),
       rag: !!runtime,
-      uploadMaxBytes: config.uploadMaxBytes,
+      uploadMaxBytes: config.uploadMaxBytes
     });
   };
 
@@ -199,7 +208,7 @@ export const createEngineHost = (opts: EngineHostOptions): EngineHost => {
         emit({
           type: "turn-error",
           message: e instanceof Error ? e.message : String(e),
-          isAuthError: isCopilotAuthError(e),
+          isAuthError: isCopilotAuthError(e)
         });
       } finally {
         if (myGen === turnGen) turnRunning = false;
@@ -211,11 +220,18 @@ export const createEngineHost = (opts: EngineHostOptions): EngineHost => {
     async abort() {
       await engine.abort();
     },
-    get uploadMaxBytes() { return config.uploadMaxBytes; },
+    get uploadMaxBytes() {
+      return config.uploadMaxBytes;
+    },
     async ingestFile(name, bytes) {
       const source = `upload://${name}`;
       if (!runtime) {
-        emit({ type: "ingest-status", source, phase: "skipped", reason: "knowledge index not configured" });
+        emit({
+          type: "ingest-status",
+          source,
+          phase: "skipped",
+          reason: "knowledge index not configured"
+        });
         return;
       }
       if (!formatOf(name)) {
@@ -231,17 +247,36 @@ export const createEngineHost = (opts: EngineHostOptions): EngineHost => {
         }
         const res = await runtime.knowledge.indexDocument(
           { key: source, title: name, text: ex.text },
-          (p) => { if (p.phase === "embedding") emit({ type: "ingest-status", source, phase: "embedding", detail: `${p.done}/${p.total}` }); }
+          (p) => {
+            if (p.phase === "embedding")
+              emit({
+                type: "ingest-status",
+                source,
+                phase: "embedding",
+                detail: `${p.done}/${p.total}`
+              });
+          }
         );
-        if (res.skipped) emit({ type: "ingest-status", source, phase: "skipped", reason: res.skipped });
+        if (res.skipped)
+          emit({ type: "ingest-status", source, phase: "skipped", reason: res.skipped });
         else emit({ type: "ingest-status", source, phase: "indexed", chunks: res.chunks });
       } catch (e) {
-        emit({ type: "ingest-status", source, phase: "skipped", reason: e instanceof Error ? e.message : String(e) });
+        emit({
+          type: "ingest-status",
+          source,
+          phase: "skipped",
+          reason: e instanceof Error ? e.message : String(e)
+        });
       }
     },
     async ingestUrl(url) {
       if (!runtime) {
-        emit({ type: "ingest-status", source: url, phase: "skipped", reason: "knowledge index not configured" });
+        emit({
+          type: "ingest-status",
+          source: url,
+          phase: "skipped",
+          reason: "knowledge index not configured"
+        });
         return;
       }
       let host: string;
@@ -256,14 +291,29 @@ export const createEngineHost = (opts: EngineHostOptions): EngineHost => {
         // Ad-hoc add: allow the pasted URL's own host and bound the sweep so one
         // URL doesn't trigger a full-site crawl. allowDomains override makes the
         // URL in-scope even when it isn't in the configured CRAWL_ALLOW_DOMAINS.
-        const res = await runtime.knowledge.crawl({ seeds: [url], allowDomains: [host], maxDepth: 1, maxPages: 25 });
+        const res = await runtime.knowledge.crawl({
+          seeds: [url],
+          allowDomains: [host],
+          maxDepth: 1,
+          maxPages: 25
+        });
         if (res.pagesCrawled === 0) {
-          emit({ type: "ingest-status", source: url, phase: "skipped", reason: "nothing indexed (unreachable, blocked by robots, or no content)" });
+          emit({
+            type: "ingest-status",
+            source: url,
+            phase: "skipped",
+            reason: "nothing indexed (unreachable, blocked by robots, or no content)"
+          });
         } else {
           emit({ type: "ingest-status", source: url, phase: "indexed", chunks: res.chunksAdded });
         }
       } catch (e) {
-        emit({ type: "ingest-status", source: url, phase: "skipped", reason: e instanceof Error ? e.message : String(e) });
+        emit({
+          type: "ingest-status",
+          source: url,
+          phase: "skipped",
+          reason: e instanceof Error ? e.message : String(e)
+        });
       }
     },
     async listSources() {
@@ -277,7 +327,11 @@ export const createEngineHost = (opts: EngineHostOptions): EngineHost => {
       await loginFn({
         home: config.copilot?.home,
         onDeviceCode: (info) =>
-          emit({ type: "device-code", verificationUri: info.verificationUri, userCode: info.userCode }),
+          emit({
+            type: "device-code",
+            verificationUri: info.verificationUri,
+            userCode: info.userCode
+          })
       });
       await restart();
     },
@@ -300,6 +354,6 @@ export const createEngineHost = (opts: EngineHostOptions): EngineHost => {
     },
     snapshot(): ServerEvent[] {
       return [lastEngineState, lastAuthStatus, lastConfigStatus].filter(Boolean) as ServerEvent[];
-    },
+    }
   };
 };

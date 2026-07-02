@@ -8,7 +8,7 @@ export const handleStream = (req: IncomingMessage, res: ServerResponse, host: En
   res.writeHead(200, {
     "content-type": "text/event-stream",
     "cache-control": "no-cache",
-    connection: "keep-alive",
+    connection: "keep-alive"
   });
   res.write(": connected\n\n");
   const detach = host.hub.add(res);
@@ -25,7 +25,11 @@ export const handleChat = async (req: IncomingMessage, res: ServerResponse, host
   sendJson(res, 202, { accepted: true });
 };
 
-export const handleConfirm = async (req: IncomingMessage, res: ServerResponse, host: EngineHost) => {
+export const handleConfirm = async (
+  req: IncomingMessage,
+  res: ServerResponse,
+  host: EngineHost
+) => {
   const { id, approve } = await readJson<{ id: string; approve: boolean }>(req);
   host.resolveConfirm(id, approve);
   sendJson(res, 200, { ok: true });

@@ -66,7 +66,9 @@ export const registerDashboardResources = (server: McpServer, runtime: McpRuntim
         markdown += `## Recommended Actions
 
 `;
-        const urgent = risks.filter((r) => r.riskLevel === "Critical" || r.riskLevel === "High").slice(0, 5);
+        const urgent = risks
+          .filter((r) => r.riskLevel === "Critical" || r.riskLevel === "High")
+          .slice(0, 5);
         for (const r of urgent) {
           markdown += `1. **${r.incidentNumber}**: ${r.suggestedAction}\n`;
         }
@@ -129,7 +131,12 @@ export const registerDashboardResources = (server: McpServer, runtime: McpRuntim
         const tickets = byPriority[priority] || [];
         if (tickets.length === 0) continue;
 
-        const label = { "1": "P1 (Critical)", "2": "P2 (High)", "3": "P3 (Medium)", "4": "P4 (Low)" }[priority];
+        const label = {
+          "1": "P1 (Critical)",
+          "2": "P2 (High)",
+          "3": "P3 (Medium)",
+          "4": "P4 (Low)"
+        }[priority];
         markdown += `## ${label} - ${tickets.length} stale
 
 | Incident | Stale By | Last Updated | Assignment Group |

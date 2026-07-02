@@ -14,7 +14,7 @@ describe("startServer", () => {
       config: { llm: { mode: "seat", model: "gpt-5" }, copilot: {} } as any,
       tools: [],
       engineFactory: (d) => new FakeEngine(d) as any,
-      runtimeFactory: () => ({ knowledge: { close: async () => {} } }),
+      runtimeFactory: () => ({ knowledge: { close: async () => {} } })
     });
     await host.start();
     server = await startServer({ port: 0, host });

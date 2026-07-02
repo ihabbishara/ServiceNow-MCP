@@ -12,7 +12,9 @@ const call = (tool: any, args: unknown) => tool.handler!(args, {});
 describe("get_incident_documents tool", () => {
   it("returns the service result", async () => {
     const runtime: any = {
-      sharePoint: { getIncidentDocuments: async (n: string) => ({ incident: n, count: 0, documents: [] }) }
+      sharePoint: {
+        getIncidentDocuments: async (n: string) => ({ incident: n, count: 0, documents: [] })
+      }
     };
     const tool = toolByName(runtime, "get_incident_documents");
     const out = await call(tool, { incident: "INC123456" });
@@ -22,12 +24,18 @@ describe("get_incident_documents tool", () => {
   it("reports a clear error when SharePoint is disabled", async () => {
     const tool = toolByName({ sharePoint: undefined }, "get_incident_documents");
     const out = await call(tool, { incident: "INC1" });
-    expect(out).toEqual({ error: "SharePoint integration is disabled (set SHAREPOINT_ENABLED=true)." });
+    expect(out).toEqual({
+      error: "SharePoint integration is disabled (set SHAREPOINT_ENABLED=true)."
+    });
   });
 
   it("never throws — wraps service errors", async () => {
     const runtime: any = {
-      sharePoint: { getIncidentDocuments: async () => { throw new Error("boom"); } }
+      sharePoint: {
+        getIncidentDocuments: async () => {
+          throw new Error("boom");
+        }
+      }
     };
     const tool = toolByName(runtime, "get_incident_documents");
     expect(await call(tool, { incident: "INC1" })).toEqual({ error: "Error: boom" });

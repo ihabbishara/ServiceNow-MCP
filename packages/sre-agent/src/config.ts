@@ -110,9 +110,7 @@ export const loadAgentConfig = (
 ): AgentConfig => {
   const parsed = schema.safeParse(env);
   if (!parsed.success) {
-    const issues = parsed.error.issues
-      .map((i) => `${i.path.join(".")}: ${i.message}`)
-      .join("\n  ");
+    const issues = parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("\n  ");
     throw new Error(`Invalid configuration:\n  ${issues}`);
   }
   const e = parsed.data;

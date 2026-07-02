@@ -15,7 +15,7 @@ describe("formatOf", () => {
   it("maps known extensions, null otherwise", () => {
     expect(formatOf("a.DOCX")).toBe("docx");
     expect(formatOf("a.pdf")).toBe("pdf");
-    expect(formatOf("a.doc")).toBeNull();   // legacy binary not supported
+    expect(formatOf("a.doc")).toBeNull(); // legacy binary not supported
     expect(formatOf("a.txt")).toBe("txt");
   });
 });
@@ -33,7 +33,14 @@ describe("extractText", () => {
   });
 
   it("turns a parser error into a skip", async () => {
-    const boom: Parsers = { ...parsers, pdf: vi.fn(async () => { throw new Error("corrupt"); }) };
-    expect(await extractText("x.pdf", Buffer.from(""), boom)).toEqual({ skipped: "parse failed: corrupt" });
+    const boom: Parsers = {
+      ...parsers,
+      pdf: vi.fn(async () => {
+        throw new Error("corrupt");
+      })
+    };
+    expect(await extractText("x.pdf", Buffer.from(""), boom)).toEqual({
+      skipped: "parse failed: corrupt"
+    });
   });
 });
