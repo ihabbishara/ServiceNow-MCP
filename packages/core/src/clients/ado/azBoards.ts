@@ -44,9 +44,10 @@ export class AzBoardsClient implements AzureDevOpsClient {
   }
 
   async searchWorkItems(f: WorkItemSearchFilters): Promise<WorkItem[]> {
+    const limit = Math.min(f.limit ?? 50, 200);
     const where = ["[System.TeamProject] = @project", ...searchConditions(f)];
 
-    const wiql = `SELECT ${SELECT} FROM workitems WHERE ${where.join(" AND ")} ORDER BY [System.ChangedDate] DESC`;
+    const wiql = `SELECT TOP ${limit} ${SELECT} FROM workitems WHERE ${where.join(" AND ")} ORDER BY [System.ChangedDate] DESC`;
     const rows = await this.runner.json<AzWorkItemRaw[]>([
       "boards",
       "query",
@@ -57,7 +58,6 @@ export class AzBoardsClient implements AzureDevOpsClient {
       "--project",
       this.cfg.project
     ]);
-    const limit = Math.min(f.limit ?? 50, 200);
     return (rows ?? []).slice(0, limit).map(mapAzWorkItem);
   }
 
@@ -124,7 +124,7 @@ export class AzBoardsClient implements AzureDevOpsClient {
 
   async listChildren(parentId: number): Promise<number[]> {
     if (!Number.isInteger(parentId)) throw new Error("parent id must be an integer");
-    const wiql = `SELECT [System.Id] FROM WorkItems WHERE [System.Parent] = ${parentId} ORDER BY [System.Id]`;
+    const wiql = `SELECT TOP 500 [System.Id] FROM WorkItems WHERE [System.Parent] = ${parentId} ORDER BY [System.Id]`;
     const rows = await this.runner.json<Array<{ id: number }>>([
       "boards",
       "query",

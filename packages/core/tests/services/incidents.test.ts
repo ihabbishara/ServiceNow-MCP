@@ -99,6 +99,18 @@ describe("IncidentService", () => {
     expect(sn.listChangesWithFilters).not.toHaveBeenCalled();
   });
 
+  it("correlateFor passes startedBefore = openedAt + afterHours to listChangesWithFilters", async () => {
+    const { svc, sn } = makeService();
+    await svc.summarizeIncident("INC0001");
+    const call = (sn.listChangesWithFilters as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    // openedAt = 2026-06-11T10:00:00Z; afterHours = 4 → startedBefore = 2026-06-11T14:00:00.000Z
+    expect(call).toMatchObject({
+      startedAfter: "2026-06-10T10:00:00.000Z",
+      startedBefore: "2026-06-11T14:00:00.000Z",
+      limit: 200
+    });
+  });
+
   it("findRelatedChanges returns correlated changes", async () => {
     const { svc } = makeService();
     const result = await svc.findRelatedChanges("INC0001");
