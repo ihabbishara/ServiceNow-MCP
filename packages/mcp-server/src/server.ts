@@ -2,7 +2,6 @@ import { createRequire } from "module";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { McpRuntime } from "@sre/core";
 import { registerRegistryTools } from "./tools/registry.js";
-import { registerWorkItemCsvTools } from "./tools/workItemCsv.js";
 import { registerIncidentResources, registerTeamResources } from "./resources/incidents.js";
 import { registerChangeResources } from "./resources/changes.js";
 import { registerDashboardResources } from "./resources/dashboards.js";
@@ -19,7 +18,6 @@ export const createMcpServer = (runtime: McpRuntime): McpServer => {
 
   // Register all tools
   registerRegistryTools(server, runtime);
-  registerWorkItemCsvTools(server, runtime);
 
   // Register all resources
   registerIncidentResources(server, runtime);

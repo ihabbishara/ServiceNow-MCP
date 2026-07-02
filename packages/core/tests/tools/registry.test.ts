@@ -223,6 +223,52 @@ describe("knowledge + sharepoint specs", () => {
   });
 });
 
+describe("workItemCsv specs", () => {
+  const spec = (n: string) => TOOL_SPECS.find((s) => s.name === n)!;
+
+  it("registers both CSV tools as reads", () => {
+    expect(spec("list_work_item_csvs").write).toBeFalsy();
+    expect(spec("read_work_item_csv").write).toBeFalsy();
+  });
+
+  it("guards on ADO enabled then on csvDir", () => {
+    const g = spec("list_work_item_csvs").enabledWhen!;
+    expect(g({ azureDevOps: { enabled: false } } as any)).toBe(
+      "Azure DevOps integration is disabled. Set ADO_ENABLED=true."
+    );
+    expect(g({ azureDevOps: { enabled: true, csvDir: undefined } } as any)).toBe(
+      "CSV folder not configured. Set ADO_CSV_DIR to a folder of .csv files."
+    );
+    expect(g({ azureDevOps: { enabled: true, csvDir: "/tmp/csv" } } as any)).toBeNull();
+  });
+
+  it("the registry holds exactly the 19 tools", () => {
+    expect(TOOL_SPECS.map((s) => s.name).sort()).toEqual(
+      [
+        "clone_work_item",
+        "correlate_changes",
+        "create_bug_from_incident",
+        "create_work_item",
+        "find_sla_risks",
+        "find_stale_tickets",
+        "generate_ops_summary",
+        "get_change",
+        "get_incident",
+        "get_incident_documents",
+        "get_work_item",
+        "index_url",
+        "list_work_item_csvs",
+        "read_work_item_csv",
+        "search_changes",
+        "search_incidents",
+        "search_knowledge",
+        "search_work_items",
+        "summarize_incident"
+      ].sort()
+    );
+  });
+});
+
 describe("changes specs", () => {
   const spec = (n: string) => TOOL_SPECS.find((s) => s.name === n)!;
 

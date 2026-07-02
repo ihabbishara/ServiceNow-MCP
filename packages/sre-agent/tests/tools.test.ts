@@ -53,7 +53,7 @@ const byName = (rt: any, n: string): Tool<any> => {
 const call = (t: Tool<any>, args: unknown) => t.handler!(args as never, {} as never);
 
 describe("buildTools", () => {
-  it("registers exactly the 17 expected tools", () => {
+  it("registers exactly the 19 expected tools", () => {
     const names = buildTools(fakeRuntime())
       .map((t) => t.name)
       .sort();
@@ -71,6 +71,8 @@ describe("buildTools", () => {
         "get_incident_documents",
         "get_work_item",
         "index_url",
+        "list_work_item_csvs",
+        "read_work_item_csv",
         "search_changes",
         "search_incidents",
         "search_knowledge",
