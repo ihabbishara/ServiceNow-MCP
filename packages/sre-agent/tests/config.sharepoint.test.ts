@@ -13,7 +13,9 @@ describe("sharePointEnabled flag", () => {
   it("false by default", () => {
     expect(loadAgentConfig(base).sharePointEnabled).toBe(false);
   });
-  it("true when SHAREPOINT_ENABLED=true", () => {
-    expect(loadAgentConfig({ ...base, SHAREPOINT_ENABLED: "true" }).sharePointEnabled).toBe(true);
+  it("true when SHAREPOINT_ENABLED=true (with required SHAREPOINT_SITE_URL)", () => {
+    expect(
+      loadAgentConfig({ ...base, SHAREPOINT_ENABLED: "true", SHAREPOINT_SITE_URL: "https://tenant.sharepoint.com/sites/sre" }).sharePointEnabled
+    ).toBe(true);
   });
 });

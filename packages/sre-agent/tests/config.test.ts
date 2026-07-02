@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { loadConfig } from "@sre/core";
 import { loadAgentConfig } from "../src/config.js";
 
 const base = {
@@ -127,5 +128,10 @@ describe("loadAgentConfig", () => {
     it("reads UPLOAD_MAX_BYTES", () => {
       expect(loadAgentConfig({ ...base, UPLOAD_MAX_BYTES: "2048" }).uploadMaxBytes).toBe(2048);
     });
+  });
+
+  it("exposes an AppConfig identical to core loadConfig for the same env", () => {
+    const cfg = loadAgentConfig(base);
+    expect(cfg.app).toEqual(loadConfig(base));
   });
 });
