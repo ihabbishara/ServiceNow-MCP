@@ -71,6 +71,35 @@ describe("incidents specs", () => {
   });
 });
 
+describe("analysis specs", () => {
+  const spec = (n: string) => TOOL_SPECS.find((s) => s.name === n)!;
+
+  it("registers the analysis group", () => {
+    const names = TOOL_SPECS.map((s) => s.name);
+    expect(names).toEqual(
+      expect.arrayContaining(["find_sla_risks", "find_stale_tickets", "generate_ops_summary"])
+    );
+  });
+
+  it("find_sla_risks applies the minimum risk-level filter", async () => {
+    const risks = [
+      { incidentNumber: "I1", riskLevel: "Critical" },
+      { incidentNumber: "I2", riskLevel: "Medium" }
+    ];
+    const rt: any = { incidentService: { listSlaRisks: vi.fn(async () => risks) } };
+    const out = (await spec("find_sla_risks").run(rt, { risk_level: "High" })) as any;
+    expect(out.count).toBe(1);
+    expect(out.risks[0].incidentNumber).toBe("I1");
+  });
+
+  it("generate_ops_summary rejects an invalid date with ToolError", async () => {
+    const rt: any = { reportService: { generateDailyOpsReport: vi.fn() } };
+    await expect(spec("generate_ops_summary").run(rt, { date: "not-a-date" })).rejects.toThrow(
+      ToolError
+    );
+  });
+});
+
 describe("changes specs", () => {
   const spec = (n: string) => TOOL_SPECS.find((s) => s.name === n)!;
 
