@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { buildWorkflowPrompt } from "../src/workflows/index.js";
+import { promptSpec } from "@sre/core";
 
 describe("workflows", () => {
   it("/triage builds the triage prompt with the incident number", () => {
@@ -46,5 +47,25 @@ describe("workflows", () => {
     expect(buildWorkflowPrompt("/review CHG1")).toContain("search_knowledge");
     expect(buildWorkflowPrompt("/postmortem INC1")).toContain("search_knowledge");
     expect(buildWorkflowPrompt("/handover Platform SRE")).toContain("search_knowledge");
+  });
+});
+
+describe("registry parity (agent workflows)", () => {
+  it("slash commands emit exactly the registry build output", () => {
+    expect(buildWorkflowPrompt("/triage INC1")).toBe(
+      promptSpec("incident_triage").build({ incident_number: "INC1" })
+    );
+    expect(buildWorkflowPrompt("/review CHG1")).toBe(
+      promptSpec("change_review").build({ change_number: "CHG1" })
+    );
+    expect(buildWorkflowPrompt("/postmortem INC1")).toBe(
+      promptSpec("incident_postmortem").build({ incident_number: "INC1" })
+    );
+    expect(buildWorkflowPrompt("/handover Platform SRE 12")).toBe(
+      promptSpec("shift_handover").build({ team_name: "Platform SRE", hours_back: 12 })
+    );
+    expect(buildWorkflowPrompt("/handover Platform SRE")).toBe(
+      promptSpec("shift_handover").build({ team_name: "Platform SRE" })
+    );
   });
 });
