@@ -10,3 +10,6 @@ dist/
 
 # Claude Code local state (worktrees, session config)
 .claude/
+
+# Superpowers SDD scratch directory
+.superpowers/

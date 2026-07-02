@@ -19,14 +19,19 @@ describe("registerSharePointTools", () => {
       sharePoint: { getIncidentDocuments: async (n: string) => ({ incident: n, count: 0 }) }
     };
     registerSharePointTools(server as any, runtime);
-    const out = await server.tools["get_incident_documents"]({ incident: "INC1" });
+    const out = (await server.tools["get_incident_documents"]({ incident: "INC1" })) as {
+      content: Array<{ type: string; text: string }>;
+    };
     expect(out.content[0].text).toContain('"incident": "INC1"');
   });
 
   it("returns an isError result when disabled", async () => {
     const server = fakeServer();
     registerSharePointTools(server as any, { sharePoint: undefined } as any);
-    const out = await server.tools["get_incident_documents"]({ incident: "INC1" });
+    const out = (await server.tools["get_incident_documents"]({ incident: "INC1" })) as {
+      content: Array<{ type: string; text: string }>;
+      isError: boolean;
+    };
     expect(out.isError).toBe(true);
   });
 });
