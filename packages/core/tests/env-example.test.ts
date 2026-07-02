@@ -6,13 +6,16 @@ import { fileURLToPath } from "node:url";
 const envExamplePath = fileURLToPath(new URL("../../sre-agent/.env.example", import.meta.url));
 
 // Vars read by the app that MUST be documented in .env.example.
-// (Audit found these 5 missing as of 2026-07-02.)
+// (Audit 2026-07-02 found the first 5 missing; final review added the last 3.)
 const REQUIRED_DOCUMENTED = [
   "ADO_BOARD_MAP",
   "ADO_CSV_DIR",
   "ADO_CSV_MAX_BYTES",
   "COPILOT_CLI_PATH",
-  "WEB_PORT"
+  "WEB_PORT",
+  "CRAWL_TTL_HOURS",
+  "UPLOAD_MAX_BYTES",
+  "SHAREPOINT_TIMEOUT_MS"
 ];
 
 describe(".env.example completeness", () => {
