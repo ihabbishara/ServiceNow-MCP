@@ -1,146 +1,33 @@
 import { defineTool } from "@github/copilot-sdk";
 import { z } from "zod";
-import type { McpRuntime } from "@sre/core";
+import { TOOL_SPECS, ToolError } from "@sre/core";
+import type { McpRuntime, ToolSpec } from "@sre/core";
 
 /**
- * All 12 custom tools projected from `@sre/core` for the Copilot SDK.
- *
- * Each handler calls the matching `runtime.<service>` method and returns the
- * SAME projected JSON the mcp-server tools return (the projections are copied
- * verbatim from `packages/mcp-server/src/tools/*.ts`). The 11 read tools set
- * `skipPermission: true`; only `create_bug_from_incident` is gated.
- *
- * On any error a handler returns `{ error: String(err) }` — it never throws, so
- * the model sees a structured error instead of the turn failing.
+ * Copilot adapter over the core tool registry. Read tools skip the permission
+ * gate; write tools (spec.write) surface a permission request handled by
+ * makePermissionHandler. Handlers never throw: expected failures (ToolError)
+ * and unexpected errors both come back as { error } so the model sees a
+ * structured error instead of the turn failing.
  */
-export const buildTools = (runtime: McpRuntime) => [
-  defineTool("search_incidents", {
-    description:
-      "Search ServiceNow incidents with filters. Use to find incidents by state, priority, assignment group, or description.",
-    skipPermission: true,
-    parameters: z.object({
-      state_not: z
-        .string()
-        .optional()
-        .describe(
-          "Exclude incidents with this single state name (e.g., 'Resolved' excludes only Resolved, not Closed or Canceled)"
-        ),
-      priority: z
-        .enum(["1", "2", "3", "4"])
-        .optional()
-        .describe("Filter by priority: 1=Critical, 2=High, 3=Medium, 4=Low"),
-      assignment_group: z.string().optional().describe("Filter by assignment group name"),
-      assigned_to: z
-        .string()
-        .optional()
-        .describe("Filter by assigned user name (mutually exclusive with unassigned_only)"),
-      short_description_contains: z
-        .string()
-        .optional()
-        .describe("Search text in short description"),
-      unassigned_only: z
-        .boolean()
-        .optional()
-        .describe("Only show incidents with no assignee (mutually exclusive with assigned_to)"),
-      limit: z.number().optional().describe("Maximum results (default: 50, max: 200)")
-    }),
-    handler: async (a) => {
+export const toCopilotTool = (spec: ToolSpec, runtime: McpRuntime) =>
+  defineTool(spec.name, {
+    description: spec.description,
+    skipPermission: !spec.write,
+    parameters: z.object(spec.schema),
+    handler: async (args: unknown) => {
       try {
-        if (a.unassigned_only && a.assigned_to) {
-          return {
-            error: "unassigned_only and assigned_to are mutually exclusive — pass only one."
-          };
-        }
-        const incidents = await runtime.serviceNowClient.listIncidentsWithFilters({
-          stateNot: a.state_not,
-          priority: a.priority,
-          assignmentGroup: a.assignment_group,
-          assignedTo: a.unassigned_only ? "" : a.assigned_to,
-          shortDescriptionContains: a.short_description_contains,
-          limit: Math.min(a.limit ?? 50, 200)
-        });
-        return {
-          count: incidents.length,
-          incidents: incidents.map((inc) => ({
-            number: inc.number,
-            priority: inc.priority,
-            state: inc.state,
-            shortDescription: inc.shortDescription,
-            assignedTo: inc.assignedTo ?? null,
-            assignmentGroup: inc.assignmentGroup ?? null,
-            openedAt: inc.openedAt,
-            updatedAt: inc.updatedAt
-          }))
-        };
+        const disabled = spec.enabledWhen?.(runtime.config);
+        if (disabled) return { error: disabled };
+        return await spec.run(runtime, args as never);
       } catch (err) {
-        return { error: String(err) };
+        return { error: err instanceof ToolError ? err.message : String(err) };
       }
     }
-  }),
+  });
 
-  defineTool("get_incident", {
-    description: "Get complete details of a specific incident by number (e.g., INC0012345)",
-    skipPermission: true,
-    parameters: z.object({
-      number: z.string().describe("Incident number (e.g., INC0012345)")
-    }),
-    handler: async (a) => {
-      try {
-        const incident = await runtime.serviceNowClient.getIncidentByNumber(a.number);
-        return incident ?? { error: `Incident ${a.number} not found` };
-      } catch (err) {
-        return { error: String(err) };
-      }
-    }
-  }),
-
-  defineTool("summarize_incident", {
-    description:
-      "Get incident details enriched with related changes and linked Azure DevOps work items. Use for incident analysis, triage, or handover.",
-    skipPermission: true,
-    parameters: z.object({
-      number: z.string().describe("Incident number (e.g., INC0012345)")
-    }),
-    handler: async (a) => {
-      try {
-        const result = await runtime.incidentService.summarizeIncident(a.number);
-        return {
-          incident: {
-            number: result.incident.number,
-            priority: result.incident.priority,
-            state: result.incident.state,
-            shortDescription: result.incident.shortDescription,
-            description: result.incident.description,
-            assignedTo: result.incident.assignedTo,
-            assignmentGroup: result.incident.assignmentGroup,
-            businessService: result.incident.businessService,
-            cmdbCi: result.incident.cmdbCi,
-            openedAt: result.incident.openedAt,
-            updatedAt: result.incident.updatedAt,
-            slaDue: result.incident.slaDue,
-            workNotes: result.incident.workNotes,
-            comments: result.incident.comments
-          },
-          relatedChanges: result.relatedChanges.map((c) => ({
-            changeNumber: c.changeNumber,
-            shortDescription: c.shortDescription,
-            state: c.state,
-            risk: c.risk,
-            correlationReason: c.correlationReason,
-            confidenceScore: c.confidenceScore
-          })),
-          relatedWorkItems: result.relatedWorkItems.map((w) => ({
-            id: w.id,
-            title: w.title,
-            state: w.state
-          }))
-        };
-      } catch (err) {
-        return { error: String(err) };
-      }
-    }
-  }),
-
+/** Tools not yet migrated to the core registry — shrinks to [] by Task 7, then this scaffold is deleted. */
+const legacyTools = (runtime: McpRuntime) => [
   defineTool("search_changes", {
     description: "Search ServiceNow change records with filters",
     skipPermission: true,
@@ -595,4 +482,9 @@ export const buildTools = (runtime: McpRuntime) => [
       }
     }
   })
+];
+
+export const buildTools = (runtime: McpRuntime) => [
+  ...TOOL_SPECS.map((s) => toCopilotTool(s, runtime)),
+  ...legacyTools(runtime)
 ];

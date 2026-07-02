@@ -1,7 +1,7 @@
 import { createRequire } from "module";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { McpRuntime } from "@sre/core";
-import { registerIncidentTools } from "./tools/incidents.js";
+import { registerRegistryTools } from "./tools/registry.js";
 import { registerChangeTools } from "./tools/changes.js";
 import { registerAnalysisTools } from "./tools/analysis.js";
 import { registerAdoTools } from "./tools/ado.js";
@@ -23,7 +23,7 @@ export const createMcpServer = (runtime: McpRuntime): McpServer => {
   });
 
   // Register all tools
-  registerIncidentTools(server, runtime);
+  registerRegistryTools(server, runtime);
   registerChangeTools(server, runtime);
   registerAnalysisTools(server, runtime);
   registerAdoTools(server, runtime);

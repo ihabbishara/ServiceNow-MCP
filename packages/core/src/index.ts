@@ -20,3 +20,4 @@ export { SharePointService, createSharePointService } from "./services/sharepoin
 export type { IncidentDocsResult, IncidentDocument } from "./clients/sharepoint/types.js";
 export * from "./services/workItemService.js";
 export * from "./services/csvReader.js";
+export * from "./tools/registry.js";

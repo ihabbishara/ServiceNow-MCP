@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import type { Tool } from "@github/copilot-sdk";
 import { buildTools } from "../src/tools/index.js";
+import { TOOL_SPECS } from "@sre/core";
 
 /**
  * Minimal fake runtime: only the methods a given test exercises are stubbed.
@@ -166,5 +167,18 @@ describe("buildTools", () => {
     expect(await call(t, { number: "INC1" })).toEqual({
       error: expect.stringMatching(/boom/)
     });
+  });
+});
+
+describe("registry parity (Copilot surface)", () => {
+  it("exposes every registry spec with matching description, permission, and schema keys", () => {
+    const tools = buildTools(fakeRuntime());
+    for (const spec of TOOL_SPECS) {
+      const t: any = tools.find((tool) => tool.name === spec.name);
+      expect(t, `registry tool ${spec.name} missing from buildTools`).toBeTruthy();
+      expect(t.description).toBe(spec.description);
+      expect(Boolean(t.skipPermission)).toBe(!spec.write);
+      expect(Object.keys(t.parameters.shape).sort()).toEqual(Object.keys(spec.schema).sort());
+    }
   });
 });
