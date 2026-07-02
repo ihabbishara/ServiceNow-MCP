@@ -1,7 +1,8 @@
 import type { PermissionHandler } from "@github/copilot-sdk";
+import { WRITE_TOOL_NAMES } from "@sre/core";
 
-/** Tools that mutate external state and must pass the confirm gate. */
-const WRITE_TOOLS = new Set(["create_bug_from_incident"]);
+/** Tools that mutate external state and must pass the confirm gate — derived from the registry. */
+const WRITE_TOOLS = WRITE_TOOL_NAMES;
 
 /**
  * Build an SDK `PermissionHandler` that gates the write tool(s).

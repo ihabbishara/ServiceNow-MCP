@@ -44,4 +44,14 @@ describe("permission gate", () => {
     const r = await h({ kind: "read", path: "/tmp/x" } as unknown as PermissionRequest, inv);
     expect(r).toEqual({ kind: "approve-once" });
   });
+
+  it("gates every registry write tool, not just create_bug_from_incident", async () => {
+    const confirm = vi.fn(async () => true);
+    const h = makePermissionHandler({ confirmWrites: true }, confirm);
+    for (const toolName of ["create_work_item", "clone_work_item"]) {
+      const res = await h({ kind: "custom-tool", toolName, toolDescription: "" } as never);
+      expect(res).toEqual({ kind: "approve-once" });
+    }
+    expect(confirm).toHaveBeenCalledTimes(2);
+  });
 });

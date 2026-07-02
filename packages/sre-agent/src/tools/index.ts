@@ -26,10 +26,4 @@ export const toCopilotTool = (spec: ToolSpec, runtime: McpRuntime) =>
     }
   });
 
-/** Tools not yet migrated to the core registry — shrinks to [] by Task 7, then this scaffold is deleted. */
-const legacyTools = (_runtime: McpRuntime) => [];
-
-export const buildTools = (runtime: McpRuntime) => [
-  ...TOOL_SPECS.map((s) => toCopilotTool(s, runtime)),
-  ...legacyTools(runtime)
-];
+export const buildTools = (runtime: McpRuntime) => TOOL_SPECS.map((s) => toCopilotTool(s, runtime));
