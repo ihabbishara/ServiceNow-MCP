@@ -10,6 +10,8 @@ import type {
 } from "./types.js";
 import { mapAzWorkItem, AzWorkItemRaw } from "./map.js";
 import { AzBoardsClient } from "./azBoards.js";
+import { searchConditions } from "./wiql.js";
+import { workItemFieldOps } from "./fields.js";
 
 export type {
   AzureDevOpsClient,
@@ -17,31 +19,6 @@ export type {
   CreateBugPayload,
   CreateWorkItemPayload
 } from "./types.js";
-
-interface AdoWorkItemRow {
-  id: number;
-  fields: Record<string, unknown> & {
-    "System.Title"?: string;
-    "System.State"?: string;
-    "System.AssignedTo"?: { displayName?: string };
-    "System.AreaPath"?: string;
-    "System.Tags"?: string;
-  };
-}
-
-const escapeWiql = (s: string): string => s.replace(/'/g, "''");
-
-const mapWorkItem = (row: AdoWorkItemRow): WorkItem => ({
-  id: row.id,
-  title: row.fields["System.Title"] ?? "",
-  state: row.fields["System.State"] ?? "",
-  assignedTo: row.fields["System.AssignedTo"]?.displayName,
-  areaPath: row.fields["System.AreaPath"],
-  tags: row.fields["System.Tags"]
-    ?.split(";")
-    .map((t) => t.trim())
-    .filter(Boolean)
-});
 
 export class AdoPatClient implements AzureDevOpsClient {
   private readonly dispatcher?: FetchDispatcher;
@@ -73,19 +50,30 @@ export class AdoPatClient implements AzureDevOpsClient {
     return (await res.json()) as T;
   }
 
+  private static readonly SEARCH_FIELDS = [
+    "System.Title",
+    "System.State",
+    "System.WorkItemType",
+    "System.AssignedTo",
+    "System.AreaPath",
+    "System.IterationPath",
+    "System.Tags",
+    "System.Parent",
+    "Microsoft.VSTS.Common.Priority",
+    "Microsoft.VSTS.Scheduling.StoryPoints"
+  ].join(",");
+
   async searchWorkItems(f: WorkItemSearchFilters): Promise<WorkItem[]> {
     if (!this.cfg.enabled) return [];
     this.assertConfigured();
 
-    const conditions: string[] = [];
-    if (f.text) conditions.push(`[System.Title] CONTAINS '${escapeWiql(f.text)}'`);
-    if (f.workItemType) conditions.push(`[System.WorkItemType] = '${escapeWiql(f.workItemType)}'`);
-    if (f.state) conditions.push(`[System.State] = '${escapeWiql(f.state)}'`);
+    const conditions = searchConditions(f);
     const where = conditions.length ? ` WHERE ${conditions.join(" AND ")}` : "";
     const query = `SELECT [System.Id] FROM WorkItems${where} ORDER BY [System.ChangedDate] DESC`;
+    const limit = Math.min(f.limit ?? 50, 200);
 
     const wiql = await this.requestJson<{ workItems?: Array<{ id: number }> }>(
-      this.apiUrl("wit/wiql?api-version=7.1&$top=50"),
+      this.apiUrl(`wit/wiql?api-version=7.1&$top=${limit}`),
       {
         method: "POST",
         headers: {
@@ -99,18 +87,13 @@ export class AdoPatClient implements AzureDevOpsClient {
     const ids = (wiql.workItems ?? []).map((w) => w.id);
     if (!ids.length) return [];
 
-    const fields = [
-      "System.Title",
-      "System.State",
-      "System.AssignedTo",
-      "System.AreaPath",
-      "System.Tags"
-    ].join(",");
-    const details = await this.requestJson<{ value?: AdoWorkItemRow[] }>(
-      this.apiUrl(`wit/workitems?ids=${ids.join(",")}&fields=${fields}&api-version=7.1`),
+    const details = await this.requestJson<{ value?: AzWorkItemRaw[] }>(
+      this.apiUrl(
+        `wit/workitems?ids=${ids.join(",")}&fields=${AdoPatClient.SEARCH_FIELDS}&api-version=7.1`
+      ),
       { headers: { Accept: "application/json", Authorization: this.authHeader } }
     );
-    return (details.value ?? []).map(mapWorkItem);
+    return (details.value ?? []).map(mapAzWorkItem);
   }
 
   async getWorkItem(id: number): Promise<WorkItem | null> {
@@ -132,34 +115,15 @@ export class AdoPatClient implements AzureDevOpsClient {
     const ops: Array<{ op: "add"; path: string; value: string | number }> = [
       { op: "add", path: "/fields/System.Title", value: p.title }
     ];
-    if (p.description != null) {
-      const html = p.description.replace(/\n/g, "<br>");
-      const path =
-        p.type === "Bug" ? "/fields/Microsoft.VSTS.TCM.ReproSteps" : "/fields/System.Description";
-      ops.push({ op: "add", path, value: html });
-    }
     const areaPath = p.areaPath ?? this.cfg.defaultAreaPath;
     const iterationPath = p.iterationPath ?? this.cfg.defaultIterationPath;
     if (areaPath) ops.push({ op: "add", path: "/fields/System.AreaPath", value: areaPath });
     if (iterationPath)
       ops.push({ op: "add", path: "/fields/System.IterationPath", value: iterationPath });
-    if (p.tags?.length)
-      ops.push({ op: "add", path: "/fields/System.Tags", value: p.tags.join("; ") });
     if (p.assignedTo)
       ops.push({ op: "add", path: "/fields/System.AssignedTo", value: p.assignedTo });
-    const prio = p.priority ? Number(p.priority) : NaN;
-    if (Number.isInteger(prio) && prio >= 1 && prio <= 4) {
-      ops.push({ op: "add", path: "/fields/Microsoft.VSTS.Common.Priority", value: prio });
-    }
-    if (typeof p.storyPoints === "number") {
-      ops.push({
-        op: "add",
-        path: "/fields/Microsoft.VSTS.Scheduling.StoryPoints",
-        value: p.storyPoints
-      });
-    }
-    for (const [k, v] of Object.entries(p.fields ?? {}))
-      ops.push({ op: "add", path: `/fields/${k}`, value: v });
+    for (const f of workItemFieldOps(p))
+      ops.push({ op: "add", path: `/fields/${f.referenceName}`, value: f.value });
     return ops;
   }
 
