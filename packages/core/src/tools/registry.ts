@@ -5,6 +5,7 @@ import { knowledgeSpecs } from "./specs/knowledge.js";
 import { sharePointSpecs } from "./specs/sharepoint.js";
 import { adoSpecs } from "./specs/ado.js";
 import { workItemCsvSpecs } from "./specs/workItemCsv.js";
+import { repoSpecs } from "./specs/repo.js";
 import type { ToolSpec } from "./spec.js";
 
 export { ToolError, defineSpec } from "./spec.js";
@@ -18,7 +19,8 @@ export const TOOL_SPECS: ToolSpec[] = [
   ...knowledgeSpecs,
   ...sharePointSpecs,
   ...adoSpecs,
-  ...workItemCsvSpecs
+  ...workItemCsvSpecs,
+  ...repoSpecs
 ];
 
 /** Names of tools that mutate external state; derived, never hand-maintained. */

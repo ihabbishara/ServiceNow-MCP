@@ -242,9 +242,10 @@ describe("workItemCsv specs", () => {
     expect(g({ azureDevOps: { enabled: true, csvDir: "/tmp/csv" } } as any)).toBeNull();
   });
 
-  it("the registry holds exactly the 19 tools", () => {
+  it("the registry holds exactly the 23 tools", () => {
     expect(TOOL_SPECS.map((s) => s.name).sort()).toEqual(
       [
+        "checkout_repo",
         "clone_work_item",
         "correlate_changes",
         "create_bug_from_incident",
@@ -258,10 +259,13 @@ describe("workItemCsv specs", () => {
         "get_work_item",
         "index_url",
         "list_work_item_csvs",
+        "read_repo_file",
         "read_work_item_csv",
+        "repo_history",
         "search_changes",
         "search_incidents",
         "search_knowledge",
+        "search_repo",
         "search_work_items",
         "summarize_incident"
       ].sort()

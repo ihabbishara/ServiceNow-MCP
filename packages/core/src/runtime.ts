@@ -10,6 +10,7 @@ import { ReportService } from "./services/report.js";
 import { KnowledgeService } from "./services/knowledge/index.js";
 import { SharePointService, createSharePointService } from "./services/sharepoint/index.js";
 import { WorkItemService } from "./services/workItemService.js";
+import { GitRepoClient } from "./clients/git.js";
 
 export interface McpRuntime {
   config: AppConfig;
@@ -23,6 +24,8 @@ export interface McpRuntime {
   knowledge: KnowledgeService;
   sharePoint?: SharePointService;
   workItemService: WorkItemService;
+  /** Present when azureDevOps.orgUrl is configured; backs the repo analysis tools. */
+  gitRepos?: GitRepoClient;
 }
 
 const isAppConfig = (v: unknown): v is AppConfig =>
@@ -59,6 +62,7 @@ export const createMcpRuntime = (
   const sharePoint = config.sharePoint.enabled
     ? createSharePointService(config.sharePoint)
     : undefined;
+  const gitRepos = config.azureDevOps.orgUrl ? new GitRepoClient(config.azureDevOps) : undefined;
 
   return {
     config,
@@ -71,6 +75,7 @@ export const createMcpRuntime = (
     correlationService,
     knowledge,
     sharePoint,
-    workItemService
+    workItemService,
+    gitRepos
   };
 };
