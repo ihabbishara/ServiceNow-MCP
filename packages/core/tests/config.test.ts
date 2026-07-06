@@ -128,6 +128,18 @@ describe("loadConfig", () => {
     expect(cfg.thresholds.staleByPriorityMinutes["1"]).toBe(15);
     expect(cfg.thresholds.relatedChangeWindow.beforeHours).toBe(48);
   });
+
+  it("parses GIT_WORKSPACE_DIR into azureDevOps.gitWorkspaceDir", () => {
+    const cfg = loadConfig({ ...validEnv, GIT_WORKSPACE_DIR: "/var/tmp/repos" });
+    expect(cfg.azureDevOps.gitWorkspaceDir).toBe("/var/tmp/repos");
+  });
+
+  it("leaves gitWorkspaceDir undefined when GIT_WORKSPACE_DIR is unset or empty", () => {
+    expect(loadConfig(validEnv).azureDevOps.gitWorkspaceDir).toBeUndefined();
+    expect(
+      loadConfig({ ...validEnv, GIT_WORKSPACE_DIR: "" }).azureDevOps.gitWorkspaceDir
+    ).toBeUndefined();
+  });
 });
 
 const base = {

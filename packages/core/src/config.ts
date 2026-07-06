@@ -90,7 +90,8 @@ export const envSchema = z.object({
   SHAREPOINT_MAX_DOC_TOKENS: z.coerce.number().int().positive().default(50000),
   SHAREPOINT_MAX_FILES: z.coerce.number().int().positive().default(50),
   SHAREPOINT_MAX_FILE_BYTES: z.coerce.number().int().positive().default(10485760),
-  SHAREPOINT_TIMEOUT_MS: z.coerce.number().int().positive().default(30000)
+  SHAREPOINT_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
+  GIT_WORKSPACE_DIR: optional(z.string().min(1))
 });
 
 export interface ServiceNowConfig {
@@ -116,6 +117,8 @@ export interface AdoConfig {
   boardMap?: Record<string, string>;
   csvDir?: string;
   csvMaxBytes: number;
+  /** Root dir for incident-analysis repo checkouts (GIT_WORKSPACE_DIR); default under os.tmpdir(). */
+  gitWorkspaceDir?: string;
 }
 
 export interface KnowledgeConfig {
@@ -264,7 +267,8 @@ export const buildAppConfig = (e: z.infer<typeof envSchema>): AppConfig => {
       proxyUrl: e.ADO_PROXY,
       boardMap: parseBoardMap(e.ADO_BOARD_MAP),
       csvDir: e.ADO_CSV_DIR,
-      csvMaxBytes: e.ADO_CSV_MAX_BYTES
+      csvMaxBytes: e.ADO_CSV_MAX_BYTES,
+      gitWorkspaceDir: e.GIT_WORKSPACE_DIR
     },
     sharePoint: {
       enabled: e.SHAREPOINT_ENABLED,
