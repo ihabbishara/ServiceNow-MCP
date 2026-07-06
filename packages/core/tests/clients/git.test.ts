@@ -5,7 +5,11 @@ import { join } from "node:path";
 import { GitRepoClient, GitError, repoDirFor } from "../../src/clients/git.js";
 import type { ExecFn } from "../../src/clients/ado/az.js";
 
-const ADO = { orgUrl: "https://dev.azure.com/INGCDaaS", pat: undefined, gitWorkspaceDir: undefined };
+const ADO = {
+  orgUrl: "https://dev.azure.com/INGCDaaS",
+  pat: undefined,
+  gitWorkspaceDir: undefined
+};
 const URL_OK = "https://dev.azure.com/INGCDaaS/IngOne/_git/payments";
 
 /** ExecFn fake: records calls, returns canned stdout per git subcommand.
@@ -42,8 +46,12 @@ describe("GitRepoClient URL allowlist", () => {
   it("accepts dev.azure.com/<org> (case-insensitive) and <org>.visualstudio.com", async () => {
     const { exec } = makeExec(canned);
     const c = new GitRepoClient(ADO, exec, () => false);
-    await expect(c.ensureRepo("https://dev.azure.com/ingcdaas/IngOne/_git/payments")).resolves.toBeTruthy();
-    await expect(c.ensureRepo("https://INGCDaaS.visualstudio.com/IngOne/_git/payments")).resolves.toBeTruthy();
+    await expect(
+      c.ensureRepo("https://dev.azure.com/ingcdaas/IngOne/_git/payments")
+    ).resolves.toBeTruthy();
+    await expect(
+      c.ensureRepo("https://INGCDaaS.visualstudio.com/IngOne/_git/payments")
+    ).resolves.toBeTruthy();
   });
 
   it("strips embedded credentials from the URL before cloning", async () => {
@@ -98,7 +106,9 @@ describe("GitRepoClient clone/auth", () => {
     const pat = "s3cretPAT";
     const b64 = Buffer.from(`:${pat}`).toString("base64");
     const exec: ExecFn = vi.fn(async () => {
-      throw Object.assign(new Error("boom"), { stderr: `fatal: auth ${pat} / Basic ${b64} rejected` });
+      throw Object.assign(new Error("boom"), {
+        stderr: `fatal: auth ${pat} / Basic ${b64} rejected`
+      });
     });
     const c = new GitRepoClient({ ...ADO, pat }, exec, () => false);
     const err = await c.ensureRepo(URL_OK).catch((e) => e as GitError);
@@ -117,7 +127,11 @@ describe("GitRepoClient grep", () => {
     });
     const c = new GitRepoClient(ADO, exec, () => true);
     const res = await c.grep(URL_OK, "PaymentError");
-    expect(res.matches[0]).toEqual({ file: "src/pay.ts", line: 42, text: "  throw new PaymentError()" });
+    expect(res.matches[0]).toEqual({
+      file: "src/pay.ts",
+      line: 42,
+      text: "  throw new PaymentError()"
+    });
     expect(res.truncated).toBe(false);
 
     const execNoMatch: ExecFn = vi.fn(async (_f, args) => {
@@ -185,7 +199,8 @@ describe("GitRepoClient readFile containment", () => {
 
 describe("GitRepoClient history", () => {
   it("parses tab-separated log output", async () => {
-    const log = "abc\t2026-07-01T10:00:00+02:00\tJane\tfix: rounding\ndef\t2026-06-30T09:00:00+02:00\tBob\tfeat: pay v2";
+    const log =
+      "abc\t2026-07-01T10:00:00+02:00\tJane\tfix: rounding\ndef\t2026-06-30T09:00:00+02:00\tBob\tfeat: pay v2";
     const exec: ExecFn = vi.fn(async (_f, args) =>
       args.includes("log") ? { stdout: log, stderr: "" } : { stdout: "abc123\n", stderr: "" }
     );

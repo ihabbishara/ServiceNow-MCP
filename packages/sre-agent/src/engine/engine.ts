@@ -230,9 +230,7 @@ export class ChatEngine {
       ...this.providerConfig()
     });
     const chunks: string[] = [];
-    const offDelta = session.on("assistant.message_delta", (e) =>
-      chunks.push(e.data.deltaContent)
-    );
+    const offDelta = session.on("assistant.message_delta", (e) => chunks.push(e.data.deltaContent));
     const offTool = session.on("tool.execution_start", (e) =>
       this.deps.onToolStart?.(e.data.toolName)
     );

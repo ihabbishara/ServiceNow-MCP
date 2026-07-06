@@ -197,12 +197,16 @@ Focus on learning and prevention, not blame.`
     schema: {
       repo_url: z
         .string()
-        .describe("Azure DevOps repo clone URL (https://dev.azure.com/<org>/<project>/_git/<repo>)"),
+        .describe(
+          "Azure DevOps repo clone URL (https://dev.azure.com/<org>/<project>/_git/<repo>)"
+        ),
       error_text: z.string().describe("Error messages / stack traces to analyse"),
       incident_number: z.string().optional().describe("Related incident, e.g. INC0012345"),
       ref: z.string().optional().describe("Branch or tag matching the deployed version")
     },
-    build: (a) => `You are a Code Analyser. Pinpoint where in the codebase the failure below most likely originates.
+    build: (
+      a
+    ) => `You are a Code Analyser. Pinpoint where in the codebase the failure below most likely originates.
 
 Repository: ${a.repo_url}${a.ref ? ` (ref: ${a.ref})` : ""}${
       a.incident_number

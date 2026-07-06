@@ -45,7 +45,10 @@ const MAX_FILE_BYTES = 64 * 1024;
 
 /** Deterministic per-(url, ref) checkout directory under the workspace root. */
 export const repoDirFor = (url: string, ref: string | undefined, root: string): string => {
-  const key = createHash("sha1").update(`${url}#${ref ?? ""}`).digest("hex").slice(0, 10);
+  const key = createHash("sha1")
+    .update(`${url}#${ref ?? ""}`)
+    .digest("hex")
+    .slice(0, 10);
   const name = (basename(new URL(url).pathname) || "repo").replace(/[^a-zA-Z0-9._-]/g, "-");
   return join(root, `${name}-${key}`);
 };
@@ -221,7 +224,14 @@ export class GitRepoClient {
       content = Buffer.from(content, "utf8").subarray(0, MAX_FILE_BYTES).toString("utf8");
       truncated = true;
     }
-    return { path: relPath, startLine: start, endLine: end, totalLines: allLines.length, content, truncated };
+    return {
+      path: relPath,
+      startLine: start,
+      endLine: end,
+      totalLines: allLines.length,
+      content,
+      truncated
+    };
   }
 
   async history(

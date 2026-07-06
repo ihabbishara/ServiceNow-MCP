@@ -56,9 +56,7 @@ const makeFakeClient = (
   const sessions: ReturnType<typeof makeFakeSession>[] = [];
   const createSession = vi.fn(async (_config: SessionConfig) => {
     const s =
-      sessions.length === 0
-        ? makeFakeSession([])
-        : makeFakeSession(subAgentDeltas, subAgentReject);
+      sessions.length === 0 ? makeFakeSession([]) : makeFakeSession(subAgentDeltas, subAgentReject);
     sessions.push(s);
     return s;
   });
@@ -182,7 +180,10 @@ describe("ChatEngine clientFactory seam", () => {
     });
     await engine.start();
     await engine.send("Provide me the latest 5 incidents");
-    expect(sessions[0].sendAndWait).toHaveBeenCalledWith("Provide me the latest 5 incidents", 300000);
+    expect(sessions[0].sendAndWait).toHaveBeenCalledWith(
+      "Provide me the latest 5 incidents",
+      300000
+    );
   });
 });
 
@@ -319,9 +320,17 @@ describe("ChatEngine.getAuthStatus", () => {
 
 describe("ChatEngine.runSubAgent", () => {
   it("creates a second session with ONLY the given tools, returns accumulated deltas, disconnects", async () => {
-    const { client, createSession, sessions } = makeFakeClient(undefined, ["## Suspects\n", "- a.ts:42"]);
+    const { client, createSession, sessions } = makeFakeClient(undefined, [
+      "## Suspects\n",
+      "- a.ts:42"
+    ]);
     const config = loadAgentConfig({ ...base });
-    const engine = new ChatEngine({ config, tools: [], ...noopDeps, clientFactory: () => client as never });
+    const engine = new ChatEngine({
+      config,
+      tools: [],
+      ...noopDeps,
+      clientFactory: () => client as never
+    });
     await engine.start();
 
     const subTools = [{ name: "checkout_repo" }, { name: "get_incident" }] as never[];
@@ -348,7 +357,12 @@ describe("ChatEngine.runSubAgent", () => {
     // sub-session's sendAndWait rejects, and we assert disconnect still runs.
     const { client, sessions } = makeFakeClient(undefined, [], new Error("timeout"));
     const config = loadAgentConfig({ ...base });
-    const engine = new ChatEngine({ config, tools: [], ...noopDeps, clientFactory: () => client as never });
+    const engine = new ChatEngine({
+      config,
+      tools: [],
+      ...noopDeps,
+      clientFactory: () => client as never
+    });
     await engine.start();
     await expect(engine.runSubAgent({ tools: [], prompt: "x" })).rejects.toThrow(/timeout/);
     expect(sessions[1].disconnect).toHaveBeenCalledOnce();
@@ -359,7 +373,12 @@ describe("CODE_ANALYSIS_SYSTEM_INSTRUCTION", () => {
   it("is appended when ADO org is configured", async () => {
     const { client, createSession } = makeFakeClient();
     const config = loadAgentConfig({ ...base }); // base includes ADO_ORG_URL
-    const engine = new ChatEngine({ config, tools: [], ...noopDeps, clientFactory: () => client as never });
+    const engine = new ChatEngine({
+      config,
+      tools: [],
+      ...noopDeps,
+      clientFactory: () => client as never
+    });
     await engine.start();
     const sc = createSession.mock.calls[0][0];
     expect(sc.systemMessage?.content).toContain("analyze_code");
@@ -372,7 +391,12 @@ describe("CODE_ANALYSIS_SYSTEM_INSTRUCTION", () => {
     delete noAdo.ADO_ORG_URL;
     delete noAdo.ADO_PROJECT;
     const config = loadAgentConfig(noAdo);
-    const engine = new ChatEngine({ config, tools: [], ...noopDeps, clientFactory: () => client as never });
+    const engine = new ChatEngine({
+      config,
+      tools: [],
+      ...noopDeps,
+      clientFactory: () => client as never
+    });
     await engine.start();
     const sc = createSession.mock.calls[0][0];
     expect(sc.systemMessage?.content ?? "").not.toContain("analyze_code");

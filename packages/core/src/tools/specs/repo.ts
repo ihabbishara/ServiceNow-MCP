@@ -4,8 +4,7 @@ import { GitError } from "../../clients/git.js";
 import type { GitRepoClient } from "../../clients/git.js";
 import type { McpRuntime } from "../../runtime.js";
 
-const DISABLED_MSG =
-  "Git repo tools require Azure DevOps to be configured (set ADO_ORG_URL).";
+const DISABLED_MSG = "Git repo tools require Azure DevOps to be configured (set ADO_ORG_URL).";
 
 const gitClient = (rt: McpRuntime): GitRepoClient => {
   // Defense in depth: enabledWhen gates on config, this guards a runtime without the client.
@@ -60,7 +59,8 @@ export const repoSpecs = [
       ref
     },
     enabledWhen: (c) => (c.azureDevOps.orgUrl ? null : DISABLED_MSG),
-    run: (rt, a) => mapGitError(gitClient(rt).grep(a.repo_url, a.pattern, { ref: a.ref, glob: a.glob }))
+    run: (rt, a) =>
+      mapGitError(gitClient(rt).grep(a.repo_url, a.pattern, { ref: a.ref, glob: a.glob }))
   }),
   defineSpec({
     name: "read_repo_file",
@@ -70,8 +70,18 @@ export const repoSpecs = [
     schema: {
       repo_url: repoUrl,
       path: z.string().min(1).describe("Repo-relative file path, e.g. src/payments/charge.ts"),
-      start_line: z.coerce.number().int().positive().optional().describe("First line (1-based, inclusive)"),
-      end_line: z.coerce.number().int().positive().optional().describe("Last line (1-based, inclusive)"),
+      start_line: z.coerce
+        .number()
+        .int()
+        .positive()
+        .optional()
+        .describe("First line (1-based, inclusive)"),
+      end_line: z.coerce
+        .number()
+        .int()
+        .positive()
+        .optional()
+        .describe("Last line (1-based, inclusive)"),
       ref
     },
     enabledWhen: (c) => (c.azureDevOps.orgUrl ? null : DISABLED_MSG),
@@ -92,11 +102,19 @@ export const repoSpecs = [
     schema: {
       repo_url: repoUrl,
       path: z.string().optional().describe("Repo-relative path to scope the log to"),
-      max_count: z.coerce.number().int().positive().max(100).optional().describe("Commits to return (default 20)"),
+      max_count: z.coerce
+        .number()
+        .int()
+        .positive()
+        .max(100)
+        .optional()
+        .describe("Commits to return (default 20)"),
       ref
     },
     enabledWhen: (c) => (c.azureDevOps.orgUrl ? null : DISABLED_MSG),
     run: (rt, a) =>
-      mapGitError(gitClient(rt).history(a.repo_url, { ref: a.ref, path: a.path, maxCount: a.max_count }))
+      mapGitError(
+        gitClient(rt).history(a.repo_url, { ref: a.ref, path: a.path, maxCount: a.max_count })
+      )
   })
 ];
