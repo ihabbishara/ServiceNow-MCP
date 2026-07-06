@@ -12,7 +12,7 @@ export interface PromptSpec<Shape extends z.ZodRawShape = z.ZodRawShape> {
 export const definePromptSpec = <S extends z.ZodRawShape>(spec: PromptSpec<S>): PromptSpec =>
   spec as PromptSpec;
 
-/** The four workflow prompts, defined once for both surfaces (MCP prompts + agent slash commands). */
+/** The workflow prompts, defined once for both surfaces (MCP prompts + agent slash commands). */
 export const PROMPT_SPECS: PromptSpec[] = [
   definePromptSpec({
     name: "incident_triage",
@@ -189,6 +189,47 @@ Then help me document:
    - Runbook updates
 
 Focus on learning and prevention, not blame.`
+  }),
+
+  definePromptSpec({
+    name: "code_analysis",
+    description: "Pinpoint likely root-cause code locations for an incident's error output",
+    schema: {
+      repo_url: z
+        .string()
+        .describe("Azure DevOps repo clone URL (https://dev.azure.com/<org>/<project>/_git/<repo>)"),
+      error_text: z.string().describe("Error messages / stack traces to analyse"),
+      incident_number: z.string().optional().describe("Related incident, e.g. INC0012345"),
+      ref: z.string().optional().describe("Branch or tag matching the deployed version")
+    },
+    build: (a) => `You are a Code Analyser. Pinpoint where in the codebase the failure below most likely originates.
+
+Repository: ${a.repo_url}${a.ref ? ` (ref: ${a.ref})` : ""}${
+      a.incident_number
+        ? `\nIncident: ${a.incident_number} — call get_incident for more context if needed.`
+        : ""
+    }
+
+Error output to analyse:
+\`\`\`
+${a.error_text}
+\`\`\`
+
+Method:
+1. Call checkout_repo for the repository${a.ref ? " at the given ref" : ""}.
+2. Extract file names, class/function symbols, and line numbers from the error output.
+3. Call search_repo for each symbol or distinctive message fragment.
+4. Call read_repo_file around the matches to understand the failing code path.
+5. Call repo_history on the suspect files — recent changes are prime suspects.
+
+Report exactly these sections:
+## Suspects — file:line list, one line each, with why it is suspect
+## Hypothesis — the most likely failure mechanism
+## Evidence — code and commit facts supporting the hypothesis
+## Suggested fix area — where a fix would land (do not write the fix)
+## Confidence — high / medium / low, with the main remaining uncertainty
+
+Ground every claim in tool output. Never invent file contents or line numbers.`
   })
 ];
 
