@@ -17,26 +17,51 @@ const base = {
 
 /**
  * A fake `CopilotSession` that records nothing but offers the lifecycle hooks
- * the engine touches: `.on` (returns an unsubscribe fn), `.sendAndWait`,
+ * the engine touches: `.on` (registers a handler, returns an unsubscribe fn),
+ * `.sendAndWait` (emits any queued deltas through the registered
+ * `assistant.message_delta` handler, or rejects if `rejectWith` is given),
  * `.disconnect`, `.abort`.
  */
-const makeFakeSession = () => ({
-  on: vi.fn(() => vi.fn()),
-  sendAndWait: vi.fn(async () => undefined),
-  disconnect: vi.fn(async () => undefined),
-  abort: vi.fn(async () => undefined)
-});
+const makeFakeSession = (deltas: string[] = [], rejectWith?: Error) => {
+  const handlers: Record<string, (e: { data: { deltaContent: string } }) => void> = {};
+  const session = {
+    on: vi.fn((event: string, cb: (e: { data: { deltaContent: string } }) => void) => {
+      handlers[event] = cb;
+      return vi.fn();
+    }),
+    sendAndWait: vi.fn(async () => {
+      if (rejectWith) throw rejectWith;
+      for (const d of deltas) handlers["assistant.message_delta"]?.({ data: { deltaContent: d } });
+      return undefined;
+    }),
+    disconnect: vi.fn(async () => undefined),
+    abort: vi.fn(async () => undefined)
+  };
+  return session;
+};
 
 /**
  * A fake `CopilotClient` whose `createSession` captures the `SessionConfig`
  * the engine hands it, so tests can assert seat-vs-BYOK wiring without a live
- * Copilot seat. `start`/`stop` are no-op stubs.
+ * Copilot seat. Each `createSession` returns a NEW session: the first is the
+ * main chat (no deltas); later ones are sub-agent sessions that stream
+ * `subAgentDeltas` (or reject with `subAgentReject`). `start`/`stop` are no-op
+ * stubs.
  */
 const makeFakeClient = (
-  authStatus = { isAuthenticated: true, login: "octocat", authType: "user" as const }
+  authStatus = { isAuthenticated: true, login: "octocat", authType: "user" as const },
+  subAgentDeltas: string[] = [],
+  subAgentReject?: Error
 ) => {
-  const session = makeFakeSession();
-  const createSession = vi.fn(async (_config: SessionConfig) => session);
+  const sessions: ReturnType<typeof makeFakeSession>[] = [];
+  const createSession = vi.fn(async (_config: SessionConfig) => {
+    const s =
+      sessions.length === 0
+        ? makeFakeSession([])
+        : makeFakeSession(subAgentDeltas, subAgentReject);
+    sessions.push(s);
+    return s;
+  });
   const getAuthStatus = vi.fn(async () => authStatus);
   const client = {
     start: vi.fn(async () => undefined),
@@ -44,7 +69,7 @@ const makeFakeClient = (
     getAuthStatus,
     createSession
   };
-  return { client, createSession, getAuthStatus, session };
+  return { client, createSession, getAuthStatus, sessions };
 };
 
 const noopDeps = {
@@ -121,16 +146,20 @@ describe("ChatEngine clientFactory seam", () => {
     });
     await engine.start();
     const sessionConfig = createSession.mock.calls[0][0];
-    expect(sessionConfig.systemMessage).toEqual({
-      mode: "append",
-      content: KNOWLEDGE_SYSTEM_INSTRUCTION
-    });
+    // base also configures ADO, so the code-analysis instruction is appended too;
+    // assert the knowledge instruction is present rather than an exact-equal match.
+    expect(sessionConfig.systemMessage?.mode).toBe("append");
+    expect(sessionConfig.systemMessage?.content).toContain(KNOWLEDGE_SYSTEM_INSTRUCTION);
     expect(KNOWLEDGE_SYSTEM_INSTRUCTION).toContain("search_knowledge");
   });
 
-  it("omits systemMessage when the crawler is not configured", async () => {
+  it("omits systemMessage when no steering instruction applies", async () => {
     const { client, createSession } = makeFakeClient();
-    const config = loadAgentConfig({ ...base }); // no CRAWL_SEEDS
+    // no CRAWL_SEEDS, and drop ADO so the code-analysis instruction is off too.
+    const noAdo = { ...base } as Record<string, string>;
+    delete noAdo.ADO_ORG_URL;
+    delete noAdo.ADO_PROJECT;
+    const config = loadAgentConfig(noAdo);
     const engine = new ChatEngine({
       config,
       tools: [],
@@ -143,7 +172,7 @@ describe("ChatEngine clientFactory seam", () => {
   });
 
   it("send() passes the configured TURN_TIMEOUT_MS to sendAndWait (not the SDK 60s default)", async () => {
-    const { client, session } = makeFakeClient();
+    const { client, sessions } = makeFakeClient();
     const config = loadAgentConfig({ ...base, TURN_TIMEOUT_MS: "300000" });
     const engine = new ChatEngine({
       config,
@@ -153,7 +182,7 @@ describe("ChatEngine clientFactory seam", () => {
     });
     await engine.start();
     await engine.send("Provide me the latest 5 incidents");
-    expect(session.sendAndWait).toHaveBeenCalledWith("Provide me the latest 5 incidents", 300000);
+    expect(sessions[0].sendAndWait).toHaveBeenCalledWith("Provide me the latest 5 incidents", 300000);
   });
 });
 
@@ -285,5 +314,67 @@ describe("ChatEngine.getAuthStatus", () => {
     // After stop the client/session are released; calling in must fail loudly
     // rather than dispatch to a stopped client.
     await expect(engine.getAuthStatus()).rejects.toThrow(/not started/);
+  });
+});
+
+describe("ChatEngine.runSubAgent", () => {
+  it("creates a second session with ONLY the given tools, returns accumulated deltas, disconnects", async () => {
+    const { client, createSession, sessions } = makeFakeClient(undefined, ["## Suspects\n", "- a.ts:42"]);
+    const config = loadAgentConfig({ ...base });
+    const engine = new ChatEngine({ config, tools: [], ...noopDeps, clientFactory: () => client as never });
+    await engine.start();
+
+    const subTools = [{ name: "checkout_repo" }, { name: "get_incident" }] as never[];
+    const report = await engine.runSubAgent({ tools: subTools, prompt: "analyse this" });
+
+    expect(report).toBe("## Suspects\n- a.ts:42");
+    expect(createSession).toHaveBeenCalledTimes(2);
+    const subConfig = createSession.mock.calls[1][0];
+    expect(subConfig.tools).toBe(subTools);
+    expect(subConfig.model).toBe(config.llm.model);
+    expect(sessions[1].sendAndWait).toHaveBeenCalledWith("analyse this", config.turnTimeoutMs);
+    expect(sessions[1].disconnect).toHaveBeenCalledOnce();
+    expect(sessions[0].disconnect).not.toHaveBeenCalled(); // main session untouched
+  });
+
+  it("throws before start()", async () => {
+    const config = loadAgentConfig({ ...base });
+    const engine = new ChatEngine({ config, tools: [], ...noopDeps });
+    await expect(engine.runSubAgent({ tools: [], prompt: "x" })).rejects.toThrow(/not started/);
+  });
+
+  it("disconnects the sub-session even when sendAndWait rejects", async () => {
+    // Deterministic variant of the brief's timing-based test (see report): the
+    // sub-session's sendAndWait rejects, and we assert disconnect still runs.
+    const { client, sessions } = makeFakeClient(undefined, [], new Error("timeout"));
+    const config = loadAgentConfig({ ...base });
+    const engine = new ChatEngine({ config, tools: [], ...noopDeps, clientFactory: () => client as never });
+    await engine.start();
+    await expect(engine.runSubAgent({ tools: [], prompt: "x" })).rejects.toThrow(/timeout/);
+    expect(sessions[1].disconnect).toHaveBeenCalledOnce();
+  });
+});
+
+describe("CODE_ANALYSIS_SYSTEM_INSTRUCTION", () => {
+  it("is appended when ADO org is configured", async () => {
+    const { client, createSession } = makeFakeClient();
+    const config = loadAgentConfig({ ...base }); // base includes ADO_ORG_URL
+    const engine = new ChatEngine({ config, tools: [], ...noopDeps, clientFactory: () => client as never });
+    await engine.start();
+    const sc = createSession.mock.calls[0][0];
+    expect(sc.systemMessage?.content).toContain("analyze_code");
+    expect(sc.systemMessage?.content).toContain("_git/");
+  });
+
+  it("is absent when ADO org is not configured", async () => {
+    const { client, createSession } = makeFakeClient();
+    const noAdo = { ...base } as Record<string, string>;
+    delete noAdo.ADO_ORG_URL;
+    delete noAdo.ADO_PROJECT;
+    const config = loadAgentConfig(noAdo);
+    const engine = new ChatEngine({ config, tools: [], ...noopDeps, clientFactory: () => client as never });
+    await engine.start();
+    const sc = createSession.mock.calls[0][0];
+    expect(sc.systemMessage?.content ?? "").not.toContain("analyze_code");
   });
 });
