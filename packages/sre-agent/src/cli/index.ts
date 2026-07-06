@@ -7,6 +7,7 @@ import { loadDotenv } from "../config/env.js";
 import { ChatEngine } from "../engine/engine.js";
 import { copilotLogin, isCopilotAuthError } from "../engine/auth.js";
 import { buildTools } from "../tools/index.js";
+import { buildAnalyzeCodeTool } from "../tools/analyzeCode.js";
 import { buildWorkflowPrompt } from "../workflows/index.js";
 import { runDoctor, runChecks } from "../doctor.js";
 import { runInit } from "../init.js";
@@ -184,13 +185,26 @@ const main = async () => {
     return ans === "y" || ans === "yes";
   };
 
+  // analyze_code needs the engine (to spawn its sub-session) and the engine
+  // needs the full toolset at construction — a lazy ref breaks the cycle. The
+  // ref is read in the closure before its single assignment below, so it can't
+  // be const despite prefer-const's suggestion.
+  // eslint-disable-next-line prefer-const
+  let engineRef: ChatEngine | undefined;
   const engine = new ChatEngine({
     config,
-    tools: buildTools(runtime),
+    tools: [
+      ...buildTools(runtime),
+      buildAnalyzeCodeTool(runtime, () => {
+        if (!engineRef) throw new Error("engine not started");
+        return engineRef;
+      })
+    ],
     confirm,
     onDelta: (t) => stdout.write(t),
     onToolStart: (n) => stdout.write(`\n  ↳ ${n}…\n`)
   });
+  engineRef = engine;
 
   process.stderr.write(
     `[sre-agent] connecting to Copilot (${config.llm.mode} mode, model ${config.llm.model})… ` +

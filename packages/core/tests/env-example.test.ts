@@ -15,7 +15,8 @@ const REQUIRED_DOCUMENTED = [
   "WEB_PORT",
   "CRAWL_TTL_HOURS",
   "UPLOAD_MAX_BYTES",
-  "SHAREPOINT_TIMEOUT_MS"
+  "SHAREPOINT_TIMEOUT_MS",
+  "GIT_WORKSPACE_DIR"
 ];
 
 describe(".env.example completeness", () => {

@@ -31,6 +31,15 @@ export const SHAREPOINT_SYSTEM_INSTRUCTION =
   "and asks about its documentation, runbook, postmortem, or details that may live in SharePoint, call " +
   "`get_incident_documents` (alongside the ServiceNow tools) and cite the document names you used.";
 
+/** Appended when ADO is configured: steer toward analyze_code for code root-cause requests. */
+export const CODE_ANALYSIS_SYSTEM_INSTRUCTION =
+  "This agent has an `analyze_code` tool that checks out an Azure DevOps git repository and pinpoints " +
+  "likely root-cause code locations for an incident's error output. When an incident contains stack " +
+  "traces or error messages referencing application code and the user wants a root cause, first ask " +
+  "the user for the repo clone URL in the format https://dev.azure.com/<org>/<project>/_git/<repo> " +
+  "(and optionally the deployed branch/tag), then call `analyze_code` with that URL and the error text. " +
+  "Relay the analyser's report and cite the suspect file:line locations.";
+
 /**
  * Translate the agent's seat-auth config into `CopilotClientOptions`.
  *
@@ -108,6 +117,23 @@ export class ChatEngine {
 
   constructor(private readonly deps: EngineDeps) {}
 
+  /** BYOK provider block for a SessionConfig; empty object in seat mode. */
+  private providerConfig(): Partial<SessionConfig> {
+    const cfg = this.deps.config;
+    return cfg.llm.mode === "byok" && cfg.llm.provider
+      ? {
+          provider: {
+            type: cfg.llm.provider.type,
+            baseUrl: cfg.llm.provider.baseUrl,
+            apiKey: cfg.llm.provider.apiKey,
+            ...(cfg.llm.provider.type === "azure"
+              ? { azure: { apiVersion: cfg.llm.provider.apiVersion } }
+              : {})
+          }
+        }
+      : {};
+  }
+
   async start(): Promise<void> {
     // Seat auth options are derived from config; tests inject a fake factory
     // to assert what the client is constructed with.
@@ -127,7 +153,8 @@ export class ChatEngine {
         makePermissionHandler({ confirmWrites: cfg.confirmWrites }, this.deps.confirm);
       const systemInstructions = [
         cfg.knowledgeEnabled ? KNOWLEDGE_SYSTEM_INSTRUCTION : null,
-        cfg.sharePointEnabled ? SHAREPOINT_SYSTEM_INSTRUCTION : null
+        cfg.sharePointEnabled ? SHAREPOINT_SYSTEM_INSTRUCTION : null,
+        cfg.app.azureDevOps.orgUrl ? CODE_ANALYSIS_SYSTEM_INSTRUCTION : null
       ].filter(Boolean);
       const sessionConfig: SessionConfig = {
         model: cfg.llm.model,
@@ -137,18 +164,7 @@ export class ChatEngine {
         ...(systemInstructions.length
           ? { systemMessage: { mode: "append" as const, content: systemInstructions.join("\n\n") } }
           : {}),
-        ...(cfg.llm.mode === "byok" && cfg.llm.provider
-          ? {
-              provider: {
-                type: cfg.llm.provider.type,
-                baseUrl: cfg.llm.provider.baseUrl,
-                apiKey: cfg.llm.provider.apiKey,
-                ...(cfg.llm.provider.type === "azure"
-                  ? { azure: { apiVersion: cfg.llm.provider.apiVersion } }
-                  : {})
-              }
-            }
-          : {})
+        ...this.providerConfig()
       };
 
       this.session = await this.client.createSession(sessionConfig);
@@ -191,6 +207,41 @@ export class ChatEngine {
   async send(prompt: string): Promise<void> {
     if (!this.session) throw new Error("engine not started");
     await this.session.sendAndWait(prompt, this.deps.config.turnTimeoutMs);
+  }
+
+  /**
+   * Run a one-shot sub-agent: a second session on the same client with a
+   * restricted toolset. Deltas are not streamed to the UI; they accumulate and
+   * the final text returns. The sub-session is disconnected afterwards; the
+   * main session is untouched.
+   */
+  async runSubAgent(opts: { tools: Tool<any>[]; prompt: string }): Promise<string> {
+    if (!this.client) throw new Error("engine not started");
+    const cfg = this.deps.config;
+    const session = await this.client.createSession({
+      model: cfg.llm.model,
+      streaming: true,
+      tools: opts.tools,
+      // Sub-agent toolset is read-only; deny anything that asks for permission.
+      onPermissionRequest: async () => ({
+        kind: "reject" as const,
+        feedback: "Sub-agent tools are read-only."
+      }),
+      ...this.providerConfig()
+    });
+    const chunks: string[] = [];
+    const offDelta = session.on("assistant.message_delta", (e) => chunks.push(e.data.deltaContent));
+    const offTool = session.on("tool.execution_start", (e) =>
+      this.deps.onToolStart?.(e.data.toolName)
+    );
+    try {
+      await session.sendAndWait(opts.prompt, cfg.turnTimeoutMs);
+    } finally {
+      offDelta();
+      offTool();
+      await session.disconnect().catch(() => undefined);
+    }
+    return chunks.join("");
   }
 
   async abort(): Promise<void> {

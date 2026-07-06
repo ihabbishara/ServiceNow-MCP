@@ -2,12 +2,13 @@ import { describe, it, expect } from "vitest";
 import { PROMPT_SPECS, promptSpec } from "../../src/prompts/registry.js";
 
 describe("PROMPT_SPECS registry", () => {
-  it("holds exactly the four prompts with unique names and metadata", () => {
+  it("holds exactly the workflow prompts with unique names and metadata", () => {
     expect(PROMPT_SPECS.map((p) => p.name)).toEqual([
       "incident_triage",
       "shift_handover",
       "change_review",
-      "incident_postmortem"
+      "incident_postmortem",
+      "code_analysis"
     ]);
     for (const p of PROMPT_SPECS) {
       expect(p.description.length).toBeGreaterThan(10);
@@ -53,5 +54,34 @@ describe("PROMPT_SPECS registry", () => {
     expect(text).toContain("search_knowledge");
     expect(text).toContain("get_incident_documents for INC0012345");
     expect(text).toContain("Focus on learning and prevention, not blame.");
+  });
+});
+
+describe("code_analysis prompt", () => {
+  it("embeds the repo URL, error text, ref, and incident and names the repo tools", () => {
+    const text = promptSpec("code_analysis").build({
+      repo_url: "https://dev.azure.com/Org/P/_git/pay",
+      error_text: "TypeError: Cannot read properties of undefined at charge (charge.ts:42)",
+      incident_number: "INC0012345",
+      ref: "release/1.2"
+    });
+    expect(text).toContain("https://dev.azure.com/Org/P/_git/pay");
+    expect(text).toContain("charge.ts:42");
+    expect(text).toContain("release/1.2");
+    expect(text).toContain("INC0012345");
+    for (const tool of ["checkout_repo", "search_repo", "read_repo_file", "repo_history"]) {
+      expect(text).toContain(tool);
+    }
+    expect(text).toContain("## Suspects");
+    expect(text).toContain("## Confidence");
+  });
+
+  it("omits incident/ref lines when not provided", () => {
+    const text = promptSpec("code_analysis").build({
+      repo_url: "https://dev.azure.com/Org/P/_git/pay",
+      error_text: "boom"
+    });
+    expect(text).not.toContain("Incident:");
+    expect(text).not.toContain("ref:");
   });
 });
