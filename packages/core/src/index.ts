@@ -5,6 +5,7 @@ export * from "./clients/servicenow.js";
 export * from "./clients/ado/types.js";
 export * from "./clients/ado/az.js";
 export * from "./clients/ado/index.js";
+export * from "./clients/git.js";
 export * from "./clients/embedder.js";
 export * from "./clients/chat/types.js";
 export * from "./clients/chat/factory.js";
