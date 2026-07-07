@@ -104,8 +104,14 @@ export function EnvSettings() {
   const save = async () => {
     setSaving(true);
     try {
-      const res = await putEnv(varsToSave(vars, originalKeys));
-      setIssues(res.ok ? undefined : (await res.json()).issues);
+      const payload = varsToSave(vars, originalKeys);
+      const res = await putEnv(payload);
+      if (res.ok) {
+        setIssues(undefined);
+        setOriginalKeys(Object.keys(payload)); // disk now matches the payload's key set
+      } else {
+        setIssues((await res.json()).issues);
+      }
     } finally {
       setSaving(false);
     }
