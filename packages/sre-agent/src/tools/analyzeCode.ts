@@ -41,7 +41,11 @@ export const buildAnalyzeCodeTool = (runtime: McpRuntime, getEngine: () => ChatE
         const tools = TOOL_SPECS.filter((s) =>
           (CODE_ANALYSER_TOOL_NAMES as readonly string[]).includes(s.name)
         ).map((s) => toCopilotTool(s, runtime));
-        const report = await getEngine().runSubAgent({ tools, prompt });
+        const report = await getEngine().runSubAgent({
+          tools,
+          prompt,
+          agentLabel: "Code Analyser"
+        });
         return { report };
       } catch (err) {
         return { error: err instanceof Error ? err.message : String(err) };

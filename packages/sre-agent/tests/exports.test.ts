@@ -7,6 +7,7 @@ describe("public API barrel", () => {
       "ChatEngine",
       "loadAgentConfig",
       "buildTools",
+      "buildAnalyzeCodeTool",
       "copilotLogin",
       "isCopilotAuthError",
       "loadDotenv",

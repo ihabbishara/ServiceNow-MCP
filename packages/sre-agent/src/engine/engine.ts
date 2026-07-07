@@ -80,6 +80,15 @@ export const buildClientOptions = (
   return options;
 };
 
+/** Progress event from a runSubAgent invocation, for UI surfaces to display. */
+export interface SubAgentEvent {
+  phase: "start" | "tool" | "done" | "error";
+  /** Human label of the sub-agent, e.g. "Code Analyser". */
+  agent: string;
+  /** Phase detail: tool name + short arg summary, duration ("34s"), or error message. */
+  detail?: string;
+}
+
 export interface EngineDeps {
   config: AgentConfig;
   tools: Tool<any>[];
@@ -87,6 +96,8 @@ export interface EngineDeps {
   confirm: (summary: string) => Promise<boolean>;
   onDelta: (text: string) => void;
   onToolStart?: (name: string) => void;
+  /** Sub-agent progress (start/tool/done/error); optional — surfaces opt in. */
+  onSubAgent?: (e: SubAgentEvent) => void;
   /**
    * Optional override for the permission handler. When omitted, the engine
    * builds one from `config.confirmWrites` + `confirm` so the write tool is
@@ -102,6 +113,21 @@ export interface EngineDeps {
    */
   clientFactory?: (options: CopilotClientOptions) => CopilotClient;
 }
+
+// The most informative argument per repo tool; repo_url is never echoed (noise —
+// the user supplied it) and values are flattened to one short line.
+const DETAIL_ARG_KEYS = ["pattern", "path", "ref"] as const;
+const toolDetail = (name: string, args?: Record<string, unknown>): string => {
+  for (const key of DETAIL_ARG_KEYS) {
+    const v = args?.[key];
+    if (typeof v === "string" && v) {
+      const flat = v.replace(/\s+/g, " ").trim();
+      const short = flat.length > 60 ? `${flat.slice(0, 59)}…` : flat;
+      return `${name} — "${short}"`;
+    }
+  }
+  return name;
+};
 
 /**
  * Front-end-agnostic chat engine wrapping the Copilot SDK lifecycle:
@@ -212,36 +238,56 @@ export class ChatEngine {
   /**
    * Run a one-shot sub-agent: a second session on the same client with a
    * restricted toolset. Deltas are not streamed to the UI; they accumulate and
-   * the final text returns. The sub-session is disconnected afterwards; the
-   * main session is untouched.
+   * the final text returns. Progress is reported through `deps.onSubAgent`
+   * (start → tool per execution → done/error) labeled with `agentLabel`;
+   * sub-agent tool starts do NOT reach `deps.onToolStart` — that channel is
+   * main-session activity only. The sub-session is disconnected afterwards;
+   * the main session is untouched.
    */
-  async runSubAgent(opts: { tools: Tool<any>[]; prompt: string }): Promise<string> {
+  async runSubAgent(opts: {
+    tools: Tool<any>[];
+    prompt: string;
+    agentLabel?: string;
+  }): Promise<string> {
     if (!this.client) throw new Error("engine not started");
     const cfg = this.deps.config;
-    const session = await this.client.createSession({
-      model: cfg.llm.model,
-      streaming: true,
-      tools: opts.tools,
-      // Sub-agent toolset is read-only; deny anything that asks for permission.
-      onPermissionRequest: async () => ({
-        kind: "reject" as const,
-        feedback: "Sub-agent tools are read-only."
-      }),
-      ...this.providerConfig()
-    });
-    const chunks: string[] = [];
-    const offDelta = session.on("assistant.message_delta", (e) => chunks.push(e.data.deltaContent));
-    const offTool = session.on("tool.execution_start", (e) =>
-      this.deps.onToolStart?.(e.data.toolName)
-    );
+    const agent = opts.agentLabel ?? "sub-agent";
+    const emit = (phase: SubAgentEvent["phase"], detail?: string) =>
+      this.deps.onSubAgent?.({ phase, agent, ...(detail !== undefined ? { detail } : {}) });
+    const startedAt = Date.now();
+    emit("start");
     try {
-      await session.sendAndWait(opts.prompt, cfg.turnTimeoutMs);
-    } finally {
-      offDelta();
-      offTool();
-      await session.disconnect().catch(() => undefined);
+      const session = await this.client.createSession({
+        model: cfg.llm.model,
+        streaming: true,
+        tools: opts.tools,
+        // Sub-agent toolset is read-only; deny anything that asks for permission.
+        onPermissionRequest: async () => ({
+          kind: "reject" as const,
+          feedback: "Sub-agent tools are read-only."
+        }),
+        ...this.providerConfig()
+      });
+      const chunks: string[] = [];
+      const offDelta = session.on("assistant.message_delta", (e) =>
+        chunks.push(e.data.deltaContent)
+      );
+      const offTool = session.on("tool.execution_start", (e) =>
+        emit("tool", toolDetail(e.data.toolName, e.data.arguments))
+      );
+      try {
+        await session.sendAndWait(opts.prompt, cfg.turnTimeoutMs);
+      } finally {
+        offDelta();
+        offTool();
+        await session.disconnect().catch(() => undefined);
+      }
+      emit("done", `${Math.round((Date.now() - startedAt) / 1000)}s`);
+      return chunks.join("");
+    } catch (err) {
+      emit("error", err instanceof Error ? err.message : String(err));
+      throw err;
     }
-    return chunks.join("");
   }
 
   async abort(): Promise<void> {

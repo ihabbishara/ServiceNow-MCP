@@ -32,6 +32,12 @@ export interface EngineHostOptions {
   tools: Tool<unknown>[];
   /** Seam: defaults to `new ChatEngine(deps)`; tests inject a fake. */
   engineFactory?: (deps: EngineDeps) => ChatEngine;
+  /**
+   * Extra Copilot tools that need a live engine reference (e.g. analyze_code,
+   * whose handler spawns a sub-agent session). `getEngine` resolves the host's
+   * CURRENT engine — correct across restart() rebuilds.
+   */
+  extraToolsFactory?: (getEngine: () => ChatEngine) => Tool<unknown>[];
   /** Seam: defaults to the SseHub broadcast; tests capture events. */
   emit?: (event: ServerEvent) => void;
   /** Seam: defaults to randomUUID; tests pin confirm ids. */
@@ -123,13 +129,18 @@ export const createEngineHost = (opts: EngineHostOptions): EngineHost => {
       emit({ type: "confirm-request", id, summary });
     });
 
-  const buildEngine = (cfg: AgentConfig) =>
+  // Return type is annotated (not inferred) to break the construction cycle:
+  // the `() => engine` thunk below reads `engine`, whose own type comes from
+  // this function — same lazy-ref break as the CLI's `engineRef`.
+  const buildEngine = (cfg: AgentConfig): ChatEngine =>
     engineFactory({
       config: cfg,
-      tools: opts.tools,
+      tools: [...opts.tools, ...(opts.extraToolsFactory?.(() => engine) ?? [])],
       confirm,
       onDelta: (text) => emit({ type: "delta", text }),
-      onToolStart: (name) => emit({ type: "tool-start", name })
+      onToolStart: (name) => emit({ type: "tool-start", name }),
+      onSubAgent: (e) =>
+        emit({ type: "subagent-status", phase: e.phase, agent: e.agent, detail: e.detail })
     });
 
   let engine = buildEngine(config);

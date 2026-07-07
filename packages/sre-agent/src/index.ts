@@ -6,5 +6,7 @@ export { loadAgentConfig } from "./config.js";
 export type { AgentConfig } from "./config.js";
 export { loadDotenv, resolveDotenvPath, packageEnvPath } from "./config/env.js";
 export { buildTools } from "./tools/index.js";
+export { buildAnalyzeCodeTool, CODE_ANALYSER_TOOL_NAMES } from "./tools/analyzeCode.js";
+export type { SubAgentEvent } from "./engine/engine.js";
 export { buildWorkflowPrompt } from "./workflows/index.js";
 export { bootCrawl } from "./cli/crawl.js";

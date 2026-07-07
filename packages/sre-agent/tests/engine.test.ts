@@ -18,19 +18,31 @@ const base = {
 /**
  * A fake `CopilotSession` that records nothing but offers the lifecycle hooks
  * the engine touches: `.on` (registers a handler, returns an unsubscribe fn),
- * `.sendAndWait` (emits any queued deltas through the registered
- * `assistant.message_delta` handler, or rejects if `rejectWith` is given),
+ * `.sendAndWait` (fires any queued `toolEvents` through the registered
+ * `tool.execution_start` handler, then either rejects with `rejectWith` or
+ * emits the queued deltas through the `assistant.message_delta` handler),
  * `.disconnect`, `.abort`.
  */
-const makeFakeSession = (deltas: string[] = [], rejectWith?: Error) => {
-  const handlers: Record<string, (e: { data: { deltaContent: string } }) => void> = {};
+const makeFakeSession = (
+  deltas: string[] = [],
+  opts: {
+    toolEvents?: { toolName: string; arguments?: Record<string, unknown> }[];
+    rejectWith?: Error;
+  } = {}
+) => {
+  const handlers: Record<string, (e: { data: any }) => void> = {};
   const session = {
-    on: vi.fn((event: string, cb: (e: { data: { deltaContent: string } }) => void) => {
+    on: vi.fn((event: string, cb: (e: { data: any }) => void) => {
       handlers[event] = cb;
       return vi.fn();
     }),
     sendAndWait: vi.fn(async () => {
-      if (rejectWith) throw rejectWith;
+      for (const t of opts.toolEvents ?? []) {
+        handlers["tool.execution_start"]?.({
+          data: { toolName: t.toolName, arguments: t.arguments }
+        });
+      }
+      if (opts.rejectWith) throw opts.rejectWith;
       for (const d of deltas) handlers["assistant.message_delta"]?.({ data: { deltaContent: d } });
       return undefined;
     }),
@@ -45,18 +57,21 @@ const makeFakeSession = (deltas: string[] = [], rejectWith?: Error) => {
  * the engine hands it, so tests can assert seat-vs-BYOK wiring without a live
  * Copilot seat. Each `createSession` returns a NEW session: the first is the
  * main chat (no deltas); later ones are sub-agent sessions that stream
- * `subAgentDeltas` (or reject with `subAgentReject`). `start`/`stop` are no-op
- * stubs.
+ * `subAgentDeltas` and replay `subAgentOpts` (tool events / a rejection).
+ * `start`/`stop` are no-op stubs.
  */
 const makeFakeClient = (
   authStatus = { isAuthenticated: true, login: "octocat", authType: "user" as const },
   subAgentDeltas: string[] = [],
-  subAgentReject?: Error
+  subAgentOpts: {
+    toolEvents?: { toolName: string; arguments?: Record<string, unknown> }[];
+    rejectWith?: Error;
+  } = {}
 ) => {
   const sessions: ReturnType<typeof makeFakeSession>[] = [];
   const createSession = vi.fn(async (_config: SessionConfig) => {
     const s =
-      sessions.length === 0 ? makeFakeSession([]) : makeFakeSession(subAgentDeltas, subAgentReject);
+      sessions.length === 0 ? makeFakeSession() : makeFakeSession(subAgentDeltas, subAgentOpts);
     sessions.push(s);
     return s;
   });
@@ -355,7 +370,9 @@ describe("ChatEngine.runSubAgent", () => {
   it("disconnects the sub-session even when sendAndWait rejects", async () => {
     // Deterministic variant of the brief's timing-based test (see report): the
     // sub-session's sendAndWait rejects, and we assert disconnect still runs.
-    const { client, sessions } = makeFakeClient(undefined, [], new Error("timeout"));
+    const { client, sessions } = makeFakeClient(undefined, [], {
+      rejectWith: new Error("timeout")
+    });
     const config = loadAgentConfig({ ...base });
     const engine = new ChatEngine({
       config,
@@ -366,6 +383,106 @@ describe("ChatEngine.runSubAgent", () => {
     await engine.start();
     await expect(engine.runSubAgent({ tools: [], prompt: "x" })).rejects.toThrow(/timeout/);
     expect(sessions[1].disconnect).toHaveBeenCalledOnce();
+  });
+});
+
+describe("runSubAgent onSubAgent events", () => {
+  const run = async (opts: {
+    deltas?: string[];
+    toolEvents?: { toolName: string; arguments?: Record<string, unknown> }[];
+    rejectWith?: Error;
+    agentLabel?: string;
+  }) => {
+    const { client } = makeFakeClient(undefined, opts.deltas ?? ["ok"], {
+      toolEvents: opts.toolEvents,
+      rejectWith: opts.rejectWith
+    });
+    const config = loadAgentConfig({ ...base });
+    const events: import("../src/engine/engine.js").SubAgentEvent[] = [];
+    const onToolStart = vi.fn();
+    const engine = new ChatEngine({
+      config,
+      tools: [],
+      ...noopDeps,
+      onToolStart,
+      onSubAgent: (e) => events.push(e),
+      clientFactory: () => client as never
+    });
+    await engine.start();
+    const result = engine.runSubAgent({
+      tools: [],
+      prompt: "x",
+      ...(opts.agentLabel ? { agentLabel: opts.agentLabel } : {})
+    });
+    return { result, events, onToolStart };
+  };
+
+  it("emits start → tool (with arg summary) → done, labeled", async () => {
+    const { result, events } = await run({
+      agentLabel: "Code Analyser",
+      toolEvents: [
+        { toolName: "checkout_repo", arguments: { repo_url: "https://dev.azure.com/o/p/_git/r" } },
+        { toolName: "search_repo", arguments: { pattern: "PaymentError", repo_url: "https://x" } }
+      ]
+    });
+    await result;
+    expect(events.map((e) => e.phase)).toEqual(["start", "tool", "tool", "done"]);
+    expect(events.every((e) => e.agent === "Code Analyser")).toBe(true);
+    expect(events[1].detail).toBe("checkout_repo"); // repo_url never echoed
+    expect(events[2].detail).toBe('search_repo — "PaymentError"');
+    expect(events[3].detail).toMatch(/^\d+s$/);
+  });
+
+  it("defaults the label to 'sub-agent'", async () => {
+    const { result, events } = await run({});
+    await result;
+    expect(events[0]).toMatchObject({ phase: "start", agent: "sub-agent" });
+  });
+
+  it("truncates long args to 60 chars and strips newlines", async () => {
+    const long = "a".repeat(80) + "\nsecond line";
+    const { result, events } = await run({
+      toolEvents: [{ toolName: "search_repo", arguments: { pattern: long } }]
+    });
+    await result;
+    const detail = events[1].detail!;
+    expect(detail).toContain("search_repo — ");
+    expect(detail).not.toContain("\n");
+    expect(detail.length).toBeLessThanOrEqual("search_repo — ".length + 64);
+    expect(detail).toContain("…");
+  });
+
+  it("emits error (then rethrows) when the sub-agent fails", async () => {
+    const { result, events } = await run({
+      rejectWith: new Error("timeout waiting for session.idle")
+    });
+    await expect(result).rejects.toThrow(/timeout/);
+    expect(events.map((e) => e.phase)).toEqual(["start", "error"]);
+    expect(events.at(-1)).toMatchObject({
+      phase: "error",
+      detail: expect.stringContaining("timeout")
+    });
+  });
+
+  it("does NOT forward sub-agent tool starts to onToolStart", async () => {
+    const { result, onToolStart } = await run({ toolEvents: [{ toolName: "search_repo" }] });
+    await result;
+    expect(onToolStart).not.toHaveBeenCalled();
+  });
+
+  it("is silent and safe when onSubAgent is not provided", async () => {
+    const { client } = makeFakeClient(undefined, ["ok"], {
+      toolEvents: [{ toolName: "search_repo" }]
+    });
+    const config = loadAgentConfig({ ...base });
+    const engine = new ChatEngine({
+      config,
+      tools: [],
+      ...noopDeps,
+      clientFactory: () => client as never
+    });
+    await engine.start();
+    await expect(engine.runSubAgent({ tools: [], prompt: "x" })).resolves.toBe("ok");
   });
 });
 
