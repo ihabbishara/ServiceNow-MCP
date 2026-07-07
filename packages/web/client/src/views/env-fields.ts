@@ -105,7 +105,8 @@ export const ENV_FIELDS: Record<string, EnvFieldMeta> = {
   },
   ADO_BOARD_MAP: {
     label: "Board map",
-    description: 'JSON map of board name → area path, e.g. {"BoardName":"Area\\\\Path"}. Invalid JSON is ignored.',
+    description:
+      'JSON map of board name → area path, e.g. {"BoardName":"Area\\\\Path"}. Invalid JSON is ignored.',
     group: "Azure DevOps"
   },
   ADO_CSV_DIR: {
@@ -389,7 +390,5 @@ export const varsToSave = (
   originalKeys: string[]
 ): Record<string, string> => {
   const original = new Set(originalKeys);
-  return Object.fromEntries(
-    Object.entries(vars).filter(([k, v]) => v !== "" || original.has(k))
-  );
+  return Object.fromEntries(Object.entries(vars).filter(([k, v]) => v !== "" || original.has(k)));
 };
