@@ -39,7 +39,7 @@ describe("enabledWhen empty-string is treated as disabled (fix #7)", () => {
 describe("toMcpHandler result shaping", () => {
   const runtime = (over: Record<string, unknown> = {}) =>
     ({
-      config: {},
+      config: { azureDevOps: {} },
       serviceNowClient: {
         getIncidentByNumber: vi.fn(async () => null),
         listIncidentsWithFilters: vi.fn(async () => [])

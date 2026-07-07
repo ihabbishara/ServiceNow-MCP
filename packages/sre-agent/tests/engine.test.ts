@@ -500,6 +500,8 @@ describe("CODE_ANALYSIS_SYSTEM_INSTRUCTION", () => {
     const sc = createSession.mock.calls[0][0];
     expect(sc.systemMessage?.content).toContain("analyze_code");
     expect(sc.systemMessage?.content).toContain("_git/");
+    expect(sc.systemMessage?.content).toContain("signalsDetected");
+    expect(sc.systemMessage?.content).toContain("Never run the analysis without");
   });
 
   it("is absent when ADO org is not configured", async () => {

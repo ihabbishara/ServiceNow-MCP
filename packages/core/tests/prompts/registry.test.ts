@@ -30,6 +30,13 @@ describe("PROMPT_SPECS registry", () => {
     expect(text).toContain("Be concise and actionable. Focus on what to do now.");
   });
 
+  it("triage prompt offers proactive code analysis on code signals", () => {
+    const text = promptSpec("incident_triage").build({ incident_number: "INC0012345" });
+    expect(text).toContain("codeAnalysis");
+    expect(text).toContain("codebase root-cause analysis");
+    expect(text).toContain("repo clone URL");
+  });
+
   it("shift_handover interpolates team + hours and defaults hours to 8", () => {
     const withHours = promptSpec("shift_handover").build({
       team_name: "Platform SRE",
