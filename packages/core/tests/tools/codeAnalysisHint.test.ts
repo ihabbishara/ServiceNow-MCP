@@ -39,7 +39,11 @@ describe("codeAnalysis hint", () => {
     const res = (await spec("get_incident").run(makeRuntime("https://dev.azure.com/Org"), {
       number: "INC0012345"
     })) as Record<string, unknown>;
-    const hint = res.codeAnalysis as { signalsDetected: boolean; signals: string[]; nextStep: string };
+    const hint = res.codeAnalysis as {
+      signalsDetected: boolean;
+      signals: string[];
+      nextStep: string;
+    };
     expect(hint.signalsDetected).toBe(true);
     expect(hint.signals[0]).toContain("charge.ts:42");
     expect(hint.nextStep).toContain("ask the user");
@@ -70,9 +74,15 @@ describe("codeAnalysis hint", () => {
       relatedChanges: [],
       relatedWorkItems: []
     });
-    const got = (await spec("get_incident").run(rt, { number: "INC0012345" })) as Record<string, unknown>;
+    const got = (await spec("get_incident").run(rt, { number: "INC0012345" })) as Record<
+      string,
+      unknown
+    >;
     expect("codeAnalysis" in got).toBe(false);
-    const sum = (await spec("summarize_incident").run(rt, { number: "INC0012345" })) as Record<string, unknown>;
+    const sum = (await spec("summarize_incident").run(rt, { number: "INC0012345" })) as Record<
+      string,
+      unknown
+    >;
     expect("codeAnalysis" in sum).toBe(false);
   });
 
@@ -82,9 +92,12 @@ describe("codeAnalysis hint", () => {
       description: "see notes",
       workNotes: ["stack: at pay (billing.py:9)"]
     };
-    const res = (await spec("get_incident").run(makeRuntime("https://dev.azure.com/Org", noteOnly), {
-      number: "INC0012345"
-    })) as Record<string, unknown>;
+    const res = (await spec("get_incident").run(
+      makeRuntime("https://dev.azure.com/Org", noteOnly),
+      {
+        number: "INC0012345"
+      }
+    )) as Record<string, unknown>;
     expect(res.codeAnalysis).toMatchObject({ signalsDetected: true });
   });
 });

@@ -16,11 +16,15 @@ describe("detectCodeSignals positives", () => {
 
   it("detects exception class names", () => {
     expect(detectCodeSignals(["NullPointerException: order was null"]).detected).toBe(true);
-    expect(detectCodeSignals(["TypeError: Cannot read properties of undefined"]).detected).toBe(true);
+    expect(detectCodeSignals(["TypeError: Cannot read properties of undefined"]).detected).toBe(
+      true
+    );
   });
 
   it("detects a Python traceback", () => {
-    expect(detectCodeSignals(["Traceback (most recent call last):", "  File \"app.py\""]).detected).toBe(true);
+    expect(
+      detectCodeSignals(["Traceback (most recent call last):", '  File "app.py"']).detected
+    ).toBe(true);
   });
 
   it("finds signals across multiple fields (worknotes + description)", () => {
