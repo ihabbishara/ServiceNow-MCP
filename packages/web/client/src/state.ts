@@ -1,10 +1,18 @@
 // packages/web/client/src/state.ts
 import type { ServerEvent, EngineState } from "../../shared/events.js";
 
+export interface SubAgentActivity {
+  agent: string;
+  steps: string[];
+  error?: string;
+}
+
 export interface ChatMessage {
   id: number;
   role: "user" | "assistant";
   text: string;
+  /** Sub-agent step timeline that ran during this turn (folded in at turn end). */
+  activity?: SubAgentActivity;
 }
 export interface ChatState {
   messages: ChatMessage[];
@@ -26,6 +34,7 @@ export interface ChatState {
   deviceCode?: { verificationUri: string; userCode: string };
   confirm?: { id: string; summary: string };
   error?: { message: string; isAuthError: boolean };
+  subagent?: SubAgentActivity & { done: boolean };
   nextMessageId: number;
 }
 
@@ -40,6 +49,33 @@ export const initialState: ChatState = {
 };
 
 export type ClientEvent = { type: "user-message"; text: string };
+
+// Fold the live sub-agent block (if any) into a transcript message so the
+// timeline survives the end of the turn.
+const foldActivity = (
+  s: ChatState,
+  streamingText: string
+): Pick<ChatState, "messages" | "nextMessageId" | "subagent"> => {
+  const activity = s.subagent
+    ? { agent: s.subagent.agent, steps: s.subagent.steps, error: s.subagent.error }
+    : undefined;
+  const hasMsg = !!streamingText || !!activity;
+  return {
+    subagent: undefined,
+    messages: hasMsg
+      ? [
+          ...s.messages,
+          {
+            id: s.nextMessageId,
+            role: "assistant" as const,
+            text: streamingText,
+            ...(activity ? { activity } : {})
+          }
+        ]
+      : s.messages,
+    nextMessageId: hasMsg ? s.nextMessageId + 1 : s.nextMessageId
+  };
+};
 
 export const applyServerEvent = (s: ChatState, e: ServerEvent | ClientEvent): ChatState => {
   switch (e.type) {
@@ -57,11 +93,8 @@ export const applyServerEvent = (s: ChatState, e: ServerEvent | ClientEvent): Ch
         ...s,
         busy: false,
         activeTool: undefined,
-        messages: s.streaming
-          ? [...s.messages, { id: s.nextMessageId, role: "assistant", text: s.streaming }]
-          : s.messages,
         streaming: "",
-        nextMessageId: s.streaming ? s.nextMessageId + 1 : s.nextMessageId
+        ...foldActivity(s, s.streaming)
       };
     case "turn-error":
       return {
@@ -69,7 +102,8 @@ export const applyServerEvent = (s: ChatState, e: ServerEvent | ClientEvent): Ch
         busy: false,
         activeTool: undefined,
         streaming: "",
-        error: { message: e.message, isAuthError: e.isAuthError }
+        error: { message: e.message, isAuthError: e.isAuthError },
+        ...foldActivity(s, "")
       };
     case "confirm-request":
       return { ...s, confirm: { id: e.id, summary: e.summary } };
@@ -111,6 +145,32 @@ export const applyServerEvent = (s: ChatState, e: ServerEvent | ClientEvent): Ch
       };
     case "tool-start":
       return { ...s, activeTool: e.name };
+    case "subagent-status":
+      switch (e.phase) {
+        case "start":
+          return { ...s, subagent: { agent: e.agent, steps: ["started"], done: false } };
+        case "tool":
+          return s.subagent
+            ? { ...s, subagent: { ...s.subagent, steps: [...s.subagent.steps, e.detail ?? ""] } }
+            : s;
+        case "done":
+          return s.subagent
+            ? {
+                ...s,
+                subagent: {
+                  ...s.subagent,
+                  steps: [...s.subagent.steps, `report ready (${e.detail ?? ""})`],
+                  done: true
+                }
+              }
+            : s;
+        case "error":
+          return s.subagent
+            ? { ...s, subagent: { ...s.subagent, error: e.detail, done: true } }
+            : s;
+        default:
+          return s;
+      }
     default:
       return s;
   }

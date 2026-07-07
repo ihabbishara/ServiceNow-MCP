@@ -51,6 +51,28 @@ const PROMPTS = [
   }
 ];
 
+function ActivityBlock({
+  agent,
+  steps,
+  error
+}: {
+  agent: string;
+  steps: string[];
+  error?: string;
+}) {
+  return (
+    <div className="rounded px-4 py-2 bg-surface-container text-label-md text-on-surface-variant space-y-0.5">
+      <div className="font-medium">🔬 {agent}</div>
+      {steps.map((step, i) => (
+        <div key={i} className="font-mono">
+          · {step}
+        </div>
+      ))}
+      {error && <div className="text-error font-mono">failed: {error}</div>}
+    </div>
+  );
+}
+
 function Welcome({ onPick }: { onPick: (text: string) => void }) {
   return (
     <div className="h-full flex flex-col items-center justify-start pt-[12vh] text-center gap-7 px-6">
@@ -111,7 +133,7 @@ export function Chat({
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [state.messages.length, state.streaming, state.busy]);
+  }, [state.messages.length, state.streaming, state.busy, state.subagent?.steps.length]);
   return (
     <div className="flex flex-col h-full max-w-container mx-auto w-full">
       <div ref={scrollRef} className="flex-1 overflow-auto p-6 space-y-4">
@@ -127,11 +149,17 @@ export function Chat({
                   </span>
                 </div>
               ) : (
-                <div key={m.id} className="rounded px-4 py-2 bg-surface-container">
-                  <Markdown>{m.text}</Markdown>
+                <div key={m.id} className="space-y-2">
+                  {m.activity && <ActivityBlock {...m.activity} />}
+                  {m.text && (
+                    <div className="rounded px-4 py-2 bg-surface-container">
+                      <Markdown>{m.text}</Markdown>
+                    </div>
+                  )}
                 </div>
               )
             )}
+            {state.subagent && <ActivityBlock {...state.subagent} />}
             {state.streaming && (
               <div className="rounded px-4 py-2 bg-surface-container">
                 <Markdown>{state.streaming}</Markdown>

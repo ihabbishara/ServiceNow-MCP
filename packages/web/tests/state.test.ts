@@ -126,3 +126,77 @@ describe("applyServerEvent", () => {
     expect(s.config?.uploadMaxBytes).toBe(2048);
   });
 });
+
+describe("subagent activity block", () => {
+  const seq = (events: Parameters<typeof applyServerEvent>[1][]) =>
+    events.reduce(applyServerEvent, initialState);
+
+  it("builds the live block from start/tool/done", () => {
+    const s = seq([
+      { type: "subagent-status", phase: "start", agent: "Code Analyser" },
+      {
+        type: "subagent-status",
+        phase: "tool",
+        agent: "Code Analyser",
+        detail: 'search_repo — "PaymentError"'
+      },
+      { type: "subagent-status", phase: "done", agent: "Code Analyser", detail: "34s" }
+    ]);
+    expect(s.subagent).toEqual({
+      agent: "Code Analyser",
+      steps: ["started", 'search_repo — "PaymentError"', "report ready (34s)"],
+      done: true
+    });
+  });
+
+  it("records error phase", () => {
+    const s = seq([
+      { type: "subagent-status", phase: "start", agent: "Code Analyser" },
+      { type: "subagent-status", phase: "error", agent: "Code Analyser", detail: "clone failed" }
+    ]);
+    expect(s.subagent).toMatchObject({ error: "clone failed", done: true });
+  });
+
+  it("ignores tool/done/error without a preceding start", () => {
+    const s = seq([{ type: "subagent-status", phase: "tool", agent: "X", detail: "y" }]);
+    expect(s.subagent).toBeUndefined();
+  });
+
+  it("folds the block into the assistant message on turn-end", () => {
+    const s = seq([
+      { type: "subagent-status", phase: "start", agent: "Code Analyser" },
+      { type: "subagent-status", phase: "done", agent: "Code Analyser", detail: "5s" },
+      { type: "delta", text: "Report: ..." },
+      { type: "turn-end" }
+    ]);
+    expect(s.subagent).toBeUndefined();
+    const last = s.messages.at(-1)!;
+    expect(last.role).toBe("assistant");
+    expect(last.text).toBe("Report: ...");
+    expect(last.activity).toEqual({
+      agent: "Code Analyser",
+      steps: ["started", "report ready (5s)"],
+      error: undefined
+    });
+  });
+
+  it("creates an activity-only assistant message when the turn ends with no text", () => {
+    const s = seq([
+      { type: "subagent-status", phase: "start", agent: "Code Analyser" },
+      { type: "turn-end" }
+    ]);
+    expect(s.messages.at(-1)).toMatchObject({ role: "assistant", text: "" });
+    expect(s.messages.at(-1)!.activity?.steps).toEqual(["started"]);
+  });
+
+  it("clears the live block on turn-error but keeps it in the transcript", () => {
+    const s = seq([
+      { type: "subagent-status", phase: "start", agent: "Code Analyser" },
+      { type: "subagent-status", phase: "error", agent: "Code Analyser", detail: "boom" },
+      { type: "turn-error", message: "turn failed", isAuthError: false }
+    ]);
+    expect(s.subagent).toBeUndefined();
+    expect(s.messages.at(-1)!.activity).toMatchObject({ error: "boom" });
+    expect(s.error?.message).toBe("turn failed");
+  });
+});
