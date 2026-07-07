@@ -1,5 +1,38 @@
 import { z } from "zod";
 import { ToolError, defineSpec } from "../spec.js";
+import { detectCodeSignals } from "../../services/codeSignals.js";
+import type { McpRuntime } from "../../runtime.js";
+
+// Surface-neutral: sre-agent has analyze_code; MCP hosts fall back to the raw repo tools.
+const CODE_ANALYSIS_NEXT_STEP =
+  "Code-referencing errors detected in this incident. Proactively ask the user whether they want a " +
+  "codebase root-cause analysis. If they accept, ask for the Azure DevOps repo clone URL " +
+  "(https://dev.azure.com/<org>/<project>/_git/<repo>) and optionally the deployed branch/tag, then " +
+  "run analyze_code with the incident's error text — or use checkout_repo/search_repo/read_repo_file " +
+  "directly if analyze_code is not available on this surface.";
+
+interface IncidentTexts {
+  shortDescription?: string;
+  description?: string;
+  workNotes?: string[];
+  comments?: string[];
+}
+
+/** Structural engagement hint: {} unless ADO is configured AND the incident text carries code signals. */
+const codeAnalysisHint = (
+  rt: McpRuntime,
+  inc: IncidentTexts
+): { codeAnalysis?: { signalsDetected: true; signals: string[]; nextStep: string } } => {
+  if (!rt.config.azureDevOps.orgUrl) return {};
+  const { detected, signals } = detectCodeSignals([
+    inc.shortDescription,
+    inc.description,
+    ...(inc.workNotes ?? []),
+    ...(inc.comments ?? [])
+  ]);
+  if (!detected) return {};
+  return { codeAnalysis: { signalsDetected: true, signals, nextStep: CODE_ANALYSIS_NEXT_STEP } };
+};
 
 export const incidentSpecs = [
   defineSpec({
@@ -71,7 +104,7 @@ export const incidentSpecs = [
     run: async (rt, a) => {
       const incident = await rt.serviceNowClient.getIncidentByNumber(a.number);
       if (!incident) throw new ToolError(`Incident ${a.number} not found`);
-      return incident;
+      return { ...incident, ...codeAnalysisHint(rt, incident) };
     }
   }),
 
@@ -113,7 +146,8 @@ export const incidentSpecs = [
           id: w.id,
           title: w.title,
           state: w.state
-        }))
+        })),
+        ...codeAnalysisHint(rt, result.incident)
       };
     }
   })
