@@ -39,6 +39,7 @@ Then guide me through:
    - Review related changes - could any have caused this?
    - Check for patterns in recent similar incidents
    - Identify most likely cause
+   - If the incident contains stack traces or code-referencing errors (see \`codeAnalysis\` in the summary), offer a codebase root-cause analysis and ask for the repo clone URL
 
 3. **Immediate Actions**
    - What can be done to mitigate right now?

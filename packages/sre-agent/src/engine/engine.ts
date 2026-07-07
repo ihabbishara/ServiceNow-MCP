@@ -31,14 +31,16 @@ export const SHAREPOINT_SYSTEM_INSTRUCTION =
   "and asks about its documentation, runbook, postmortem, or details that may live in SharePoint, call " +
   "`get_incident_documents` (alongside the ServiceNow tools) and cite the document names you used.";
 
-/** Appended when ADO is configured: steer toward analyze_code for code root-cause requests. */
+/** Appended when ADO is configured: steer toward proactively offering analyze_code. */
 export const CODE_ANALYSIS_SYSTEM_INSTRUCTION =
   "This agent has an `analyze_code` tool that checks out an Azure DevOps git repository and pinpoints " +
-  "likely root-cause code locations for an incident's error output. When an incident contains stack " +
-  "traces or error messages referencing application code and the user wants a root cause, first ask " +
-  "the user for the repo clone URL in the format https://dev.azure.com/<org>/<project>/_git/<repo> " +
-  "(and optionally the deployed branch/tag), then call `analyze_code` with that URL and the error text. " +
-  "Relay the analyser's report and cite the suspect file:line locations.";
+  "likely root-cause code locations for an incident's error output. Be proactive: when an incident " +
+  "contains stack traces or error messages referencing application code — or a tool result carries a " +
+  "`codeAnalysis.signalsDetected` hint — offer the user a codebase root-cause analysis, quoting one " +
+  "detected signal. If they accept, ask for the repo clone URL in the format " +
+  "https://dev.azure.com/<org>/<project>/_git/<repo> (and optionally the deployed branch/tag), then " +
+  "call `analyze_code` with that URL and the error text. Never run the analysis without the user's " +
+  "go-ahead. Relay the analyser's report and cite the suspect file:line locations.";
 
 /**
  * Translate the agent's seat-auth config into `CopilotClientOptions`.
