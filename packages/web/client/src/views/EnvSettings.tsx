@@ -5,7 +5,7 @@ import { Button } from "./ui/Button.js";
 import { Card } from "./ui/Card.js";
 import { CollapsibleSection } from "./ui/CollapsibleSection.js";
 import { Tooltip } from "./ui/Tooltip.js";
-import { ENV_GROUPS, describe, groupOf, isSecret, labelOf } from "./env-fields.js";
+import { ENV_GROUPS, describe, isSecret, labelOf, visibleKeys, varsToSave } from "./env-fields.js";
 
 function SecretEye({ revealed, onToggle }: { revealed: boolean; onToggle: () => void }) {
   return (
@@ -86,6 +86,7 @@ function FieldRow({
 
 export function EnvSettings() {
   const [vars, setVars] = useState<Record<string, string>>({});
+  const [originalKeys, setOriginalKeys] = useState<string[]>([]);
   const [comments, setComments] = useState<Record<string, string>>({});
   const [issues, setIssues] = useState<string>();
   const [saving, setSaving] = useState(false);
@@ -94,6 +95,7 @@ export function EnvSettings() {
     getEnv()
       .then((r) => {
         setVars(r.vars);
+        setOriginalKeys(Object.keys(r.vars));
         setComments(r.comments ?? {});
       })
       .catch(() => setIssues("Failed to load .env"));
@@ -102,8 +104,14 @@ export function EnvSettings() {
   const save = async () => {
     setSaving(true);
     try {
-      const res = await putEnv(vars);
-      setIssues(res.ok ? undefined : (await res.json()).issues);
+      const payload = varsToSave(vars, originalKeys);
+      const res = await putEnv(payload);
+      if (res.ok) {
+        setIssues(undefined);
+        setOriginalKeys(Object.keys(payload)); // disk now matches the payload's key set
+      } else {
+        setIssues((await res.json()).issues);
+      }
     } finally {
       setSaving(false);
     }
@@ -133,7 +141,7 @@ export function EnvSettings() {
           </pre>
         )}
         {ENV_GROUPS.map((group) => {
-          const keys = Object.keys(vars).filter((k) => groupOf(k) === group);
+          const keys = visibleKeys(group, Object.keys(vars));
           if (keys.length === 0) return null;
           return (
             <CollapsibleSection key={group} title={group}>
@@ -142,7 +150,7 @@ export function EnvSettings() {
                   <FieldRow
                     key={k}
                     k={k}
-                    value={vars[k]}
+                    value={vars[k] ?? ""}
                     comment={comments[k]}
                     onChange={(v) => setVars((prev) => ({ ...prev, [k]: v }))}
                   />

@@ -103,6 +103,28 @@ export const ENV_FIELDS: Record<string, EnvFieldMeta> = {
     description: "Feature flag for the create-bug write tool.",
     group: "Azure DevOps"
   },
+  ADO_BOARD_MAP: {
+    label: "Board map",
+    description:
+      'JSON map of board name → area path, e.g. {"BoardName":"Area\\\\Path"}. Invalid JSON is ignored.',
+    group: "Azure DevOps"
+  },
+  ADO_CSV_DIR: {
+    label: "Work-item CSV folder",
+    description: "Folder of work-item CSV files the list/read CSV tools may ingest.",
+    group: "Azure DevOps"
+  },
+  ADO_CSV_MAX_BYTES: {
+    label: "Max CSV bytes",
+    description: "Max CSV file size read into memory (default 5 MB).",
+    group: "Azure DevOps"
+  },
+  GIT_WORKSPACE_DIR: {
+    label: "Git workspace dir",
+    description:
+      "Directory for incident-analysis repo checkouts (default: OS temp dir, auto-cleaned by the OS). Clones are shallow and read-only.",
+    group: "Azure DevOps"
+  },
 
   // LLM & Copilot
   LLM_MODE: {
@@ -152,6 +174,11 @@ export const ENV_FIELDS: Record<string, EnvFieldMeta> = {
     label: "Ignore ambient GitHub token",
     description:
       "Strip ambient GH_TOKEN/GITHUB_TOKEN so the runtime uses the stored Copilot OAuth (avoids 403s).",
+    group: "LLM & Copilot"
+  },
+  COPILOT_CLI_PATH: {
+    label: "Copilot CLI path",
+    description: "Override path to the Copilot SDK CLI runtime binary.",
     group: "LLM & Copilot"
   },
 
@@ -259,6 +286,26 @@ export const ENV_FIELDS: Record<string, EnvFieldMeta> = {
     description: "Optional HTTP(S) proxy for SharePoint/Graph calls.",
     group: "SharePoint"
   },
+  SHAREPOINT_MAX_DOC_TOKENS: {
+    label: "Max doc tokens",
+    description: "Inline text budget across all extracted documents (default 50000).",
+    group: "SharePoint"
+  },
+  SHAREPOINT_MAX_FILES: {
+    label: "Max files",
+    description: "Cap on files walked per incident folder (default 50).",
+    group: "SharePoint"
+  },
+  SHAREPOINT_MAX_FILE_BYTES: {
+    label: "Max file bytes",
+    description: "Skip documents larger than this (default 10 MB).",
+    group: "SharePoint"
+  },
+  SHAREPOINT_TIMEOUT_MS: {
+    label: "Timeout (ms)",
+    description: "Per-request timeout for SharePoint/Graph calls (default 30000).",
+    group: "SharePoint"
+  },
 
   // Other / behavior / thresholds
   CONFIRM_WRITES: {
@@ -300,6 +347,11 @@ export const ENV_FIELDS: Record<string, EnvFieldMeta> = {
     label: "Correlation window after (h)",
     description: "Hours after an incident to look for related changes (default 4).",
     group: "Other"
+  },
+  WEB_PORT: {
+    label: "Web UI port",
+    description: "Port for the local web UI, bound to 127.0.0.1 (default 4317).",
+    group: "Other"
   }
 };
 
@@ -320,3 +372,23 @@ export const labelOf = (key: string): string => ENV_FIELDS[key]?.label ?? key;
 /** Help text: registry description, else the inline .env comment, else empty. */
 export const describe = (key: string, comment?: string): string =>
   ENV_FIELDS[key]?.description ?? comment ?? "";
+
+/** Union of catalog + file keys for one group: catalog declaration order first, file-only extras after. */
+export const visibleKeys = (group: EnvGroup, fileKeys: string[]): string[] => {
+  const catalog = Object.keys(ENV_FIELDS).filter((k) => ENV_FIELDS[k].group === group);
+  const extras = fileKeys.filter((k) => !(k in ENV_FIELDS) && groupOf(k) === group);
+  return [...catalog, ...extras];
+};
+
+/**
+ * Save payload without churn: drop empty values for keys that were not in the
+ * originally-loaded file (avoids appending KEY="" lines), keep empty values for
+ * originally-present keys (the user is clearing them), keep all non-empty values.
+ */
+export const varsToSave = (
+  vars: Record<string, string>,
+  originalKeys: string[]
+): Record<string, string> => {
+  const original = new Set(originalKeys);
+  return Object.fromEntries(Object.entries(vars).filter(([k, v]) => v !== "" || original.has(k)));
+};
