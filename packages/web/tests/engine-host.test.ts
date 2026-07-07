@@ -354,6 +354,50 @@ describe("EngineHost ingest", () => {
   });
 });
 
+describe("engine-host sub-agent visibility", () => {
+  it("maps onSubAgent callbacks to subagent-status events", async () => {
+    const events: ServerEvent[] = [];
+    const host = createEngineHost({
+      config: { llm: { mode: "seat", model: "gpt-5" } } as any,
+      tools: [],
+      engineFactory: (deps) => new FakeEngine(deps) as any,
+      emit: (e) => events.push(e),
+      idFactory: () => "fixed-id"
+    });
+    await host.start();
+    FakeEngine.last.deps.onSubAgent({ phase: "tool", agent: "Code Analyser", detail: "search_repo" });
+    expect(events).toContainEqual({
+      type: "subagent-status",
+      phase: "tool",
+      agent: "Code Analyser",
+      detail: "search_repo"
+    });
+  });
+
+  it("appends extraToolsFactory tools and getEngine resolves the current engine", async () => {
+    const events: ServerEvent[] = [];
+    let capturedGetEngine: (() => unknown) | undefined;
+    const marker = { name: "analyze_code" };
+    const host = createEngineHost({
+      config: { llm: { mode: "seat", model: "gpt-5" } } as any,
+      tools: [{ name: "base_tool" } as any],
+      extraToolsFactory: (getEngine) => {
+        capturedGetEngine = getEngine;
+        return [marker as any];
+      },
+      engineFactory: (deps) => new FakeEngine(deps) as any,
+      emit: (e) => events.push(e),
+      idFactory: () => "fixed-id"
+    });
+    await host.start();
+    expect(FakeEngine.last.deps.tools.map((t: { name: string }) => t.name)).toEqual([
+      "base_tool",
+      "analyze_code"
+    ]);
+    expect(capturedGetEngine!()).toBe(FakeEngine.last);
+  });
+});
+
 describe("engine-host config-status", () => {
   // Uses config.app.* (not the removed .raw shim) — regression guard for P1a Task 4.
   const fullConfig = {

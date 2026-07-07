@@ -49,13 +49,21 @@ export const startServer = async (opts: { port: number; host?: EngineHost }): Pr
     opts.host ??
     (await (async () => {
       // Real bootstrap path is exercised by `npm start`, not unit tests.
-      const { loadAgentConfig, loadDotenv, buildTools, bootCrawl } = await import("@sre/sre-agent");
+      const { loadAgentConfig, loadDotenv, buildTools, bootCrawl, buildAnalyzeCodeTool } =
+        await import("@sre/sre-agent");
       const { createMcpRuntime } = await import("@sre/core");
       loadDotenv();
       const config = loadAgentConfig();
       const runtime = createMcpRuntime(config.app);
       const tools = buildTools(runtime) as import("@github/copilot-sdk").Tool<unknown>[];
-      const h = createEngineHost({ config, tools, runtimeFactory: () => runtime });
+      const h = createEngineHost({
+        config,
+        tools,
+        extraToolsFactory: (getEngine) => [
+          buildAnalyzeCodeTool(runtime, getEngine) as import("@github/copilot-sdk").Tool<unknown>
+        ],
+        runtimeFactory: () => runtime
+      });
       await h.start();
       // Auto-crawl-on-boot (background, freshness-gated). No-op unless CRAWL_SEEDS set.
       bootCrawl(runtime, { enabled: config.knowledgeEnabled, ttlHours: config.crawlTtlHours });

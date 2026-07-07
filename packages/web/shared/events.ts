@@ -33,4 +33,10 @@ export type ServerEvent =
       reason?: string;
       detail?: string;
     }
-  | { type: "engine-state"; state: EngineState; message?: string };
+  | { type: "engine-state"; state: EngineState; message?: string }
+  | {
+      type: "subagent-status";
+      phase: "start" | "tool" | "done" | "error";
+      agent: string;
+      detail?: string;
+    };
