@@ -365,7 +365,11 @@ describe("engine-host sub-agent visibility", () => {
       idFactory: () => "fixed-id"
     });
     await host.start();
-    FakeEngine.last.deps.onSubAgent({ phase: "tool", agent: "Code Analyser", detail: "search_repo" });
+    FakeEngine.last.deps.onSubAgent({
+      phase: "tool",
+      agent: "Code Analyser",
+      detail: "search_repo"
+    });
     expect(events).toContainEqual({
       type: "subagent-status",
       phase: "tool",

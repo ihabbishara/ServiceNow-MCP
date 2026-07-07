@@ -70,7 +70,8 @@ const makeFakeClient = (
 ) => {
   const sessions: ReturnType<typeof makeFakeSession>[] = [];
   const createSession = vi.fn(async (_config: SessionConfig) => {
-    const s = sessions.length === 0 ? makeFakeSession() : makeFakeSession(subAgentDeltas, subAgentOpts);
+    const s =
+      sessions.length === 0 ? makeFakeSession() : makeFakeSession(subAgentDeltas, subAgentOpts);
     sessions.push(s);
     return s;
   });
@@ -369,7 +370,9 @@ describe("ChatEngine.runSubAgent", () => {
   it("disconnects the sub-session even when sendAndWait rejects", async () => {
     // Deterministic variant of the brief's timing-based test (see report): the
     // sub-session's sendAndWait rejects, and we assert disconnect still runs.
-    const { client, sessions } = makeFakeClient(undefined, [], { rejectWith: new Error("timeout") });
+    const { client, sessions } = makeFakeClient(undefined, [], {
+      rejectWith: new Error("timeout")
+    });
     const config = loadAgentConfig({ ...base });
     const engine = new ChatEngine({
       config,
@@ -438,7 +441,9 @@ describe("runSubAgent onSubAgent events", () => {
 
   it("truncates long args to 60 chars and strips newlines", async () => {
     const long = "a".repeat(80) + "\nsecond line";
-    const { result, events } = await run({ toolEvents: [{ toolName: "search_repo", arguments: { pattern: long } }] });
+    const { result, events } = await run({
+      toolEvents: [{ toolName: "search_repo", arguments: { pattern: long } }]
+    });
     await result;
     const detail = events[1].detail!;
     expect(detail).toContain("search_repo — ");
@@ -448,10 +453,15 @@ describe("runSubAgent onSubAgent events", () => {
   });
 
   it("emits error (then rethrows) when the sub-agent fails", async () => {
-    const { result, events } = await run({ rejectWith: new Error("timeout waiting for session.idle") });
+    const { result, events } = await run({
+      rejectWith: new Error("timeout waiting for session.idle")
+    });
     await expect(result).rejects.toThrow(/timeout/);
     expect(events.map((e) => e.phase)).toEqual(["start", "error"]);
-    expect(events.at(-1)).toMatchObject({ phase: "error", detail: expect.stringContaining("timeout") });
+    expect(events.at(-1)).toMatchObject({
+      phase: "error",
+      detail: expect.stringContaining("timeout")
+    });
   });
 
   it("does NOT forward sub-agent tool starts to onToolStart", async () => {
@@ -461,9 +471,16 @@ describe("runSubAgent onSubAgent events", () => {
   });
 
   it("is silent and safe when onSubAgent is not provided", async () => {
-    const { client } = makeFakeClient(undefined, ["ok"], { toolEvents: [{ toolName: "search_repo" }] });
+    const { client } = makeFakeClient(undefined, ["ok"], {
+      toolEvents: [{ toolName: "search_repo" }]
+    });
     const config = loadAgentConfig({ ...base });
-    const engine = new ChatEngine({ config, tools: [], ...noopDeps, clientFactory: () => client as never });
+    const engine = new ChatEngine({
+      config,
+      tools: [],
+      ...noopDeps,
+      clientFactory: () => client as never
+    });
     await engine.start();
     await expect(engine.runSubAgent({ tools: [], prompt: "x" })).resolves.toBe("ok");
   });
