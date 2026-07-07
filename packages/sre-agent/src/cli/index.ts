@@ -202,7 +202,18 @@ const main = async () => {
     ],
     confirm,
     onDelta: (t) => stdout.write(t),
-    onToolStart: (n) => stdout.write(`\n  ↳ ${n}…\n`)
+    onToolStart: (n) => stdout.write(`\n  ↳ ${n}…\n`),
+    onSubAgent: (e) => {
+      const line =
+        e.phase === "start"
+          ? "started"
+          : e.phase === "done"
+            ? `report ready (${e.detail ?? ""})`
+            : e.phase === "error"
+              ? `failed: ${e.detail ?? ""}`
+              : (e.detail ?? "");
+      stdout.write(`\n  🔬 ${e.agent}: ${line}\n`);
+    }
   });
   engineRef = engine;
 

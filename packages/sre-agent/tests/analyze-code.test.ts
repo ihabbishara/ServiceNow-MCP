@@ -42,6 +42,14 @@ describe("analyze_code tool", () => {
     expect(res).toEqual({ error: "sub-agent timeout" });
   });
 
+  it("labels the sub-agent 'Code Analyser'", async () => {
+    const engine = makeEngine();
+    const tool = buildAnalyzeCodeTool(runtime, () => engine);
+    await call(tool, { repo_url: "u", error_text: "e" });
+    const arg = (engine.runSubAgent as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(arg.agentLabel).toBe("Code Analyser");
+  });
+
   it("the restricted toolset is exactly repo tools + get_incident", () => {
     expect([...CODE_ANALYSER_TOOL_NAMES].sort()).toEqual(
       ["checkout_repo", "get_incident", "read_repo_file", "repo_history", "search_repo"].sort()
