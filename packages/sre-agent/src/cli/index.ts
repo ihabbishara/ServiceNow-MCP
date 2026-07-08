@@ -204,15 +204,14 @@ const main = async () => {
     onDelta: (t) => stdout.write(t),
     onToolStart: (n) => stdout.write(`\n  ↳ ${n}…\n`),
     onSubAgent: (e) => {
+      if (e.phase === "tool") return; // per-tool steps are intentionally not printed
       const line =
         e.phase === "start"
-          ? "started"
+          ? "is analysing the code…"
           : e.phase === "done"
-            ? `report ready (${e.detail ?? ""})`
-            : e.phase === "error"
-              ? `failed: ${e.detail ?? ""}`
-              : (e.detail ?? "");
-      stdout.write(`\n  🔬 ${e.agent}: ${line}\n`);
+            ? `: report ready (${e.detail ?? ""})`
+            : `: failed: ${e.detail ?? ""}`;
+      stdout.write(`\n  🔬 ${e.agent} ${line}\n`);
     }
   });
   engineRef = engine;
