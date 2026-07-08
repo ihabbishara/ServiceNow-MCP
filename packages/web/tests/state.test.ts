@@ -127,26 +127,24 @@ describe("applyServerEvent", () => {
   });
 });
 
-describe("subagent activity block", () => {
+describe("subagent status block", () => {
   const seq = (events: Parameters<typeof applyServerEvent>[1][]) =>
     events.reduce(applyServerEvent, initialState);
 
-  it("builds the live block from start/tool/done", () => {
+  it("sets a labeled block on start and ignores tool events", () => {
     const s = seq([
       { type: "subagent-status", phase: "start", agent: "Code Analyser" },
-      {
-        type: "subagent-status",
-        phase: "tool",
-        agent: "Code Analyser",
-        detail: 'search_repo — "PaymentError"'
-      },
+      { type: "subagent-status", phase: "tool", agent: "Code Analyser", detail: 'search_repo — "x"' }
+    ]);
+    expect(s.subagent).toEqual({ agent: "Code Analyser", done: false });
+  });
+
+  it("marks done with a duration", () => {
+    const s = seq([
+      { type: "subagent-status", phase: "start", agent: "Code Analyser" },
       { type: "subagent-status", phase: "done", agent: "Code Analyser", detail: "34s" }
     ]);
-    expect(s.subagent).toEqual({
-      agent: "Code Analyser",
-      steps: ["started", 'search_repo — "PaymentError"', "report ready (34s)"],
-      done: true
-    });
+    expect(s.subagent).toEqual({ agent: "Code Analyser", done: true, duration: "34s" });
   });
 
   it("records error phase", () => {
@@ -154,15 +152,15 @@ describe("subagent activity block", () => {
       { type: "subagent-status", phase: "start", agent: "Code Analyser" },
       { type: "subagent-status", phase: "error", agent: "Code Analyser", detail: "clone failed" }
     ]);
-    expect(s.subagent).toMatchObject({ error: "clone failed", done: true });
+    expect(s.subagent).toMatchObject({ agent: "Code Analyser", error: "clone failed", done: true });
   });
 
   it("ignores tool/done/error without a preceding start", () => {
-    const s = seq([{ type: "subagent-status", phase: "tool", agent: "X", detail: "y" }]);
-    expect(s.subagent).toBeUndefined();
+    expect(seq([{ type: "subagent-status", phase: "tool", agent: "X", detail: "y" }]).subagent).toBeUndefined();
+    expect(seq([{ type: "subagent-status", phase: "done", agent: "X", detail: "1s" }]).subagent).toBeUndefined();
   });
 
-  it("folds the block into the assistant message on turn-end", () => {
+  it("folds the block (agent + duration, no steps) into the assistant message on turn-end", () => {
     const s = seq([
       { type: "subagent-status", phase: "start", agent: "Code Analyser" },
       { type: "subagent-status", phase: "done", agent: "Code Analyser", detail: "5s" },
@@ -173,11 +171,7 @@ describe("subagent activity block", () => {
     const last = s.messages.at(-1)!;
     expect(last.role).toBe("assistant");
     expect(last.text).toBe("Report: ...");
-    expect(last.activity).toEqual({
-      agent: "Code Analyser",
-      steps: ["started", "report ready (5s)"],
-      error: undefined
-    });
+    expect(last.activity).toEqual({ agent: "Code Analyser", duration: "5s", error: undefined });
   });
 
   it("creates an activity-only assistant message when the turn ends with no text", () => {
@@ -186,7 +180,7 @@ describe("subagent activity block", () => {
       { type: "turn-end" }
     ]);
     expect(s.messages.at(-1)).toMatchObject({ role: "assistant", text: "" });
-    expect(s.messages.at(-1)!.activity?.steps).toEqual(["started"]);
+    expect(s.messages.at(-1)!.activity).toMatchObject({ agent: "Code Analyser" });
   });
 
   it("clears the live block on turn-error but keeps it in the transcript", () => {
