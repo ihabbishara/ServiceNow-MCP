@@ -3,15 +3,16 @@ import type { ServerEvent, EngineState } from "../../shared/events.js";
 
 export interface SubAgentActivity {
   agent: string;
-  steps: string[];
   error?: string;
+  /** Wall-clock duration string (e.g. "34s") once the sub-agent finished. */
+  duration?: string;
 }
 
 export interface ChatMessage {
   id: number;
   role: "user" | "assistant";
   text: string;
-  /** Sub-agent step timeline that ran during this turn (folded in at turn end). */
+  /** Sub-agent run that happened during this turn (folded in at turn end). */
   activity?: SubAgentActivity;
 }
 export interface ChatState {
@@ -57,7 +58,7 @@ const foldActivity = (
   streamingText: string
 ): Pick<ChatState, "messages" | "nextMessageId" | "subagent"> => {
   const activity = s.subagent
-    ? { agent: s.subagent.agent, steps: s.subagent.steps, error: s.subagent.error }
+    ? { agent: s.subagent.agent, error: s.subagent.error, duration: s.subagent.duration }
     : undefined;
   const hasMsg = !!streamingText || !!activity;
   return {
@@ -148,21 +149,12 @@ export const applyServerEvent = (s: ChatState, e: ServerEvent | ClientEvent): Ch
     case "subagent-status":
       switch (e.phase) {
         case "start":
-          return { ...s, subagent: { agent: e.agent, steps: ["started"], done: false } };
+          return { ...s, subagent: { agent: e.agent, done: false } };
         case "tool":
-          return s.subagent
-            ? { ...s, subagent: { ...s.subagent, steps: [...s.subagent.steps, e.detail ?? ""] } }
-            : s;
+          return s; // steps are intentionally not surfaced
         case "done":
           return s.subagent
-            ? {
-                ...s,
-                subagent: {
-                  ...s.subagent,
-                  steps: [...s.subagent.steps, `report ready (${e.detail ?? ""})`],
-                  done: true
-                }
-              }
+            ? { ...s, subagent: { ...s.subagent, done: true, duration: e.detail } }
             : s;
         case "error":
           return s.subagent

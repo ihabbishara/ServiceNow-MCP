@@ -53,22 +53,29 @@ const PROMPTS = [
 
 function ActivityBlock({
   agent,
-  steps,
-  error
+  error,
+  duration,
+  running
 }: {
   agent: string;
-  steps: string[];
   error?: string;
+  duration?: string;
+  running?: boolean;
 }) {
+  const status = error
+    ? `— failed: ${error}`
+    : running
+      ? "is analysing the code…"
+      : `— report ready${duration ? ` (${duration})` : ""}`;
   return (
-    <div className="rounded px-4 py-2 bg-surface-container text-label-md text-on-surface-variant space-y-0.5">
-      <div className="font-medium">🔬 {agent}</div>
-      {steps.map((step, i) => (
-        <div key={i} className="font-mono">
-          · {step}
-        </div>
-      ))}
-      {error && <div className="text-error font-mono">failed: {error}</div>}
+    <div
+      className={`rounded px-4 py-2 bg-surface-container text-label-md ${
+        error ? "text-error" : "text-on-surface-variant"
+      }`}
+      role="status"
+      aria-live="polite"
+    >
+      🔬 {agent} {status}
     </div>
   );
 }
@@ -133,7 +140,7 @@ export function Chat({
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [state.messages.length, state.streaming, state.busy, state.subagent?.steps.length]);
+  }, [state.messages.length, state.streaming, state.busy, state.subagent?.done]);
   return (
     <div className="flex flex-col h-full max-w-container mx-auto w-full">
       <div ref={scrollRef} className="flex-1 overflow-auto p-6 space-y-4">
@@ -159,7 +166,14 @@ export function Chat({
                 </div>
               )
             )}
-            {state.subagent && <ActivityBlock {...state.subagent} />}
+            {state.subagent && (
+              <ActivityBlock
+                agent={state.subagent.agent}
+                error={state.subagent.error}
+                duration={state.subagent.duration}
+                running={!state.subagent.done}
+              />
+            )}
             {state.streaming && (
               <div className="rounded px-4 py-2 bg-surface-container">
                 <Markdown>{state.streaming}</Markdown>
