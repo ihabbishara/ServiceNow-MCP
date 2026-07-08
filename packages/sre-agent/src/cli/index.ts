@@ -207,11 +207,11 @@ const main = async () => {
       if (e.phase === "tool") return; // per-tool steps are intentionally not printed
       const line =
         e.phase === "start"
-          ? "is analysing the code…"
+          ? " is analysing the code…"
           : e.phase === "done"
             ? `: report ready (${e.detail ?? ""})`
             : `: failed: ${e.detail ?? ""}`;
-      stdout.write(`\n  🔬 ${e.agent} ${line}\n`);
+      stdout.write(`\n  🔬 ${e.agent}${line}\n`);
     }
   });
   engineRef = engine;
