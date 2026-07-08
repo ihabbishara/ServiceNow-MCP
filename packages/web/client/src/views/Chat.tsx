@@ -63,7 +63,7 @@ function ActivityBlock({
   running?: boolean;
 }) {
   const status = error
-    ? `failed: ${error}`
+    ? `— failed: ${error}`
     : running
       ? "is analysing the code…"
       : `— report ready${duration ? ` (${duration})` : ""}`;
