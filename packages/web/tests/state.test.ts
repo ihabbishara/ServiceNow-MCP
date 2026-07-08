@@ -134,7 +134,12 @@ describe("subagent status block", () => {
   it("sets a labeled block on start and ignores tool events", () => {
     const s = seq([
       { type: "subagent-status", phase: "start", agent: "Code Analyser" },
-      { type: "subagent-status", phase: "tool", agent: "Code Analyser", detail: 'search_repo — "x"' }
+      {
+        type: "subagent-status",
+        phase: "tool",
+        agent: "Code Analyser",
+        detail: 'search_repo — "x"'
+      }
     ]);
     expect(s.subagent).toEqual({ agent: "Code Analyser", done: false });
   });
@@ -156,8 +161,12 @@ describe("subagent status block", () => {
   });
 
   it("ignores tool/done/error without a preceding start", () => {
-    expect(seq([{ type: "subagent-status", phase: "tool", agent: "X", detail: "y" }]).subagent).toBeUndefined();
-    expect(seq([{ type: "subagent-status", phase: "done", agent: "X", detail: "1s" }]).subagent).toBeUndefined();
+    expect(
+      seq([{ type: "subagent-status", phase: "tool", agent: "X", detail: "y" }]).subagent
+    ).toBeUndefined();
+    expect(
+      seq([{ type: "subagent-status", phase: "done", agent: "X", detail: "1s" }]).subagent
+    ).toBeUndefined();
   });
 
   it("folds the block (agent + duration, no steps) into the assistant message on turn-end", () => {
