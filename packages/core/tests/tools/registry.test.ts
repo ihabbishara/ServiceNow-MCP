@@ -161,6 +161,93 @@ describe("incidents specs", () => {
       "Incident INC0 not found"
     );
   });
+
+  const incident = (state: string, assignmentGroup: string) => ({
+    number: "INC1",
+    priority: "1",
+    state,
+    shortDescription: "s",
+    assignmentGroup,
+    openedAt: "o",
+    updatedAt: "u"
+  });
+
+  it("search_incidents passes only_open through and reports stateBreakdown + matchedAssignmentGroups", async () => {
+    const listIncidentsWithFilters = vi.fn(async () => [
+      incident("In Progress", "T01234-Avengers-GIOM"),
+      incident("Closed", "T01234-Avengers-GIOM"),
+      incident("Closed", "T09999-GIOM-Platform")
+    ]);
+    const rt: any = { serviceNowClient: { listIncidentsWithFilters } };
+    const out = (await spec("search_incidents").run(rt, {
+      only_open: true,
+      assignment_group: "GIOM"
+    })) as any;
+    expect(listIncidentsWithFilters).toHaveBeenCalledWith(
+      expect.objectContaining({ onlyOpen: true, assignmentGroup: "GIOM" })
+    );
+    expect(out.stateBreakdown).toEqual({ "In Progress": 1, Closed: 2 });
+    expect(out.matchedAssignmentGroups.sort()).toEqual([
+      "T01234-Avengers-GIOM",
+      "T09999-GIOM-Platform"
+    ]);
+  });
+
+  it("search_incidents zero hits + existing groups → hint to relax other filters", async () => {
+    const rt: any = {
+      serviceNowClient: {
+        listIncidentsWithFilters: vi.fn(async () => []),
+        lookupGroups: vi.fn(async () => [{ name: "T01234-Avengers-GIOM", active: true }])
+      }
+    };
+    const out = (await spec("search_incidents").run(rt, { assignment_group: "GIOM" })) as any;
+    expect(out.count).toBe(0);
+    expect(out.hint).toContain("T01234-Avengers-GIOM");
+    expect(out.hint).toContain("relax");
+  });
+
+  it("search_incidents zero hits + no matching group → hint that the group name is wrong", async () => {
+    const rt: any = {
+      serviceNowClient: {
+        listIncidentsWithFilters: vi.fn(async () => []),
+        lookupGroups: vi.fn(async () => [])
+      }
+    };
+    const out = (await spec("search_incidents").run(rt, { assignment_group: "NOPE" })) as any;
+    expect(out.hint).toContain("No assignment group");
+    expect(out.hint).toContain("lookup_assignment_groups");
+  });
+
+  it("search_incidents survives a failing group lookup on zero hits", async () => {
+    const rt: any = {
+      serviceNowClient: {
+        listIncidentsWithFilters: vi.fn(async () => []),
+        lookupGroups: vi.fn(async () => {
+          throw new Error("boom");
+        })
+      }
+    };
+    const out = (await spec("search_incidents").run(rt, { assignment_group: "GIOM" })) as any;
+    expect(out.count).toBe(0);
+    expect(out.hint).toBeUndefined();
+  });
+
+  it("lookup_assignment_groups projects name/description/active", async () => {
+    const lookupGroups = vi.fn(async () => [
+      { name: "T01234-Avengers-GIOM", sysId: "SHOULD-NOT-APPEAR", description: "d", active: true }
+    ]);
+    const rt: any = { serviceNowClient: { lookupGroups } };
+    const out = (await spec("lookup_assignment_groups").run(rt, {
+      name_contains: "GIOM"
+    })) as any;
+    expect(lookupGroups).toHaveBeenCalledWith("GIOM", 20);
+    expect(out.count).toBe(1);
+    expect(out.groups[0]).toEqual({
+      name: "T01234-Avengers-GIOM",
+      description: "d",
+      active: true
+    });
+  });
 });
 
 describe("analysis specs", () => {
@@ -242,7 +329,7 @@ describe("workItemCsv specs", () => {
     expect(g({ azureDevOps: { enabled: true, csvDir: "/tmp/csv" } } as any)).toBeNull();
   });
 
-  it("the registry holds exactly the 23 tools", () => {
+  it("the registry holds exactly the 24 tools", () => {
     expect(TOOL_SPECS.map((s) => s.name).sort()).toEqual(
       [
         "checkout_repo",
@@ -259,6 +346,7 @@ describe("workItemCsv specs", () => {
         "get_work_item",
         "index_url",
         "list_work_item_csvs",
+        "lookup_assignment_groups",
         "read_repo_file",
         "read_work_item_csv",
         "repo_history",

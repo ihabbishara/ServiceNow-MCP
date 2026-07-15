@@ -68,7 +68,7 @@ describe("enabledWhen empty-string is treated as disabled (fix #7)", () => {
 });
 
 describe("buildTools", () => {
-  it("registers exactly the 23 expected tools", () => {
+  it("registers exactly the 24 expected tools", () => {
     const names = buildTools(fakeRuntime())
       .map((t) => t.name)
       .sort();
@@ -88,6 +88,7 @@ describe("buildTools", () => {
         "get_work_item",
         "index_url",
         "list_work_item_csvs",
+        "lookup_assignment_groups",
         "read_repo_file",
         "read_work_item_csv",
         "repo_history",

@@ -79,7 +79,7 @@ describe("ServiceNowClient", () => {
     const url = new URL(fetchMock.mock.calls[0][0] as string);
     expect(url.pathname).toBe("/api/now/table/incident");
     expect(url.searchParams.get("sysparm_query")).toBe(
-      "state!=7^priority=1^assignment_group.name=Platform SRE^short_descriptionLIKEDB^ORDERBYDESCsys_updated_on"
+      "state!=7^priority=1^assignment_group.nameLIKEPlatform SRE^short_descriptionLIKEDB^ORDERBYDESCsys_updated_on"
     );
     expect(url.searchParams.get("sysparm_limit")).toBe("200");
     expect(url.searchParams.get("sysparm_display_value")).toBe("all");
@@ -125,7 +125,7 @@ describe("ServiceNowClient", () => {
     });
     const url = new URL(fetchMock.mock.calls[0][0] as string);
     expect(url.searchParams.get("sysparm_query")).toBe(
-      "assignment_group.name=SREassigned_toISEMPTY^ORDERBYDESCsys_updated_on"
+      "assignment_group.nameLIKESREassigned_toISEMPTY^ORDERBYDESCsys_updated_on"
     );
   });
 
@@ -137,8 +137,55 @@ describe("ServiceNowClient", () => {
     });
     const url = new URL(fetchMock.mock.calls[0][0] as string);
     expect(url.searchParams.get("sysparm_query")).toBe(
-      "stateNOT IN6,7,8^assignment_group.name=Platform SRE^ORDERBYDESCsys_updated_on"
+      "stateNOT IN6,7,8^assignment_group.nameLIKEPlatform SRE^ORDERBYDESCsys_updated_on"
     );
+  });
+
+  it("listIncidentsWithFilters onlyOpen prepends the open-state exclusion", async () => {
+    fetchMock.mockResolvedValue(okResponse([]));
+    await new ServiceNowClient(cfg).listIncidentsWithFilters({ onlyOpen: true, priority: "1" });
+    const url = new URL(fetchMock.mock.calls[0][0] as string);
+    expect(url.searchParams.get("sysparm_query")).toBe(
+      "stateNOT IN6,7,8^priority=1^ORDERBYDESCsys_updated_on"
+    );
+  });
+
+  it("uses contains-match for assigned_to names", async () => {
+    fetchMock.mockResolvedValue(okResponse([]));
+    await new ServiceNowClient(cfg).listIncidentsWithFilters({ assignedTo: "Jane" });
+    const url = new URL(fetchMock.mock.calls[0][0] as string);
+    expect(url.searchParams.get("sysparm_query")).toContain("assigned_to.nameLIKEJane");
+  });
+
+  it("lookupGroups queries sys_user_group with contains-match, caps limit at 50, maps rows", async () => {
+    fetchMock.mockResolvedValue(
+      okResponse([
+        {
+          name: snField("g1", "T01234-Avengers-GIOM"),
+          sys_id: snField("grp-1"),
+          description: snField("", "GIOM ops team"),
+          active: snField("true")
+        }
+      ])
+    );
+    const groups = await new ServiceNowClient(cfg).lookupGroups("GIOM", 500);
+    const url = new URL(fetchMock.mock.calls[0][0] as string);
+    expect(url.pathname).toBe("/api/now/table/sys_user_group");
+    expect(url.searchParams.get("sysparm_query")).toBe("nameLIKEGIOM^ORDERBYname");
+    expect(url.searchParams.get("sysparm_limit")).toBe("50");
+    expect(groups[0]).toEqual({
+      name: "T01234-Avengers-GIOM",
+      sysId: "grp-1",
+      description: "GIOM ops team",
+      active: true
+    });
+  });
+
+  it("strips ^ from lookupGroups term to prevent query injection", async () => {
+    fetchMock.mockResolvedValue(okResponse([]));
+    await new ServiceNowClient(cfg).lookupGroups("GIOM^active=false");
+    const url = new URL(fetchMock.mock.calls[0][0] as string);
+    expect(url.searchParams.get("sysparm_query")).toBe("nameLIKEGIOMactive=false^ORDERBYname");
   });
 
   it("getIncidentByNumber returns null when no rows", async () => {

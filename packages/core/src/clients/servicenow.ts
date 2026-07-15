@@ -131,6 +131,7 @@ const mapChange = (row: SnRow): ChangeRecord => ({
 });
 
 export interface IncidentListFilters {
+  onlyOpen?: boolean;
   stateNot?: string;
   priority?: string;
   assignmentGroup?: string;
@@ -138,6 +139,15 @@ export interface IncidentListFilters {
   shortDescriptionContains?: string;
   limit?: number;
 }
+
+export interface AssignmentGroup {
+  name: string;
+  sysId: string;
+  description?: string;
+  active: boolean;
+}
+
+const GROUP_FIELDS = ["name", "sys_id", "description", "active"].join(",");
 
 export interface ChangeListFilters {
   stateNot?: string; // raw change_request state code (no name→code map for changes; pass numeric code)
@@ -186,11 +196,12 @@ export class ServiceNowClient {
 
   async listIncidentsWithFilters(f: IncidentListFilters): Promise<Incident[]> {
     const parts: string[] = [];
+    if (f.onlyOpen) parts.push(OPEN_INCIDENT_QUERY);
     if (f.stateNot) parts.push(`state!=${snSafe(stateCode(f.stateNot))}`);
     if (f.priority) parts.push(`priority=${snSafe(f.priority)}`);
-    if (f.assignmentGroup) parts.push(`assignment_group.name=${snSafe(f.assignmentGroup)}`);
+    if (f.assignmentGroup) parts.push(`assignment_group.nameLIKE${snSafe(f.assignmentGroup)}`);
     if (f.assignedTo === "") parts.push("assigned_toISEMPTY");
-    else if (f.assignedTo) parts.push(`assigned_to.name=${snSafe(f.assignedTo)}`);
+    else if (f.assignedTo) parts.push(`assigned_to.nameLIKE${snSafe(f.assignedTo)}`);
     if (f.shortDescriptionContains)
       parts.push(`short_descriptionLIKE${snSafe(f.shortDescriptionContains)}`);
     parts.push("ORDERBYDESCsys_updated_on");
@@ -206,7 +217,7 @@ export class ServiceNowClient {
   async listIncidents(f: { onlyOpen?: boolean; assignmentGroup?: string }): Promise<Incident[]> {
     const parts: string[] = [];
     if (f.onlyOpen) parts.push(OPEN_INCIDENT_QUERY);
-    if (f.assignmentGroup) parts.push(`assignment_group.name=${snSafe(f.assignmentGroup)}`);
+    if (f.assignmentGroup) parts.push(`assignment_group.nameLIKE${snSafe(f.assignmentGroup)}`);
     parts.push("ORDERBYDESCsys_updated_on");
     const rows = await this.request("incident", parts.join("^"), 200, INCIDENT_FIELDS);
     return rows.map(mapIncident);
@@ -220,8 +231,8 @@ export class ServiceNowClient {
   async listChangesWithFilters(f: ChangeListFilters): Promise<ChangeRecord[]> {
     const parts: string[] = [];
     if (f.stateNot) parts.push(`state!=${snSafe(f.stateNot)}`);
-    if (f.assignmentGroup) parts.push(`assignment_group.name=${snSafe(f.assignmentGroup)}`);
-    if (f.configurationItem) parts.push(`cmdb_ci.name=${snSafe(f.configurationItem)}`);
+    if (f.assignmentGroup) parts.push(`assignment_group.nameLIKE${snSafe(f.assignmentGroup)}`);
+    if (f.configurationItem) parts.push(`cmdb_ci.nameLIKE${snSafe(f.configurationItem)}`);
     if (f.startedAfter) parts.push(`start_date>=${toSnDateTime(f.startedAfter)}`);
     if (f.startedBefore) parts.push(`start_date<=${toSnDateTime(f.startedBefore)}`);
     parts.push("ORDERBYDESCstart_date");
@@ -232,6 +243,22 @@ export class ServiceNowClient {
       CHANGE_FIELDS
     );
     return rows.map(mapChange);
+  }
+
+  /** Contains-match on sys_user_group.name — resolves partial names like "GIOM" to full group names. */
+  async lookupGroups(nameContains: string, limit = 20): Promise<AssignmentGroup[]> {
+    const rows = await this.request(
+      "sys_user_group",
+      `nameLIKE${snSafe(nameContains)}^ORDERBYname`,
+      Math.min(limit, 50),
+      GROUP_FIELDS
+    );
+    return rows.map((row) => ({
+      name: display(row, "name") ?? "",
+      sysId: row.sys_id?.value ?? "",
+      description: display(row, "description"),
+      active: row.active?.value === "true"
+    }));
   }
 
   async getChangeByNumber(number: string): Promise<ChangeRecord | null> {

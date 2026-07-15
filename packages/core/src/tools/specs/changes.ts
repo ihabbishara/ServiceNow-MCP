@@ -4,7 +4,8 @@ import { ToolError, defineSpec } from "../spec.js";
 export const changeSpecs = [
   defineSpec({
     name: "search_changes",
-    description: "Search ServiceNow change records with filters",
+    description:
+      "Search ServiceNow change records with filters. Name filters (assignment_group, configuration_item) are case-insensitive contains-matches, so partial names work.",
     schema: {
       state_not: z
         .string()
@@ -12,8 +13,16 @@ export const changeSpecs = [
         .describe(
           "Exclude changes with this state. Numeric change_request state code (e.g. '3'=Implement, '4'=Review), not a state name"
         ),
-      assignment_group: z.string().optional().describe("Filter by assignment group"),
-      configuration_item: z.string().optional().describe("Filter by configuration item"),
+      assignment_group: z
+        .string()
+        .optional()
+        .describe(
+          "Filter by assignment group — partial name OK, case-insensitive contains-match (e.g. 'GIOM' matches 'T01234-Avengers-GIOM')"
+        ),
+      configuration_item: z
+        .string()
+        .optional()
+        .describe("Filter by configuration item — partial name OK, contains-match"),
       started_after: z.string().optional().describe("Changes started after this date (ISO 8601)"),
       started_before: z.string().optional().describe("Changes started before this date (ISO 8601)"),
       risk: z.enum(["High", "Medium", "Low"]).optional().describe("Filter by risk level"),

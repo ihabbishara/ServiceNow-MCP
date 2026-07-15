@@ -133,10 +133,10 @@ flowchart LR
 - `ToolError` is the expected-failure channel: surfaced verbatim to the model;
   anything else thrown is formatted as an unexpected error. The Copilot adapter
   never throws (returns `{error}`), keeping turns alive.
-- The 23 tools by domain: 9 ServiceNow (all read), 7 Azure DevOps work-item
+- The 24 tools by domain: 10 ServiceNow (all read), 7 Azure DevOps work-item
   (3 writes: `create_bug_from_incident`, `create_work_item`, `clone_work_item`),
   2 knowledge/RAG, 1 SharePoint, 2 work-item CSV, 4 git-repo (all read).
-  A 24th tool, `analyze_code`, is agent-only (see §6.3).
+  A 25th tool, `analyze_code`, is agent-only (see §6.3).
 
 ## 5. `@sre/core` — domain library
 

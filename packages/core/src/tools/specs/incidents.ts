@@ -38,7 +38,9 @@ export const incidentSpecs = [
   defineSpec({
     name: "search_incidents",
     description:
-      "Search ServiceNow incidents with filters. Use to find incidents by state, priority, assignment group, or description.",
+      "Search ServiceNow incidents with filters. Name filters (assignment_group, assigned_to) are " +
+      "case-insensitive contains-matches like the ServiceNow UI, so partial names such as 'GIOM' work. " +
+      "Returns all states unless only_open is set.",
     schema: {
       state_not: z
         .string()
@@ -46,15 +48,28 @@ export const incidentSpecs = [
         .describe(
           "Exclude incidents with this single state name (e.g., 'Resolved' excludes only Resolved, not Closed or Canceled)"
         ),
+      only_open: z
+        .boolean()
+        .optional()
+        .describe(
+          "Exclude Resolved/Closed/Canceled incidents. Set only when the user explicitly asks for open/active/unresolved incidents; omit to search all states"
+        ),
       priority: z
         .enum(["1", "2", "3", "4"])
         .optional()
-        .describe("Filter by priority: 1=Critical, 2=High, 3=Medium, 4=Low"),
-      assignment_group: z.string().optional().describe("Filter by assignment group name"),
+        .describe("Filter by priority: 1=Critical (P1), 2=High (P2), 3=Medium (P3), 4=Low (P4)"),
+      assignment_group: z
+        .string()
+        .optional()
+        .describe(
+          "Filter by assignment group — partial name OK, contains-match (e.g. 'GIOM' matches 'T01234-Avengers-GIOM')"
+        ),
       assigned_to: z
         .string()
         .optional()
-        .describe("Filter by assigned user name (mutually exclusive with unassigned_only)"),
+        .describe(
+          "Filter by assigned user — partial name OK, contains-match (mutually exclusive with unassigned_only)"
+        ),
       short_description_contains: z
         .string()
         .optional()
@@ -72,6 +87,7 @@ export const incidentSpecs = [
         );
       }
       const incidents = await rt.serviceNowClient.listIncidentsWithFilters({
+        onlyOpen: a.only_open,
         stateNot: a.state_not,
         priority: a.priority,
         assignmentGroup: a.assignment_group,
@@ -79,8 +95,36 @@ export const incidentSpecs = [
         shortDescriptionContains: a.short_description_contains,
         limit: Math.min(a.limit ?? 50, 200)
       });
+
+      const stateBreakdown: Record<string, number> = {};
+      for (const inc of incidents) stateBreakdown[inc.state] = (stateBreakdown[inc.state] ?? 0) + 1;
+
+      // Group filter transparency: show which full group names the contains-match hit,
+      // and on zero hits distinguish "no such group" from "group exists, other filters exclude all".
+      let matchedAssignmentGroups: string[] | undefined;
+      let hint: string | undefined;
+      if (a.assignment_group) {
+        matchedAssignmentGroups = [
+          ...new Set(incidents.map((i) => i.assignmentGroup).filter((g): g is string => !!g))
+        ];
+        if (incidents.length === 0) {
+          try {
+            const groups = await rt.serviceNowClient.lookupGroups(a.assignment_group);
+            hint = groups.length
+              ? `No incidents matched, but these assignment groups contain '${a.assignment_group}': ` +
+                `${groups.map((g) => g.name).join(", ")}. The group filter is fine — relax the other filters (state, priority, text) or confirm intent with the user.`
+              : `No assignment group name contains '${a.assignment_group}'. Verify the group name with the user or explore with lookup_assignment_groups.`;
+          } catch {
+            // lookup is best-effort; the empty result stands on its own
+          }
+        }
+      }
+
       return {
         count: incidents.length,
+        ...(matchedAssignmentGroups ? { matchedAssignmentGroups } : {}),
+        ...(incidents.length ? { stateBreakdown } : {}),
+        ...(hint ? { hint } : {}),
         incidents: incidents.map((inc) => ({
           number: inc.number,
           priority: inc.priority,
@@ -90,6 +134,29 @@ export const incidentSpecs = [
           assignmentGroup: inc.assignmentGroup ?? null,
           openedAt: inc.openedAt,
           updatedAt: inc.updatedAt
+        }))
+      };
+    }
+  }),
+
+  defineSpec({
+    name: "lookup_assignment_groups",
+    description:
+      "Find ServiceNow assignment groups by partial name (case-insensitive contains-match). Use to " +
+      "resolve short names like 'GIOM' to full group names such as 'T01234-Avengers-GIOM', or when a " +
+      "group-filtered search returns nothing.",
+    schema: {
+      name_contains: z.string().describe("Partial group name to match (e.g. 'GIOM')"),
+      limit: z.number().optional().describe("Maximum results (default: 20, max: 50)")
+    },
+    run: async (rt, a) => {
+      const groups = await rt.serviceNowClient.lookupGroups(a.name_contains, a.limit ?? 20);
+      return {
+        count: groups.length,
+        groups: groups.map((g) => ({
+          name: g.name,
+          description: g.description ?? null,
+          active: g.active
         }))
       };
     }
