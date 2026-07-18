@@ -1,18 +1,8 @@
 // packages/web/client/src/views/Sidebar.tsx
 import type { ChatState } from "../state.js";
 import { CollapsibleSection } from "./ui/CollapsibleSection.js";
+import { WORKFLOW_CATALOG, WORKFLOW_CATEGORIES } from "../../../shared/workflows.js";
 import ingLogo from "../assets/ing-logo.svg";
-
-const WORKFLOWS = [
-  "/triage",
-  "/review",
-  "/postmortem",
-  "/handover",
-  "/rca",
-  "/release-readiness",
-  "/ops-report",
-  "/queue-hygiene"
-];
 
 function Dot({ on }: { on: boolean }) {
   return (
@@ -109,14 +99,22 @@ export function Sidebar({
       </CollapsibleSection>
 
       <CollapsibleSection title="Workflows">
-        {WORKFLOWS.map((w) => (
-          <button
-            key={w}
-            onClick={() => onInsert(w + " ")}
-            className="text-left px-2 py-1 rounded font-mono text-label-sm text-on-surface hover:bg-surface-container transition-colors"
-          >
-            {w}
-          </button>
+        {WORKFLOW_CATEGORIES.map((cat) => (
+          <div key={cat} className="flex flex-col gap-0.5">
+            <div className="px-2 pt-2 pb-0.5 text-label-sm font-semibold uppercase tracking-wide text-on-surface-variant">
+              {cat}
+            </div>
+            {WORKFLOW_CATALOG.filter((w) => w.category === cat).map((w) => (
+              <button
+                key={w.command}
+                onClick={() => onInsert(w.command + " ")}
+                title={`${w.command}${w.argHint ? ` ${w.argHint}` : ""} — ${w.description}`}
+                className="text-left px-2 py-1 rounded font-mono text-label-sm text-on-surface hover:bg-surface-container transition-colors"
+              >
+                {w.command}
+              </button>
+            ))}
+          </div>
         ))}
       </CollapsibleSection>
 

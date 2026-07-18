@@ -12,7 +12,13 @@ describe("PROMPT_SPECS registry", () => {
       "incident_rca",
       "release_readiness",
       "ops_report",
-      "queue_hygiene"
+      "queue_hygiene",
+      "recurring_incidents",
+      "service_health",
+      "deploy_impact",
+      "incident_to_backlog",
+      "sla_review",
+      "major_incident_comms"
     ]);
     for (const p of PROMPT_SPECS) {
       expect(p.description.length).toBeGreaterThan(10);
@@ -146,6 +152,110 @@ describe("golden workflow prompts", () => {
     expect(text).toMatch(/markdown table/i);
     // No ServiceNow write tools exist; the workflow must not promise writes.
     expect(text).toContain("ServiceNow");
+  });
+});
+
+describe("persona workflow prompts (second wave)", () => {
+  it("recurring_incidents interpolates subject + window and hunts problem candidates", () => {
+    const text = promptSpec("recurring_incidents").build({ subject: "GIOM", days_back: 60 });
+    expect(text).toContain("GIOM");
+    expect(text).toContain("last 60 days");
+    const defaulted = promptSpec("recurring_incidents").build({ subject: "GIOM" });
+    expect(defaulted).toContain("last 30 days");
+    for (const tool of ["search_incidents", "search_knowledge"]) {
+      expect(defaulted).toContain(tool);
+    }
+    for (const section of ["## Clusters", "## Problem-record candidates", "## Runbook coverage"]) {
+      expect(defaulted).toContain(section);
+    }
+    expect(defaulted).toMatch(/markdown table/i);
+  });
+
+  it("service_health interpolates service + window and yields a verdict", () => {
+    const text = promptSpec("service_health").build({ service: "payments-api", days_back: 90 });
+    expect(text).toContain("payments-api");
+    expect(text).toContain("last 90 days");
+    const defaulted = promptSpec("service_health").build({ service: "payments-api" });
+    expect(defaulted).toContain("last 30 days");
+    for (const tool of ["search_incidents", "search_changes", "find_sla_risks"]) {
+      expect(defaulted).toContain(tool);
+    }
+    for (const section of ["## Scorecard", "## Top categories", "## Assessment"]) {
+      expect(defaulted).toContain(section);
+    }
+    expect(defaulted).toMatch(/markdown table/i);
+  });
+
+  it("deploy_impact interpolates the change and demands a rollback verdict", () => {
+    const text = promptSpec("deploy_impact").build({ change_number: "CHG0005432" });
+    expect(text).toContain("CHG0005432");
+    for (const tool of ["get_change", "correlate_changes", "search_incidents"]) {
+      expect(text).toContain(tool);
+    }
+    for (const section of [
+      "## Change summary",
+      "## Incidents since deployment",
+      "## Verdict",
+      "## Recommendation"
+    ]) {
+      expect(text).toContain(section);
+    }
+    expect(text).toMatch(/markdown table/i);
+    expect(text).toContain("rollback");
+  });
+
+  it("incident_to_backlog interpolates group + window and gates writes on approval", () => {
+    const text = promptSpec("incident_to_backlog").build({
+      group_name: "Platform SRE",
+      days_back: 30
+    });
+    expect(text).toContain("Platform SRE");
+    expect(text).toContain("last 30 days");
+    const defaulted = promptSpec("incident_to_backlog").build({ group_name: "Platform SRE" });
+    expect(defaulted).toContain("last 14 days");
+    for (const tool of [
+      "lookup_assignment_groups",
+      "search_incidents",
+      "search_work_items",
+      "create_bug_from_incident"
+    ]) {
+      expect(defaulted).toContain(tool);
+    }
+    for (const section of ["## Candidates", "## Proposed backlog items"]) {
+      expect(defaulted).toContain(section);
+    }
+    expect(defaulted).toMatch(/markdown table/i);
+    expect(defaulted).toContain("approve");
+  });
+
+  it("sla_review takes no args and targets management", () => {
+    const text = promptSpec("sla_review").build({});
+    for (const tool of ["find_sla_risks", "get_incident"]) {
+      expect(text).toContain(tool);
+    }
+    for (const section of ["## Breached", "## At risk", "## Recommendations"]) {
+      expect(text).toContain(section);
+    }
+    expect(text).toMatch(/markdown table/i);
+    expect(text).toContain("management");
+  });
+
+  it("major_incident_comms interpolates the incident and drafts stakeholder comms", () => {
+    const text = promptSpec("major_incident_comms").build({ incident_number: "INC0012345" });
+    expect(text).toContain("INC0012345");
+    for (const tool of ["summarize_incident", "get_incident_documents", "search_knowledge"]) {
+      expect(text).toContain(tool);
+    }
+    for (const section of [
+      "## Situation summary",
+      "## Stakeholder update",
+      "## Technical bridge summary",
+      "## Comms cadence"
+    ]) {
+      expect(text).toContain(section);
+    }
+    expect(text).toMatch(/markdown table/i);
+    expect(text).toContain("plain language");
   });
 });
 

@@ -388,6 +388,210 @@ Numbered list of concrete actions (assign, update, reprioritize, chase resolutio
 There are no ServiceNow write tools — every action is a recommendation for the operator to apply in ServiceNow.
 
 Keep it short and directive; the goal is an empty list next run.`
+  }),
+
+  definePromptSpec({
+    name: "recurring_incidents",
+    description: "Cluster repeat incidents into problem-record candidates with permanent fixes",
+    schema: {
+      subject: z.string().describe("Assignment group, service, or CI to analyse (e.g. 'GIOM')"),
+      days_back: z.coerce
+        .number()
+        .int()
+        .positive()
+        .optional()
+        .describe("Days to look back (default: 30)")
+    },
+    build: (
+      a
+    ) => `Find recurring incidents for ${a.subject} over the last ${a.days_back ?? 30} days.
+
+Gather:
+1. search_incidents for ${a.subject} across the period — all states, not just open.
+2. Group the results by symptom: similar short descriptions, same CI, same category.
+3. search_knowledge for runbooks or known issues covering the biggest clusters.
+
+Report exactly these sections:
+
+## Clusters
+Markdown table: Cluster | Count | Example incidents | Common symptom. Only clusters with 2+ incidents.
+
+## Problem-record candidates
+Markdown table: Cluster | Why it deserves a problem record | Suggested permanent fix.
+
+## Runbook coverage
+Markdown table: Cluster | Runbook exists (yes/no + link) | Gap.
+
+## Recommendations
+Up to 3 bullets: highest-leverage permanent fixes first, each with a suggested owner.
+
+A cluster seen 3+ times without a problem record or runbook is always flagged.`
+  }),
+
+  definePromptSpec({
+    name: "service_health",
+    description: "Service scorecard: incident trend, top categories, change activity, verdict",
+    schema: {
+      service: z.string().describe("Service or CI name (e.g. 'payments-api')"),
+      days_back: z.coerce
+        .number()
+        .int()
+        .positive()
+        .optional()
+        .describe("Days to look back (default: 30)")
+    },
+    build: (a) => `Assess the health of ${a.service} over the last ${a.days_back ?? 30} days.
+
+Gather:
+1. search_incidents for ${a.service} in the period — use priority and state counts.
+2. search_changes for changes touching ${a.service} in the period.
+3. find_sla_risks for current exposure on the service.
+
+Report exactly these sections:
+
+## Scorecard
+One-row markdown table: Incidents opened | Resolved | Still open | P1/P2 count | SLA breaches | Changes executed.
+
+## Incident trend
+Markdown table by week: Week | Opened | Resolved | Notable spike cause.
+
+## Top categories
+Markdown table: Category/symptom | Count | Example incident.
+
+## Recent changes
+Markdown table: Change | Window | Risk | Linked incidents (if any).
+
+## Assessment
+One line: Healthy / Degraded / At risk — then the evidence for the verdict and the single most
+important action to improve it.`
+  }),
+
+  definePromptSpec({
+    name: "deploy_impact",
+    description:
+      "Post-deployment impact check: incident correlation and rollback verdict for a change",
+    schema: {
+      change_number: z.string().describe("Deployed change to assess (e.g., CHG0005432)")
+    },
+    build: (a) => `Assess the production impact of deployed change ${a.change_number}.
+
+Gather:
+1. get_change for ${a.change_number} — window, affected CIs, backout plan.
+2. search_incidents for incidents opened since the change window started on the affected CIs/services.
+3. correlate_changes to test which of those incidents plausibly trace back to this change.
+
+Report exactly these sections:
+
+## Change summary
+One-row markdown table: Change | Deployed window | Affected CI/service | Risk | Backout plan.
+
+## Incidents since deployment
+Markdown table: Number | Priority | Opened | CI | Correlation (likely / possible / unrelated), one line of reasoning each.
+
+## Verdict
+One of: clean (no correlated incidents) / suspect (possible correlation) / confirmed impact — with the evidence.
+
+## Recommendation
+Keep, monitor, or rollback. If rollback: reference the backout plan and flag it if missing or untested.
+
+Correlation needs evidence (timing + affected CI + symptom match), not coincidence.`
+  }),
+
+  definePromptSpec({
+    name: "incident_to_backlog",
+    description:
+      "Sweep resolved incidents lacking ADO links and propose backlog items (write-gated)",
+    schema: {
+      group_name: z.string().describe("Assignment group to sweep (partial name OK)"),
+      days_back: z.coerce
+        .number()
+        .int()
+        .positive()
+        .optional()
+        .describe("Days to look back (default: 14)")
+    },
+    build: (
+      a
+    ) => `Sweep resolved incidents for the ${a.group_name} group from the last ${a.days_back ?? 14} days and propose backlog items for the ones with no follow-up.
+
+Gather:
+1. lookup_assignment_groups for '${a.group_name}' to resolve the exact group name(s).
+2. search_incidents for the group's incidents resolved in the period.
+3. search_work_items to check which incidents already have a linked ADO item.
+
+Report exactly these sections:
+
+## Candidates
+Markdown table: Incident | Resolved | Symptom | Existing work item (ID or none). Only incidents worth
+a follow-up: recurring symptoms, workaround-only resolutions, missing permanent fixes.
+
+## Proposed backlog items
+Markdown table: Incident | Proposed title | Why it deserves a backlog item.
+
+## Next step
+For each candidate I approve, call create_bug_from_incident — every write asks for my confirmation
+first. Never create items I have not approved.`
+  }),
+
+  definePromptSpec({
+    name: "sla_review",
+    description: "SLA breach and at-risk review with owners, causes, and actions",
+    schema: {},
+    build: () => `Review the current SLA position: breaches and at-risk incidents.
+
+Gather:
+1. find_sla_risks for everything breached or at risk.
+2. get_incident on the worst offenders for owner and cause detail.
+
+Report exactly these sections:
+
+## Breached
+Markdown table: Incident | Priority | Group | Breached by | Root cause of the delay | Action.
+
+## At risk
+Markdown table: Incident | Time remaining | Owner | Recommended action, most urgent first.
+
+## Systemic patterns
+Are breaches concentrated in one group, service, or priority band? One short paragraph.
+
+## Recommendations
+Up to 3 bullets, each actionable with an owner.
+
+The audience is management: lead with counts and time figures, no jargon, no tool names.`
+  }),
+
+  definePromptSpec({
+    name: "major_incident_comms",
+    description: "Major-incident comms pack: stakeholder update, bridge summary, cadence",
+    schema: {
+      incident_number: z.string().describe("Major incident (e.g., INC0012345)")
+    },
+    build: (a) => `Prepare the communications pack for major incident ${a.incident_number}.
+
+Gather:
+1. summarize_incident for ${a.incident_number} — status, impact, timeline, related changes.
+2. If SharePoint is configured, get_incident_documents for ${a.incident_number} — comms so far, analysis notes.
+3. search_knowledge for the major-incident process or comms templates if indexed.
+
+Report exactly these sections:
+
+## Situation summary
+One-row markdown table: Incident | Priority | Started | Current state | Impacted service | Users affected.
+
+## Stakeholder update
+A ready-to-send draft in plain language: what happened, current impact, what we are doing,
+next update time. No jargon, no incident-speak, no blame.
+
+## Technical bridge summary
+For engineers joining the bridge: current hypothesis, what has been tried, what is in flight — bullets.
+
+## Comms cadence
+Markdown table: Audience | Channel | Frequency | Owner.
+
+## Open questions
+What is still unknown and who is finding out — bullets.
+
+Facts only from tool output; mark anything uncertain as uncertain rather than guessing.`
   })
 ];
 

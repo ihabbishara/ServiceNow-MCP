@@ -23,6 +23,12 @@ const HELP_TEXT = `Workflow commands:
   /release-readiness [days] Go/No-Go on upcoming changes (days default: 7)
   /ops-report [days]       Management operations report (days default: 7)
   /queue-hygiene <group>   Queue cleanup review for an assignment group
+  /recurring <subject> [days]  Cluster repeat incidents into problem candidates (days default: 30)
+  /health <service> [days] Service health scorecard with verdict (days default: 30)
+  /deploy-impact <CHG>     Post-deployment incident correlation + rollback verdict
+  /incident-to-backlog <group> [days]  Propose ADO items for resolved incidents (days default: 14)
+  /sla-review              SLA breach and at-risk review for management
+  /mim <INC>               Major-incident comms pack (stakeholder update, cadence)
   /login                   Re-authenticate to GitHub Copilot (device flow)
   /help                    Show this help
   /exit                    Quit
