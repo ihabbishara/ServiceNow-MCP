@@ -3,7 +3,16 @@ import type { ChatState } from "../state.js";
 import { CollapsibleSection } from "./ui/CollapsibleSection.js";
 import ingLogo from "../assets/ing-logo.svg";
 
-const WORKFLOWS = ["/triage", "/review", "/postmortem", "/handover"];
+const WORKFLOWS = [
+  "/triage",
+  "/review",
+  "/postmortem",
+  "/handover",
+  "/rca",
+  "/release-readiness",
+  "/ops-report",
+  "/queue-hygiene"
+];
 
 function Dot({ on }: { on: boolean }) {
   return (

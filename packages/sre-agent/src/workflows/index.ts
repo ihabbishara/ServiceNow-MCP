@@ -29,6 +29,14 @@ export const buildWorkflowPrompt = (line: string): string | null => {
         ...(hours ? { hours_back: Number(hours) } : {})
       });
     }
+    case "/rca":
+      return promptSpec("incident_rca").build({ incident_number: arg });
+    case "/release-readiness":
+      return promptSpec("release_readiness").build(arg ? { days_ahead: Number(arg) } : {});
+    case "/ops-report":
+      return promptSpec("ops_report").build(arg ? { days_back: Number(arg) } : {});
+    case "/queue-hygiene":
+      return promptSpec("queue_hygiene").build({ group_name: arg });
     default:
       return null;
   }

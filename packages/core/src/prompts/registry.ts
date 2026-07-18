@@ -235,6 +235,159 @@ Report exactly these sections:
 ## Confidence — high / medium / low, with the main remaining uncertainty
 
 Ground every claim in tool output. Never invent file contents or line numbers.`
+  }),
+
+  definePromptSpec({
+    name: "incident_rca",
+    description: "Full root-cause analysis for an incident: evidence, change correlation, verdict",
+    schema: {
+      incident_number: z.string().describe("Incident to analyse (e.g., INC0012345)")
+    },
+    build: (a) => `Perform a full root-cause analysis for incident ${a.incident_number}.
+
+Gather evidence first:
+1. summarize_incident for ${a.incident_number} — full context, timeline, related changes.
+2. correlate_changes — changes around the incident start are prime suspects.
+3. search_knowledge for runbooks or known issues matching the symptoms; cite source URLs.
+4. If SharePoint is configured, get_incident_documents for ${a.incident_number}.
+5. If the incident contains stack traces or code-referencing errors, offer a codebase analysis, ask for the repo clone URL, then use analyze_code.
+
+Report exactly these sections:
+
+## Incident snapshot
+One markdown table: Number | Priority | State | Opened | Assignment group | Short description.
+
+## Change correlation
+Candidate changes as a markdown table: Change | Window | Affected CI | Verdict (suspect / cleared / unknown), one line of reasoning each.
+
+## Root-cause hypothesis
+Most likely failure mechanism, alternatives considered, and the evidence separating them.
+
+## Remediation
+Immediate mitigation, permanent fix, and prevention — one line each, with a suggested owner.
+
+## Confidence
+high / medium / low, with the main remaining uncertainty.
+
+Ground every claim in tool output; never invent data.`
+  }),
+
+  definePromptSpec({
+    name: "release_readiness",
+    description:
+      "Go/No-Go assessment of upcoming changes: conflicts, backout plans, incident exposure",
+    schema: {
+      days_ahead: z.coerce
+        .number()
+        .int()
+        .positive()
+        .optional()
+        .describe("Days to look ahead (default: 7)")
+    },
+    build: (a) => `Assess release readiness for the next ${a.days_ahead ?? 7} days.
+
+Gather:
+1. search_changes for changes scheduled in the next ${a.days_ahead ?? 7} days.
+2. get_change on each candidate for risk level and backout plan detail.
+3. search_incidents (only_open) for open incidents on the affected services/CIs.
+4. If internal documentation is indexed, search_knowledge for deployment standards on the affected services.
+
+Report exactly these sections:
+
+## Change calendar
+Markdown table: Change | Planned window | Affected CI/service | Risk | Backout plan (yes / no / untested).
+
+## Conflicts
+Overlapping windows or same-CI collisions as a markdown table: Changes | CI | Overlap | Severity.
+
+## Open-incident exposure
+Open P1/P2 incidents on services with pending changes: markdown table Incident | Priority | Service | Related change.
+
+## Go / No-Go
+One row per change: Go, Go-with-conditions, or No-Go, with one line of reasoning — as a markdown table.
+
+Be decisive. A missing or untested backout plan is always flagged, never assumed fine.`
+  }),
+
+  definePromptSpec({
+    name: "ops_report",
+    description:
+      "Management-facing operations report: volumes, SLA status, trends, recommendations",
+    schema: {
+      days_back: z.coerce
+        .number()
+        .int()
+        .positive()
+        .optional()
+        .describe("Days to look back (default: 7)")
+    },
+    build: (
+      a
+    ) => `Produce an operations report for management covering the last ${a.days_back ?? 7} days.
+
+Gather:
+1. generate_ops_summary for the period baseline.
+2. search_incidents for the period's incidents — use the priority and state counts.
+3. find_sla_risks for current SLA risks and breaches.
+4. search_changes for changes executed in the period.
+
+Report exactly these sections:
+
+## Executive summary
+One short paragraph: overall health, the single most important number, the single biggest risk.
+
+## Incident volume
+Markdown table: Priority | Opened | Resolved | Still open.
+
+## SLA status
+Markdown table: Incident | Time remaining or breached | Owner | Action.
+
+## Top offender services
+Markdown table: Service/CI | Incidents | Trend note.
+
+## Change activity
+Markdown table: Total changes | Emergency | Failed or backed out.
+
+## Recommendations
+At most 3 bullets, each actionable with a suggested owner.
+
+The audience is management: lead with numbers, no jargon, no tool names in the output.`
+  }),
+
+  definePromptSpec({
+    name: "queue_hygiene",
+    description:
+      "Queue cleanup review for an assignment group: unassigned, stale, misprioritized, SLA risk",
+    schema: {
+      group_name: z.string().describe("Assignment group to review (partial name OK, e.g. 'GIOM')")
+    },
+    build: (a) => `Run a queue-hygiene review for the ${a.group_name} assignment group.
+
+Gather:
+1. lookup_assignment_groups for '${a.group_name}' to resolve the exact group name(s).
+2. search_incidents (only_open) for the group's open incidents.
+3. find_stale_tickets for tickets missing recent updates.
+4. find_sla_risks for the group's at-risk items.
+
+Report exactly these sections:
+
+## Unassigned
+Open incidents with no assignee: markdown table Number | Priority | State | Opened | Short description.
+
+## Stale
+Tickets without recent work notes: markdown table Number | Priority | Last update | Age.
+
+## Misprioritized
+P1/P2 sitting in New, or long-open P1s: markdown table Number | Priority | State | Age | Why flagged.
+
+## SLA risk
+Markdown table: Number | Time remaining | Recommended action.
+
+## Cleanup actions
+Numbered list of concrete actions (assign, update, reprioritize, chase resolution), most urgent first.
+There are no ServiceNow write tools — every action is a recommendation for the operator to apply in ServiceNow.
+
+Keep it short and directive; the goal is an empty list next run.`
   })
 ];
 

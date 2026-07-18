@@ -8,7 +8,8 @@ const fakeParsers = {
   pptx: async () => "pptx-text",
   pdf: async () => "pdf-text",
   csv: async (b: Buffer) => b.toString("utf8"),
-  txt: async (b: Buffer) => b.toString("utf8")
+  txt: async (b: Buffer) => b.toString("utf8"),
+  md: async (b: Buffer) => b.toString("utf8")
 } satisfies Parsers;
 
 describe("docparse", () => {
@@ -16,7 +17,13 @@ describe("docparse", () => {
     expect(formatOf("a.pdf")).toBe("pdf");
     expect(formatOf("a.CSV")).toBe("csv");
     expect(formatOf("notes.txt")).toBe("txt");
+    expect(formatOf("runbook.md")).toBe("md");
     expect(extOf("x.PPTX")).toBe("pptx");
+  });
+
+  it("extracts markdown as plain text", async () => {
+    const r = await extractText("runbook.md", Buffer.from("# Title\nbody"), fakeParsers);
+    expect(r).toEqual({ text: "# Title\nbody" });
   });
 
   it("rejects legacy and unknown formats", () => {

@@ -8,7 +8,11 @@ describe("PROMPT_SPECS registry", () => {
       "shift_handover",
       "change_review",
       "incident_postmortem",
-      "code_analysis"
+      "code_analysis",
+      "incident_rca",
+      "release_readiness",
+      "ops_report",
+      "queue_hygiene"
     ]);
     for (const p of PROMPT_SPECS) {
       expect(p.description.length).toBeGreaterThan(10);
@@ -61,6 +65,87 @@ describe("PROMPT_SPECS registry", () => {
     expect(text).toContain("search_knowledge");
     expect(text).toContain("get_incident_documents for INC0012345");
     expect(text).toContain("Focus on learning and prevention, not blame.");
+  });
+});
+
+describe("golden workflow prompts", () => {
+  it("incident_rca interpolates the incident and drives the full evidence chain", () => {
+    const text = promptSpec("incident_rca").build({ incident_number: "INC0012345" });
+    expect(text).toContain("INC0012345");
+    for (const tool of ["summarize_incident", "correlate_changes", "search_knowledge"]) {
+      expect(text).toContain(tool);
+    }
+    expect(text).toContain("get_incident_documents");
+    expect(text).toContain("analyze_code");
+    for (const section of [
+      "## Incident snapshot",
+      "## Change correlation",
+      "## Root-cause hypothesis",
+      "## Remediation",
+      "## Confidence"
+    ]) {
+      expect(text).toContain(section);
+    }
+    expect(text).toMatch(/markdown table/i);
+  });
+
+  it("release_readiness interpolates the look-ahead window and defaults to 7 days", () => {
+    const custom = promptSpec("release_readiness").build({ days_ahead: 14 });
+    expect(custom).toContain("next 14 days");
+    const defaulted = promptSpec("release_readiness").build({});
+    expect(defaulted).toContain("next 7 days");
+    for (const tool of ["search_changes", "get_change", "search_incidents"]) {
+      expect(defaulted).toContain(tool);
+    }
+    for (const section of ["## Change calendar", "## Conflicts", "## Go / No-Go"]) {
+      expect(defaulted).toContain(section);
+    }
+    expect(defaulted).toMatch(/markdown table/i);
+    expect(defaulted).toContain("backout");
+  });
+
+  it("ops_report interpolates the look-back window, defaults to 7 days, and targets management", () => {
+    const custom = promptSpec("ops_report").build({ days_back: 30 });
+    expect(custom).toContain("last 30 days");
+    const defaulted = promptSpec("ops_report").build({});
+    expect(defaulted).toContain("last 7 days");
+    for (const tool of [
+      "generate_ops_summary",
+      "search_incidents",
+      "find_sla_risks",
+      "search_changes"
+    ]) {
+      expect(defaulted).toContain(tool);
+    }
+    for (const section of ["## Executive summary", "## Incident volume", "## Recommendations"]) {
+      expect(defaulted).toContain(section);
+    }
+    expect(defaulted).toMatch(/markdown table/i);
+    expect(defaulted).toContain("management");
+  });
+
+  it("queue_hygiene interpolates the group, resolves it, and stays recommend-only", () => {
+    const text = promptSpec("queue_hygiene").build({ group_name: "Platform SRE" });
+    expect(text).toContain("Platform SRE");
+    for (const tool of [
+      "lookup_assignment_groups",
+      "search_incidents",
+      "find_stale_tickets",
+      "find_sla_risks"
+    ]) {
+      expect(text).toContain(tool);
+    }
+    for (const section of [
+      "## Unassigned",
+      "## Stale",
+      "## Misprioritized",
+      "## Cleanup actions"
+    ]) {
+      expect(text).toContain(section);
+    }
+    expect(text).toMatch(/markdown table/i);
+    // No ServiceNow write tools exist; the workflow must not promise writes.
+    expect(text).toContain("ServiceNow");
   });
 });
 

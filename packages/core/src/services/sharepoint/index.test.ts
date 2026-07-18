@@ -37,7 +37,8 @@ const parsers: Parsers = {
   pptx: async (b) => b.toString(),
   pdf: async (b) => b.toString(),
   csv: async (b) => b.toString(),
-  txt: async (b) => b.toString()
+  txt: async (b) => b.toString(),
+  md: async (b) => b.toString()
 };
 
 describe("SharePointService.getIncidentDocuments", () => {

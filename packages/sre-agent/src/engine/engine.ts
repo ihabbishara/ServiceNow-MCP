@@ -24,6 +24,20 @@ export const KNOWLEDGE_SYSTEM_INSTRUCTION =
   "and suggest running `sre-agent crawl`. Do not call it for questions clearly answerable from " +
   "ServiceNow/ADO data alone.";
 
+/**
+ * Always appended. Pins the response format explicitly: table rendering was
+ * emergent model behavior and silently degraded to prose when tool payloads
+ * grew advisory fields (stateBreakdown/hint). The advisory fields exist to
+ * steer the model's next action, not to be recited to the user.
+ */
+export const FORMATTING_SYSTEM_INSTRUCTION =
+  "Response formatting: when presenting multiple records (incidents, changes, work items, groups, " +
+  "SLA risks), render them as a GitHub-flavored markdown table with the key fields as columns — " +
+  "for incidents: Number | Priority | State | Short description | Assignment group | Opened. " +
+  "Use markdown headings to structure multi-part answers and keep surrounding prose brief. " +
+  "Tool results may carry advisory fields such as hint, stateBreakdown, or matchedAssignmentGroups: " +
+  "use them to choose your next tool call or refine filters; never quote them verbatim in the reply.";
+
 /** Appended when SharePoint is configured: steer toward get_incident_documents for incident docs. */
 export const SHAREPOINT_SYSTEM_INSTRUCTION =
   "This agent has a `get_incident_documents` tool that retrieves an incident's supporting documents " +
@@ -180,6 +194,7 @@ export class ChatEngine {
         this.deps.onPermissionRequest ??
         makePermissionHandler({ confirmWrites: cfg.confirmWrites }, this.deps.confirm);
       const systemInstructions = [
+        FORMATTING_SYSTEM_INSTRUCTION,
         cfg.knowledgeEnabled ? KNOWLEDGE_SYSTEM_INSTRUCTION : null,
         cfg.sharePointEnabled ? SHAREPOINT_SYSTEM_INSTRUCTION : null,
         cfg.app.azureDevOps.orgUrl ? CODE_ANALYSIS_SYSTEM_INSTRUCTION : null

@@ -1,4 +1,4 @@
-export const ACCEPTED_EXTS = ["pdf", "docx", "xlsx", "pptx", "csv", "txt"];
+export const ACCEPTED_EXTS = ["pdf", "docx", "xlsx", "pptx", "csv", "txt", "md"];
 
 const extOf = (name: string): string => {
   const dot = name.lastIndexOf(".");

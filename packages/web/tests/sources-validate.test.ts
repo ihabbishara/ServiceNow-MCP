@@ -15,7 +15,10 @@ describe("validateFile", () => {
     const r = validateFile({ name: "a.pdf", size: 2000 }, 1000);
     expect(r.ok).toBe(false);
   });
+  it("accepts a markdown file", () => {
+    expect(validateFile({ name: "runbook.md", size: 100 }, 1000)).toEqual({ ok: true });
+  });
   it("exposes the accepted extension list", () => {
-    expect(ACCEPTED_EXTS).toEqual(["pdf", "docx", "xlsx", "pptx", "csv", "txt"]);
+    expect(ACCEPTED_EXTS).toEqual(["pdf", "docx", "xlsx", "pptx", "csv", "txt", "md"]);
   });
 });

@@ -8,7 +8,8 @@ const parsers: Parsers = {
   pptx: vi.fn(async () => "pptx-text"),
   pdf: vi.fn(async () => "pdf-text"),
   csv: vi.fn(async (b) => b.toString("utf8")),
-  txt: vi.fn(async (b) => b.toString("utf8"))
+  txt: vi.fn(async (b) => b.toString("utf8")),
+  md: vi.fn(async (b) => b.toString("utf8"))
 };
 
 describe("formatOf", () => {

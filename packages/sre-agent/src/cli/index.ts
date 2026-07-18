@@ -19,6 +19,10 @@ const HELP_TEXT = `Workflow commands:
   /review <CHG>            Review a change for risks
   /postmortem <INC>        Structure a post-incident review
   /handover <team> [hours] Generate a shift handover (hours default: 8)
+  /rca <INC>               Full root-cause analysis with change correlation
+  /release-readiness [days] Go/No-Go on upcoming changes (days default: 7)
+  /ops-report [days]       Management operations report (days default: 7)
+  /queue-hygiene <group>   Queue cleanup review for an assignment group
   /login                   Re-authenticate to GitHub Copilot (device flow)
   /help                    Show this help
   /exit                    Quit

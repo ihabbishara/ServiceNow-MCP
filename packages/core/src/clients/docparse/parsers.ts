@@ -27,5 +27,6 @@ export const defaultParsers: Parsers = {
     return text;
   },
   csv: async (b) => b.toString("utf8"),
-  txt: async (b) => b.toString("utf8")
+  txt: async (b) => b.toString("utf8"),
+  md: async (b) => b.toString("utf8")
 };

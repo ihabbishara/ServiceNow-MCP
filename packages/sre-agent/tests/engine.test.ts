@@ -3,6 +3,7 @@ import type { SessionConfig } from "@github/copilot-sdk";
 import {
   ChatEngine,
   buildClientOptions,
+  FORMATTING_SYSTEM_INSTRUCTION,
   KNOWLEDGE_SYSTEM_INSTRUCTION
 } from "../src/engine/engine.js";
 import { loadAgentConfig } from "../src/config.js";
@@ -166,7 +167,7 @@ describe("ChatEngine clientFactory seam", () => {
     expect(KNOWLEDGE_SYSTEM_INSTRUCTION).toContain("search_knowledge");
   });
 
-  it("omits systemMessage when no steering instruction applies", async () => {
+  it("always appends the formatting instruction, even with no optional capability", async () => {
     const { client, createSession } = makeFakeClient();
     // no CRAWL_SEEDS, and drop ADO so the code-analysis instruction is off too.
     const noAdo = { ...base } as Record<string, string>;
@@ -181,7 +182,17 @@ describe("ChatEngine clientFactory seam", () => {
     });
     await engine.start();
     const sessionConfig = createSession.mock.calls[0][0];
-    expect("systemMessage" in sessionConfig).toBe(false);
+    // The formatting contract is unconditional — with every capability off it
+    // is the entire system message.
+    expect(sessionConfig.systemMessage?.mode).toBe("append");
+    expect(sessionConfig.systemMessage?.content).toBe(FORMATTING_SYSTEM_INSTRUCTION);
+  });
+
+  it("formatting instruction mandates tables and forbids echoing advisory fields", () => {
+    expect(FORMATTING_SYSTEM_INSTRUCTION).toContain("markdown table");
+    for (const field of ["hint", "stateBreakdown", "matchedAssignmentGroups"]) {
+      expect(FORMATTING_SYSTEM_INSTRUCTION).toContain(field);
+    }
   });
 
   it("send() passes the configured TURN_TIMEOUT_MS to sendAndWait (not the SDK 60s default)", async () => {

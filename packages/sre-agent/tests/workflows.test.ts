@@ -34,6 +34,29 @@ describe("workflows", () => {
     expect(p).toContain("postmortem");
   });
 
+  it("/rca builds the RCA prompt with the incident number", () => {
+    const p = buildWorkflowPrompt("/rca INC0012345");
+    expect(p).toContain("INC0012345");
+    expect(p).toContain("summarize_incident");
+    expect(p).toContain("correlate_changes");
+  });
+
+  it("/release-readiness parses optional days and defaults to 7", () => {
+    expect(buildWorkflowPrompt("/release-readiness 14")).toContain("next 14 days");
+    expect(buildWorkflowPrompt("/release-readiness")).toContain("next 7 days");
+  });
+
+  it("/ops-report parses optional days and defaults to 7", () => {
+    expect(buildWorkflowPrompt("/ops-report 30")).toContain("last 30 days");
+    expect(buildWorkflowPrompt("/ops-report")).toContain("last 7 days");
+  });
+
+  it("/queue-hygiene takes a group name with spaces", () => {
+    const p = buildWorkflowPrompt("/queue-hygiene Platform SRE");
+    expect(p).toContain("Platform SRE");
+    expect(p).toContain("find_stale_tickets");
+  });
+
   it("returns null for non-workflow input", () => {
     expect(buildWorkflowPrompt("hello")).toBeNull();
   });
@@ -66,6 +89,22 @@ describe("registry parity (agent workflows)", () => {
     );
     expect(buildWorkflowPrompt("/handover Platform SRE")).toBe(
       promptSpec("shift_handover").build({ team_name: "Platform SRE" })
+    );
+    expect(buildWorkflowPrompt("/rca INC1")).toBe(
+      promptSpec("incident_rca").build({ incident_number: "INC1" })
+    );
+    expect(buildWorkflowPrompt("/release-readiness 14")).toBe(
+      promptSpec("release_readiness").build({ days_ahead: 14 })
+    );
+    expect(buildWorkflowPrompt("/release-readiness")).toBe(
+      promptSpec("release_readiness").build({})
+    );
+    expect(buildWorkflowPrompt("/ops-report 30")).toBe(
+      promptSpec("ops_report").build({ days_back: 30 })
+    );
+    expect(buildWorkflowPrompt("/ops-report")).toBe(promptSpec("ops_report").build({}));
+    expect(buildWorkflowPrompt("/queue-hygiene Platform SRE")).toBe(
+      promptSpec("queue_hygiene").build({ group_name: "Platform SRE" })
     );
   });
 });

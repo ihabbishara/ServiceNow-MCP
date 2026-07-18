@@ -6,7 +6,8 @@ const EXT_TO_FORMAT: Record<string, DocFormat> = {
   pptx: "pptx",
   pdf: "pdf",
   csv: "csv",
-  txt: "txt"
+  txt: "txt",
+  md: "md"
 };
 
 export const extOf = (name: string): string => {
