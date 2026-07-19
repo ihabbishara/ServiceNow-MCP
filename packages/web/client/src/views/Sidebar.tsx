@@ -1,8 +1,65 @@
 // packages/web/client/src/views/Sidebar.tsx
+import { useState } from "react";
+import { createPortal } from "react-dom";
 import type { ChatState } from "../state.js";
 import { CollapsibleSection } from "./ui/CollapsibleSection.js";
-import { WORKFLOW_CATALOG, WORKFLOW_CATEGORIES } from "../../../shared/workflows.js";
+import {
+  WORKFLOW_CATALOG,
+  WORKFLOW_CATEGORIES,
+  type WorkflowEntry
+} from "../../../shared/workflows.js";
 import ingLogo from "../assets/ing-logo.svg";
+
+// A workflow command with a hover/focus tooltip describing what it does. The
+// native `title` attribute was unreliable (long delay, OS-drawn, easy to miss),
+// so the tooltip is a real element. It renders through a portal at fixed
+// coordinates beside the item — the sidebar is `overflow-y-auto`, which clips
+// any absolutely-positioned child, and a portal + fixed escapes that clip.
+function WorkflowItem({
+  entry,
+  onInsert
+}: {
+  entry: WorkflowEntry;
+  onInsert: (text: string) => void;
+}) {
+  const [tip, setTip] = useState<{ top: number; left: number } | null>(null);
+  const show = (el: HTMLElement) => {
+    const r = el.getBoundingClientRect();
+    // Clamp vertically so a low item's tooltip stays on screen.
+    setTip({ top: Math.min(r.top, window.innerHeight - 96), left: r.right + 8 });
+  };
+  return (
+    <>
+      <button
+        onClick={() => onInsert(entry.command + " ")}
+        onMouseEnter={(e) => show(e.currentTarget)}
+        onMouseLeave={() => setTip(null)}
+        onFocus={(e) => show(e.currentTarget)}
+        onBlur={() => setTip(null)}
+        aria-describedby={tip ? `tip-${entry.command}` : undefined}
+        className="w-full text-left px-2 py-1 rounded font-mono text-label-sm text-on-surface hover:bg-surface-container transition-colors"
+      >
+        {entry.command}
+      </button>
+      {tip &&
+        createPortal(
+          <div
+            id={`tip-${entry.command}`}
+            role="tooltip"
+            style={{ position: "fixed", top: tip.top, left: tip.left }}
+            className="z-50 w-64 rounded-md border border-outline-variant bg-surface-container-high px-3 py-2 shadow-lg pointer-events-none"
+          >
+            <div className="font-mono text-label-sm text-primary-container">
+              {entry.command}
+              {entry.argHint ? ` ${entry.argHint}` : ""}
+            </div>
+            <div className="mt-0.5 text-label-sm text-on-surface">{entry.description}</div>
+          </div>,
+          document.body
+        )}
+    </>
+  );
+}
 
 function Dot({ on }: { on: boolean }) {
   return (
@@ -100,21 +157,11 @@ export function Sidebar({
 
       <CollapsibleSection title="Workflows">
         {WORKFLOW_CATEGORIES.map((cat) => (
-          <div key={cat} className="flex flex-col gap-0.5">
-            <div className="px-2 pt-2 pb-0.5 text-label-sm font-semibold uppercase tracking-wide text-on-surface-variant">
-              {cat}
-            </div>
+          <CollapsibleSection key={cat} title={cat}>
             {WORKFLOW_CATALOG.filter((w) => w.category === cat).map((w) => (
-              <button
-                key={w.command}
-                onClick={() => onInsert(w.command + " ")}
-                title={`${w.command}${w.argHint ? ` ${w.argHint}` : ""} — ${w.description}`}
-                className="text-left px-2 py-1 rounded font-mono text-label-sm text-on-surface hover:bg-surface-container transition-colors"
-              >
-                {w.command}
-              </button>
+              <WorkflowItem key={w.command} entry={w} onInsert={onInsert} />
             ))}
-          </div>
+          </CollapsibleSection>
         ))}
       </CollapsibleSection>
 
